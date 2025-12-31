@@ -56,36 +56,37 @@ export default function App() {
 
   // 2. Fetching REAL Testnet Data
   const handleWalletCheck = async (address: string) => {
-    setLoading(true);
-    try {
-      // استخدام CORS و No-Cache لضمان جلب بيانات حقيقية
-      const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${address}`, {
-        mode: 'cors',
-        cache: 'no-store'
-      });
-      
-      if (!response.ok) throw new Error("Wallet not found");
+  setLoading(true);
+  try {
+    // تنظيف العنوان من أي مسافات زائدة
+    const cleanAddress = address.trim();
+    
+    // الطلب الآن يذهب للسيرفر الخاص بك وليس للبلوكشين مباشرة لتجنب حظر المتصفح
+    const response = await fetch(`/api/get-wallet?address=${cleanAddress}`);
+    
+    if (!response.ok) throw new Error("Wallet not found");
 
-      const data = await response.json();
-      const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance || "0";
-      const realSequence = parseInt(data.sequence) || 0;
+    const data = await response.json();
 
-      let finalData = generateMockWalletData(address);
-      finalData.balance = parseFloat(realBalance);
-      finalData.totalTransactions = realSequence;
-      
-      // معادلة حساب السكور بناءً على الرصيد الفعلي
-      finalData.reputaScore = Math.min(Math.round((finalData.balance / 5) + 65), 100) * 10;
-      finalData.trustLevel = finalData.balance > 100 ? 'High' : 'Medium';
+    // استخراج البيانات الحقيقية
+    const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance || "0";
+    const realSequence = parseInt(data.sequence) || 0;
 
-      setWalletData(finalData);
-    } catch (err) {
-      console.warn("Using fallback due to: ", err);
-      setWalletData(generateMockWalletData(address));
-    } finally {
-      setLoading(false);
-    }
-  };
+    setWalletData({
+      ...generateMockWalletData(cleanAddress),
+      balance: parseFloat(realBalance),
+      totalTransactions: realSequence,
+      reputaScore: Math.min(Math.round((parseFloat(realBalance) / 5) + 65), 100) * 10
+    });
+
+  } catch (err) {
+    console.warn("Could not fetch real data, showing demo:", err);
+    // إبقاء الديمو فقط في حال فشل كل شيء لكي لا يتوقف التطبيق
+    setWalletData(generateMockWalletData(address));
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleReset = () => setWalletData(null);
   const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
