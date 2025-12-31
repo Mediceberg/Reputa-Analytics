@@ -60,31 +60,30 @@ const handleWalletCheck = async (address: string) => {
   const cleanAddress = address.trim();
   
   try {
-    // محاولة الجلب مباشرة من البلوكشين مع إضافة رقم عشوائي لمنع الكاش
-    const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${cleanAddress}?v=${Date.now()}`);
+    // الطلب يذهب الآن لسيرفر Vercel الخاص بك
+    const response = await fetch(`/api/get-wallet?address=${cleanAddress}`);
     
     if (!response.ok) {
-      alert("الشبكة ردت بخطأ: المحفظة غير موجودة في Testnet");
+      alert("المحفظة غير موجودة في شبكة Testnet");
       throw new Error("Not Found");
     }
 
     const data = await response.json();
-    
-    // استخراج الرصيد
     const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance;
     
     if (realBalance) {
-      alert("تم جلب بيانات حقيقية! الرصيد: " + realBalance);
+      alert("نجح الاتصال! الرصيد الحقيقي: " + realBalance);
       
       setWalletData({
-        ...generateMockWalletData(cleanAddress), // نأخذ التصميم فقط
-        balance: parseFloat(realBalance),        // نضع الرصيد الحقيقي
+        ...generateMockWalletData(cleanAddress),
+        balance: parseFloat(realBalance),
         totalTransactions: parseInt(data.sequence) || 0,
         reputaScore: Math.min(Math.round((parseFloat(realBalance) / 5) + 65), 100) * 10
       });
     }
   } catch (err) {
-    alert("فشل الجلب الحقيقي، سيتم عرض بيانات ديمو الآن. الخطأ: " + err);
+    console.error(err);
+    alert("لا تزال هناك مشكلة في السيرفر، تم عرض بيانات ديمو مؤقتاً");
     setWalletData(generateMockWalletData(cleanAddress));
   } finally {
     setLoading(false);
