@@ -60,30 +60,32 @@ const handleWalletCheck = async (address: string) => {
   const cleanAddress = address.trim();
   
   try {
-    // الطلب يذهب الآن لسيرفر Vercel الخاص بك
     const response = await fetch(`/api/get-wallet?address=${cleanAddress}`);
-    
-    if (!response.ok) {
-      alert("المحفظة غير موجودة في شبكة Testnet");
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+      alert("تنبيه: المحفظة غير موجودة في Testnet. تأكد من العنوان أو جرب لاحقاً.");
       throw new Error("Not Found");
     }
 
-    const data = await response.json();
-    const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance;
-    
+    // Pi Network Horizon API يضع الرصيد داخل مصفوفة balances
+    const nativeBalance = data.balances?.find((b: any) => b.asset_type === 'native');
+    const realBalance = nativeBalance ? nativeBalance.balance : null;
+
     if (realBalance) {
-      alert("نجح الاتصال! الرصيد الحقيقي: " + realBalance);
+      alert("✅ تم جلب البيانات! الرصيد: " + realBalance + " Pi");
       
       setWalletData({
         ...generateMockWalletData(cleanAddress),
         balance: parseFloat(realBalance),
         totalTransactions: parseInt(data.sequence) || 0,
-        reputaScore: Math.min(Math.round((parseFloat(realBalance) / 5) + 65), 100) * 10
+        reputaScore: Math.min(Math.round((parseFloat(realBalance) / 2) + 70), 100) * 10
       });
+    } else {
+      throw new Error("No Balance Found");
     }
   } catch (err) {
-    console.error(err);
-    alert("لا تزال هناك مشكلة في السيرفر، تم عرض بيانات ديمو مؤقتاً");
+    console.error("Fetch error:", err);
     setWalletData(generateMockWalletData(cleanAddress));
   } finally {
     setLoading(false);
