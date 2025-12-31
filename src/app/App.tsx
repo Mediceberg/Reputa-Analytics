@@ -55,34 +55,37 @@ export default function App() {
   }, []);
 
   // 2. Fetching REAL Testnet Data
-  const handleWalletCheck = async (address: string) => {
+const handleWalletCheck = async (address: string) => {
   setLoading(true);
+  const cleanAddress = address.trim();
+  
   try {
-    // تنظيف العنوان من أي مسافات زائدة
-    const cleanAddress = address.trim();
+    // محاولة الجلب مباشرة من البلوكشين مع إضافة رقم عشوائي لمنع الكاش
+    const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${cleanAddress}?v=${Date.now()}`);
     
-    // الطلب الآن يذهب للسيرفر الخاص بك وليس للبلوكشين مباشرة لتجنب حظر المتصفح
-    const response = await fetch(`/api/get-wallet?address=${cleanAddress}`);
-    
-    if (!response.ok) throw new Error("Wallet not found");
+    if (!response.ok) {
+      alert("الشبكة ردت بخطأ: المحفظة غير موجودة في Testnet");
+      throw new Error("Not Found");
+    }
 
     const data = await response.json();
-
-    // استخراج البيانات الحقيقية
-    const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance || "0";
-    const realSequence = parseInt(data.sequence) || 0;
-
-    setWalletData({
-      ...generateMockWalletData(cleanAddress),
-      balance: parseFloat(realBalance),
-      totalTransactions: realSequence,
-      reputaScore: Math.min(Math.round((parseFloat(realBalance) / 5) + 65), 100) * 10
-    });
-
+    
+    // استخراج الرصيد
+    const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance;
+    
+    if (realBalance) {
+      alert("تم جلب بيانات حقيقية! الرصيد: " + realBalance);
+      
+      setWalletData({
+        ...generateMockWalletData(cleanAddress), // نأخذ التصميم فقط
+        balance: parseFloat(realBalance),        // نضع الرصيد الحقيقي
+        totalTransactions: parseInt(data.sequence) || 0,
+        reputaScore: Math.min(Math.round((parseFloat(realBalance) / 5) + 65), 100) * 10
+      });
+    }
   } catch (err) {
-    console.warn("Could not fetch real data, showing demo:", err);
-    // إبقاء الديمو فقط في حال فشل كل شيء لكي لا يتوقف التطبيق
-    setWalletData(generateMockWalletData(address));
+    alert("فشل الجلب الحقيقي، سيتم عرض بيانات ديمو الآن. الخطأ: " + err);
+    setWalletData(generateMockWalletData(cleanAddress));
   } finally {
     setLoading(false);
   }
