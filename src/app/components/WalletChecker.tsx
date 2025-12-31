@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Shield, Info, Sparkles, Fingerprint, Database } from 'lucide-react';
+import { Search, Shield, Info, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
@@ -17,19 +17,20 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
     e.preventDefault();
     const cleanAddress = address.trim();
     
-    // قواعد التحقق الصارمة لشبكة Pi
+    // 1. معالجة أخطاء الإدخال بدقة
     if (!cleanAddress) {
       setError('Please enter a wallet address');
       return;
     }
 
+    // عناوين Pi Network الرسمية تبدأ دائماً بحرف G وتتكون من 56 حرفاً
     if (!cleanAddress.startsWith('G')) {
-      setError('Pi Network addresses must start with "G"');
+      setError('Pi Network public addresses must start with "G"');
       return;
     }
 
     if (cleanAddress.length !== 56) {
-      setError('Pi addresses should be exactly 56 characters');
+      setError(`Invalid length: ${cleanAddress.length}/56 characters required`);
       return;
     }
 
@@ -38,7 +39,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
   };
 
   const handleTryDemo = () => {
-    // عنوان حقيقي نشط في التست نت للتجربة
+    // تم وضع عنوان حقيقي نشط في التست نت لضمان عمل الديمو ببيانات واقعية
     const demoAddress = 'GDH6V5W2N45LCH477HIKR5277RTM7S6K26T5S66O6S6S6S6S6S6S6S6S';
     setAddress(demoAddress);
     setError('');
@@ -46,125 +47,122 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-4xl mx-auto px-4">
       {/* Hero Section */}
       <div className="text-center mb-12">
-        <div className="inline-flex items-center justify-center mb-6 relative group">
-          <div className="absolute inset-0 bg-purple-500/20 blur-3xl rounded-full group-hover:bg-purple-500/30 transition-all"></div>
+        <div className="inline-flex items-center justify-center mb-6 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-600/20 blur-3xl rounded-full"></div>
           <img 
             src={logoImage} 
             alt="Reputa Score" 
-            className="w-28 h-28 object-contain drop-shadow-2xl relative z-10 hover:scale-105 transition-transform"
+            className="w-32 h-32 object-contain drop-shadow-2xl relative z-10"
+            // ملاحظة: تم إزالة mixBlendMode إذا كان يسبب اختفاء اللوجو في بعض الخلفيات
           />
         </div>
-        <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tight">
-          <span className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent">
-            On-Chain Reputation
-          </span>
+        <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight">
+          Decode Wallet Behavior
         </h1>
-        <p className="text-lg text-gray-500 max-w-2xl mx-auto font-medium">
-          The first professional analytics tool for Pi Network wallets. 
-          Audit your trust score in seconds.
+        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-2">
+          Discover what your Pi Network wallet reveals about trust, consistency, and reputation.
+        </p>
+        <p className="text-sm text-gray-500 max-w-xl mx-auto">
+          Advanced on-chain intelligence • No private keys required
         </p>
       </div>
 
-      {/* Input Terminal Card */}
-      <Card className="p-1 shadow-2xl border-none bg-gradient-to-br from-gray-100 to-white overflow-hidden">
-        <div className="bg-white p-8 rounded-[inherit]">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex justify-between items-end">
-                <label htmlFor="wallet-address" className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">
-                  Public Wallet Address
-                </label>
-                {address.length > 0 && (
-                  <span className="text-[10px] font-mono text-gray-400">
-                    {address.length}/56 chars
-                  </span>
-                )}
+      {/* Main Card */}
+      <Card className="p-6 md:p-8 shadow-xl border-2 bg-white">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="wallet-address" className="block mb-2 font-semibold text-gray-700">
+              Enter Wallet Address
+            </label>
+            <div className="relative">
+              <Input
+                id="wallet-address"
+                type="text"
+                value={address}
+                // تحويل تلقائي للحروف الكبيرة لمنع أخطاء البحث
+                onChange={(e) => setAddress(e.target.value.toUpperCase().replace(/\s/g, ''))}
+                placeholder="G..."
+                className={`pr-12 h-14 text-base md:text-lg font-mono transition-all ${
+                  error ? 'border-red-500 focus:ring-red-200' : 'focus:border-blue-500'
+                }`}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Search className={`w-5 h-5 ${address ? 'text-blue-600' : 'text-gray-400'}`} />
               </div>
-              
-              <div className="relative group">
-                <Input
-                  id="wallet-address"
-                  type="text"
-                  value={address}
-                  onChange={(e) => {
-                    setAddress(e.target.value.toUpperCase());
-                    if(error) setError('');
-                  }}
-                  placeholder="G..."
-                  className={`h-16 text-lg font-mono bg-gray-50/50 border-2 transition-all focus:ring-4 focus:ring-purple-500/10 ${
-                    error ? 'border-red-200 bg-red-50/30' : 'border-gray-100 focus:border-purple-500'
-                  }`}
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                   <div className="h-8 w-px bg-gray-200 mx-2"></div>
-                   <Search className={`w-6 h-6 ${address ? 'text-purple-600' : 'text-gray-300'} transition-colors`} />
-                </div>
-              </div>
-              
-              {error && (
-                <p className="flex items-center gap-2 text-sm font-semibold text-red-500 animate-bounce">
-                  <Info className="w-4 h-4" /> {error}
-                </p>
-              )}
             </div>
+            {error && (
+              <p className="mt-2 text-sm text-red-600 flex items-center gap-1 animate-pulse">
+                <Info className="w-4 h-4" /> {error}
+              </p>
+            )}
+          </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                type="submit" 
-                className="flex-1 h-14 bg-gray-900 hover:bg-black text-white text-lg font-bold rounded-xl shadow-lg hover:shadow-purple-500/20 transition-all group"
-              >
-                Start Full Audit
-                <Sparkles className="w-5 h-5 ml-2 group-hover:animate-spin" />
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={handleTryDemo}
-                className="h-14 px-8 border-2 font-bold hover:bg-gray-50 rounded-xl"
-              >
-                Demo
-              </Button>
-            </div>
-          </form>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              type="submit" 
+              className="flex-1 h-12 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold"
+            >
+              Analyze Wallet
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleTryDemo}
+              className="h-12 border-2 hover:bg-gray-50"
+            >
+              Try Demo
+            </Button>
+          </div>
+        </form>
 
-          {/* Verification Badge */}
-          <div className="mt-8 pt-6 border-t border-gray-50 flex flex-wrap justify-center gap-6">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">
-              <Shield className="w-4 h-4 text-emerald-500" />
-              End-to-End Encrypted
-            </div>
-            <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">
-              <Database className="w-4 h-4 text-blue-500" />
-              Direct Node Access
-            </div>
-            <div className="flex items-center gap-2 text-[11px] font-bold text-gray-400 uppercase tracking-tighter">
-              <Fingerprint className="w-4 h-4 text-purple-500" />
-              Public Data Only
+        {/* Info Box */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+          <div className="flex gap-3">
+            <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-900 leading-relaxed">
+              <p className="font-semibold mb-1">Privacy & Security</p>
+              <p className="text-blue-700/80">
+                This audit uses <b>public blockchain data</b> only. We will never ask for your passphrase, private keys, or seed phrases.
+              </p>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Secondary Features */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
-        <div className="space-y-3">
-          <div className="w-10 h-10 bg-purple-600 text-white rounded-lg flex items-center justify-center font-bold">1</div>
-          <h4 className="font-bold text-gray-800">Submit Address</h4>
-          <p className="text-sm text-gray-500 leading-relaxed">Enter your public G-address. We never require your passphrase or private keys.</p>
-        </div>
-        <div className="space-y-3">
-          <div className="w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold">2</div>
-          <h4 className="font-bold text-gray-800">Scan Ledger</h4>
-          <p className="text-sm text-gray-500 leading-relaxed">Our engine scans the Pi Blockchain for your last 100 transactions and balance status.</p>
-        </div>
-        <div className="space-y-3">
-          <div className="w-10 h-10 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-bold">3</div>
-          <h4 className="font-bold text-gray-800">Generate Score</h4>
-          <p className="text-sm text-gray-500 leading-relaxed">Get a comprehensive trust report and a verified Reputa Score for your profile.</p>
-        </div>
+      {/* Features Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+        <Card className="p-6 text-center hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-6 h-6 text-purple-600" />
+          </div>
+          <h3 className="font-semibold mb-2">Trust Score</h3>
+          <p className="text-sm text-gray-600">
+            Advanced algorithm evaluating wallet reputation based on history.
+          </p>
+        </Card>
+
+        <Card className="p-6 text-center hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Search className="w-6 h-6 text-blue-600" />
+          </div>
+          <h3 className="font-semibold mb-2">History Audit</h3>
+          <p className="text-sm text-gray-600">
+            View real-time activity and patterns directly from the Testnet.
+          </p>
+        </Card>
+
+        <Card className="p-6 text-center hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-6 h-6 text-yellow-600" />
+          </div>
+          <h3 className="font-semibold mb-2">Instant Audit</h3>
+          <p className="text-sm text-gray-600">
+            Get non-custodial results in milliseconds from the ledger.
+          </p>
+        </Card>
       </div>
     </div>
   );
