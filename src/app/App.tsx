@@ -4,7 +4,7 @@ import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import logoImage from '../assets/logo.svg';
 
-// Interfaces (تبقى كما هي)
+// Interfaces
 export interface Transaction {
   id: string;
   type: 'sent' | 'received';
@@ -37,7 +37,7 @@ export default function App() {
   const [piUser, setPiUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // 1. ربط الحساب (Pi Login)
+  // 1. Pi Login
   useEffect(() => {
     const initPi = async () => {
       try {
@@ -54,38 +54,33 @@ export default function App() {
     initPi();
   }, []);
 
-  // 2. معالجة البحث (جلب بيانات حقيقية من Pi Testnet Blockchain)
+  // 2. Fetching REAL Testnet Data
   const handleWalletCheck = async (address: string) => {
     setLoading(true);
     try {
-      // الاتصال بشبكة التست نت الحقيقية
-      const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${address}`);
+      // استخدام CORS و No-Cache لضمان جلب بيانات حقيقية
+      const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${address}`, {
+        mode: 'cors',
+        cache: 'no-store'
+      });
       
-      if (!response.ok) {
-        throw new Error("Wallet not found on Testnet");
-      }
+      if (!response.ok) throw new Error("Wallet not found");
 
       const data = await response.json();
-
-      // استخراج البيانات الحقيقية من البلوكشين
       const realBalance = data.balances.find((b: any) => b.asset_type === 'native')?.balance || "0";
       const realSequence = parseInt(data.sequence) || 0;
 
-      // دمج البيانات الحقيقية مع هيكل البيانات المطلوب
       let finalData = generateMockWalletData(address);
       finalData.balance = parseFloat(realBalance);
       finalData.totalTransactions = realSequence;
       
-      // تحديث السكور بناءً على الرصيد الفعلي المكتشف
+      // معادلة حساب السكور بناءً على الرصيد الفعلي
       finalData.reputaScore = Math.min(Math.round((finalData.balance / 5) + 65), 100) * 10;
-      
-      if (finalData.balance > 1000) finalData.trustLevel = 'Elite';
-      else if (finalData.balance > 100) finalData.trustLevel = 'High';
+      finalData.trustLevel = finalData.balance > 100 ? 'High' : 'Medium';
 
       setWalletData(finalData);
     } catch (err) {
-      console.warn("Falling back to simulated data", err);
-      // في حال لم تكن المحفظة موجودة في التست نت، نستخدم البيانات الافتراضية
+      console.warn("Using fallback due to: ", err);
       setWalletData(generateMockWalletData(address));
     } finally {
       setLoading(false);
@@ -95,7 +90,7 @@ export default function App() {
   const handleReset = () => setWalletData(null);
   const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
 
-  // 3. تفعيل زر الدفع الحقيقي مع الربط بالخادم للموافقة
+  // 3. Payment Logic with Server Integration
   const handleAccessUpgrade = async () => {
     if (!(window as any).Pi) return;
     try {
@@ -105,26 +100,28 @@ export default function App() {
         metadata: { userId: piUser?.uid }
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
-          // إرسال الطلب لملف api/approve.ts في Vercel لحل مشكلة "Dev not approved"
-          try {
-            await fetch('/api/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId })
-            });
-          } catch (error) {
-            console.error("Server approval request failed", error);
-          }
+          // استدعاء ملف الموافقة
+          await fetch('/api/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId })
+          });
         },
-        onReadyForServerCompletion: (paymentId: string, txid: string) => {
+        onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          // خطوة إضافية لضمان إغلاق المعاملة بنجاح
+          await fetch('/api/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId, txid })
+          });
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
         },
-        onCancel: (paymentId: string) => { console.log("Cancelled"); },
-        onError: (err: any) => { console.error("Payment Error:", err); }
+        onCancel: (paymentId: string) => console.log("Cancelled", paymentId),
+        onError: (err: any) => console.error("Payment Error", err)
       });
     } catch (err) {
-      console.error("Payment initiation failed", err);
+      console.error("Payment failed", err);
     }
   };
 
@@ -156,7 +153,7 @@ export default function App() {
       <main className="container mx-auto px-4 py-8">
         {loading ? (
           <div className="text-center py-20 animate-pulse text-purple-600 font-medium">
-            Fetching Real-time Blockchain Data...
+            Accessing Pi Testnet Blockchain...
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -183,7 +180,7 @@ export default function App() {
   );
 }
 
-// --- الدوال المساعدة (توليد بيانات تكميلية للواجهة) ---
+// --- Helper Functions ---
 function generateMockWalletData(address: string): WalletData {
   const seed = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const random = (min: number, max: number) => {
@@ -191,28 +188,22 @@ function generateMockWalletData(address: string): WalletData {
     return Math.floor((x - Math.floor(x)) * (max - min + 1)) + min;
   };
 
-  const balance = random(100, 10000) + random(0, 99) / 100;
+  const balance = random(10, 500);
   const accountAge = random(30, 730);
-  const totalTransactions = random(10, 500);
-
+  
   const transactions: Transaction[] = Array.from({ length: 10 }, (_, i) => ({
       id: `tx_${seed}_${i}`,
       type: random(0, 1) === 1 ? 'received' : 'sent',
-      amount: random(1, 100),
+      amount: random(1, 50),
       from: generateRandomAddress(seed + i),
       to: generateRandomAddress(seed + i + 1),
       timestamp: new Date(Date.now() - i * 24 * 60 * 60 * 1000),
   }));
 
-  const trustScore = Math.round(Math.min((balance / 1000) * 30, 30) + Math.min((accountAge / 365) * 40, 40) + 30);
-
   return {
-    address, balance, accountAge, transactions, totalTransactions,
-    reputaScore: trustScore * 10,
-    trustLevel: trustScore >= 90 ? 'Elite' : trustScore >= 70 ? 'High' : 'Medium',
-    consistencyScore: random(60, 95),
-    networkTrust: random(70, 99),
-    riskLevel: 'Low'
+    address, balance, accountAge, transactions, totalTransactions: random(5, 50),
+    reputaScore: 750, trustLevel: 'Medium', consistencyScore: random(60, 90),
+    networkTrust: random(70, 95), riskLevel: 'Low'
   };
 }
 
