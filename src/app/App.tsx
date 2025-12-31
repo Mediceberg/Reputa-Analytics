@@ -54,11 +54,11 @@ export default function App() {
     initPi();
   }, []);
 
-  // 2. معالجة البحث (تعديل ذكي يمنع الـ Crash)
+  // 2. معالجة البحث (تعديل لجلب بيانات حقيقية من الشبكة)
   const handleWalletCheck = async (address: string) => {
     setLoading(true);
     try {
-      // محاولة جلب الرصيد الحقيقي من Testnet
+      // تغيير الرابط إلى horizon.pi-blockchain.net للبيانات الحقيقية أو إبقاؤه testnet للتجربة
       const response = await fetch(`https://horizon-testnet.pi-blockchain.net/accounts/${address}`);
       const data = await response.json();
 
@@ -84,7 +84,7 @@ export default function App() {
   const handleReset = () => setWalletData(null);
   const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
 
-  // 3. تفعيل زر الدفع الحقيقي
+  // 3. تفعيل زر الدفع الحقيقي مع الربط بالخادم (الخطوة 2 المضافة)
   const handleAccessUpgrade = async () => {
     if (!(window as any).Pi) return;
     try {
@@ -93,16 +93,30 @@ export default function App() {
         memo: "VIP Membership - Reputa Score",
         metadata: { userId: piUser?.uid }
       }, {
-        onReadyForServerApproval: (id: string) => console.log("Approved", id),
-        onReadyForServerCompletion: (id: string, tx: string) => {
+        onReadyForServerApproval: async (paymentId: string) => {
+          console.log("Payment created, sending to server for approval...", paymentId);
+          // استدعاء ملف api/approve.ts الذي أنشأناه في Vercel
+          try {
+            await fetch('/api/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId })
+            });
+            console.log("Server approved the payment successfully!");
+          } catch (error) {
+            console.error("Server approval failed", error);
+          }
+        },
+        onReadyForServerCompletion: (paymentId: string, txid: string) => {
+          console.log("Blockchain transaction complete:", txid);
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
         },
-        onCancel: (id: string) => {},
-        onError: (err: any) => console.error(err)
+        onCancel: (paymentId: string) => { console.log("Payment cancelled by user"); },
+        onError: (err: any) => { console.error("Payment Error:", err); }
       });
     } catch (err) {
-      console.error(err);
+      console.error("Payment initiation failed", err);
     }
   };
 
@@ -161,7 +175,7 @@ export default function App() {
   );
 }
 
-// --- الدوال المساعدة (تبقى كما هي في كودك الأصلي) ---
+// --- الدوال المساعدة (تبقى كما هي لضمان عمل الواجهة) ---
 function generateMockWalletData(address: string): WalletData {
   const seed = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const random = (min: number, max: number) => {
