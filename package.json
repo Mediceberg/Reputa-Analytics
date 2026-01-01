@@ -10,7 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@pinetwork-js/sdk": "https://github.com/pi-apps/pi-nodejs-sdk.git",
+    "@pinetwork-js/sdk": "https://github.com/pi-apps/pi-nodejs-sdk/tarball/master",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",
