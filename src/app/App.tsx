@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
+import { Settings, X, Zap, ShieldCheck } from 'lucide-react'; // أيقونات إضافية
 import logoImage from '../assets/logo.svg';
 
-// --- Interfaces (الهياكل البيانية) ---
+// --- Interfaces ---
 export interface Transaction {
   id: string;
   type: 'sent' | 'received';
@@ -37,7 +38,8 @@ export default function App() {
   const [piUser, setPiUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  // --- حالات جديدة للتحكم اليدوي في العمليات العشر ---
+  // --- حالات لوحة التحكم اليدوية ---
+  const [isAdminOpen, setIsAdminOpen] = useState(false); // التحكم في ظهور اللوحة
   const [manualAddress, setManualAddress] = useState('');
   const [txCount, setTxCount] = useState(0);
 
@@ -152,50 +154,43 @@ export default function App() {
     }
   };
 
-  // --- دالة الإرسال اليدوي لتجاوز قيود الـ Mainnet (تعديل App-to-User) ---
+  // --- دالة الإرسال اليدوي (App-to-User) ---
   const handleManualTestnetTx = async () => {
     if (!manualAddress.startsWith('G') || manualAddress.length !== 56) {
-      alert("الرجاء إدخال عنوان محفظة صحيح يبدأ بـ G (56 حرف)");
+      alert("الرجاء إدخال عنوان محفظة صحيح يبدأ بـ G");
       return;
     }
 
     if (!(window as any).Pi) return;
 
     try {
-      // تعديل الطلب ليكون App-to-User: يتم خصم الرصيد من محفظة التطبيق وإرساله للمستخدم
       await (window as any).Pi.createPayment({
         amount: 0.1,
-        memo: `Verification Tx #${txCount + 1}`,
+        memo: `Dev Verification #${txCount + 1}`,
         metadata: { 
           targetAddress: manualAddress, 
-          type: "APP_TO_USER_TX" // تعريف النوع للسيرفر
+          type: "APP_TO_USER_TX" 
         }
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
-          // السيرفر يستخدم المفتاح السري (Secret Key) هنا للموافقة
           await fetch('/api/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId })
+            body: JSON.stringify({ paymentId, isAppToUser: true })
           });
         },
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-          // السيرفر يؤكد العملية على البلوكشين
           await fetch('/api/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paymentId, txid })
           });
-          
           setTxCount(prev => prev + 1);
           setManualAddress(''); 
-          alert(`✅ Success! [${txCount + 1}/10] App-to-User payment sent.`);
+          alert(`✅ App-to-User Sent! [${txCount + 1}/10]`);
         },
-        onCancel: () => console.log("User cancelled"),
-        onError: (err: any) => {
-           console.error(err);
-           alert("Transaction failed. Make sure your App Wallet has Test-Pi.");
-        }
+        onCancel: () => {},
+        onError: () => alert("Transaction failed. Check App Wallet Seed.")
       });
     } catch (err) {
       console.error(err);
@@ -203,35 +198,48 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white pb-24 relative overflow-hidden">
+      
+      {/* --- الزر الشفاف للمطور (مخفي تقريباً) --- */}
+      <button 
+        onClick={() => setIsAdminOpen(true)}
+        className="fixed bottom-4 left-4 w-8 h-8 opacity-5 hover:opacity-100 transition-opacity z-[99] bg-gray-400 rounded-full flex items-center justify-center"
+      >
+        <Settings size={14} className="text-white" />
+      </button>
+
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={logoImage} alt="Logo" className="w-10 h-10 object-contain" />
-              <div>
-                <h1 className="font-bold text-xl bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
-                  Reputa Score
-                </h1>
-                <p className="text-xs text-gray-500">{piUser ? `@${piUser.username}` : 'v2.6'}</p>
-              </div>
+      <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logoImage} alt="Logo" className="w-10 h-10 object-contain" />
+            <div>
+              <h1 className="font-bold text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Reputa Score
+              </h1>
+              <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">
+                {piUser ? `@${piUser.username}` : 'Blockchain Intel'}
+              </p>
             </div>
-            {hasProAccess && (
-              <div className="px-4 py-2 bg-yellow-400 rounded-full shadow-lg">
-                <span className="text-sm font-semibold text-white">Pro Member</span>
-              </div>
-            )}
           </div>
+          {hasProAccess && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-lg border border-yellow-300">
+              <Zap size={14} className="text-white fill-current" />
+              <span className="text-[10px] font-black text-white uppercase tracking-tighter">Pro Access</span>
+            </div>
+          )}
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {loading ? (
-          <div className="text-center py-20 flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-purple-600 font-medium font-mono text-sm tracking-tighter">Querying Pi Blockchain Ledger...</p>
+          <div className="text-center py-32 flex flex-col items-center gap-6">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-purple-100 rounded-full"></div>
+              <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+            </div>
+            <p className="text-slate-400 font-mono text-xs animate-pulse">Syncing with Mainnet-Beta Node...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -245,35 +253,68 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16 py-6 text-center text-sm text-gray-500">
-        © 2024-2026 Reputa Analytics.
+      <footer className="mt-auto py-8 text-center border-t border-slate-100 text-[10px] font-mono text-slate-400 uppercase tracking-[0.2em]">
+        © 2024-2026 Reputa Analytics • Secured by Pi Network
       </footer>
 
-      {/* --- لوحة التحكم اليدوية لتجاوز مرحلة الـ 10 عمليات --- */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white p-4 z-[9999] border-t-4 border-purple-600 shadow-2xl">
-        <div className="container mx-auto flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex-shrink-0 text-center sm:text-left">
-            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Mainnet Readiness Flow</p>
-            <p className="text-lg font-black">{txCount} <span className="text-gray-500 text-xs">/ 10 Unique Wallets</span></p>
+      {/* --- الواجهة الأساسية للمطور (تظهر عند الضغط على الزر الشفاف) --- */}
+      {isAdminOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8">
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h3 className="text-white font-bold">Mainnet Readiness Console</h3>
+                  <p className="text-[10px] text-gray-500 font-mono">APP-TO-USER TRANSACTION TERMINAL</p>
+                </div>
+              </div>
+              <button onClick={() => setIsAdminOpen(false)} className="text-gray-400 hover:text-white p-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Status</p>
+                  <p className="text-xl font-black text-emerald-400">{txCount >= 10 ? 'READY' : 'PENDING'}</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Completed</p>
+                  <p className="text-xl font-black text-white">{txCount} <span className="text-gray-600 text-sm">/ 10</span></p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] text-gray-400 uppercase font-bold ml-1">Manual Recipient Address</tsabel>
+                <input 
+                  type="text"
+                  value={manualAddress}
+                  onChange={(e) => setManualAddress(e.target.value.toUpperCase().trim())}
+                  placeholder="G..."
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-purple-300 focus:outline-none focus:border-purple-500 transition-all"
+                />
+              </div>
+
+              <button 
+                onClick={handleManualTestnetTx}
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold rounded-xl shadow-xl shadow-purple-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                Execute Secure Payment (0.1 Pi)
+              </button>
+
+              <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                <p className="text-[10px] text-blue-400 leading-relaxed italic">
+                  * This terminal initiates payments from the <strong>App Wallet</strong> to the specified user address. Ensure your Backend Secret Key is configured in Vercel.
+                </p>
+              </div>
+            </div>
           </div>
-          
-          <input 
-            type="text"
-            value={manualAddress}
-            onChange={(e) => setManualAddress(e.target.value.toUpperCase().trim())}
-            placeholder="Recipient Address (G...)"
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm font-mono focus:outline-none focus:border-purple-500 w-full"
-          />
-          
-          <button 
-            onClick={handleManualTestnetTx}
-            className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-lg font-bold transition-all active:scale-95 shadow-lg shadow-purple-500/20"
-          >
-            Send 0.1 Pi from App
-          </button>
         </div>
-      </div>
+      )}
 
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
@@ -296,11 +337,4 @@ function generateMockWalletData(address: string): WalletData {
     transactions: [], totalTransactions: 0, reputaScore: 650,
     trustLevel: 'Medium', consistencyScore: 80, networkTrust: 80, riskLevel: 'Low'
   };
-}
-
-function generateRandomAddress(seed: number): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let addr = 'G';
-  for (let i = 0; i < 55; i++) addr += chars[Math.floor(Math.abs(Math.sin(seed + i) * 10000) % chars.length)];
-  return addr;
 }
