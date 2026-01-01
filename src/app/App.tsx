@@ -289,7 +289,7 @@ export default function App() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] text-gray-400 uppercase font-bold ml-1">Manual Recipient Address</tsabel>
+               <label className="text-[10px] text-gray-400 uppercase font-bold ml-1">Manual Recipient Address</label>
                 <input 
                   type="text"
                   value={manualAddress}
