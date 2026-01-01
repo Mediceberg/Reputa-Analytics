@@ -152,22 +152,27 @@ export default function App() {
     }
   };
 
-  // --- دالة الإرسال اليدوي لتجاوز قيود الـ Mainnet ---
+  // --- دالة الإرسال اليدوي لتجاوز قيود الـ Mainnet (تعديل App-to-User) ---
   const handleManualTestnetTx = async () => {
     if (!manualAddress.startsWith('G') || manualAddress.length !== 56) {
-      alert("الرجاء إدخال عنوان محفظة صحيح يبدأ بـ G");
+      alert("الرجاء إدخال عنوان محفظة صحيح يبدأ بـ G (56 حرف)");
       return;
     }
 
     if (!(window as any).Pi) return;
 
     try {
+      // تعديل الطلب ليكون App-to-User: يتم خصم الرصيد من محفظة التطبيق وإرساله للمستخدم
       await (window as any).Pi.createPayment({
         amount: 0.1,
         memo: `Verification Tx #${txCount + 1}`,
-        metadata: { target: manualAddress }
+        metadata: { 
+          targetAddress: manualAddress, 
+          type: "APP_TO_USER_TX" // تعريف النوع للسيرفر
+        }
       }, {
         onReadyForServerApproval: async (paymentId: string) => {
+          // السيرفر يستخدم المفتاح السري (Secret Key) هنا للموافقة
           await fetch('/api/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -175,6 +180,7 @@ export default function App() {
           });
         },
         onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+          // السيرفر يؤكد العملية على البلوكشين
           await fetch('/api/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -182,11 +188,14 @@ export default function App() {
           });
           
           setTxCount(prev => prev + 1);
-          setManualAddress(''); // مسح الحقل للعملية التالية
-          alert(`Success! Transaction ${txCount + 1} of 10 completed.`);
+          setManualAddress(''); 
+          alert(`✅ Success! [${txCount + 1}/10] App-to-User payment sent.`);
         },
         onCancel: () => console.log("User cancelled"),
-        onError: (err: any) => alert("Transaction failed. Check app wallet balance.")
+        onError: (err: any) => {
+           console.error(err);
+           alert("Transaction failed. Make sure your App Wallet has Test-Pi.");
+        }
       });
     } catch (err) {
       console.error(err);
@@ -245,15 +254,15 @@ export default function App() {
       <div className="fixed bottom-0 left-0 right-0 bg-gray-900 text-white p-4 z-[9999] border-t-4 border-purple-600 shadow-2xl">
         <div className="container mx-auto flex flex-col sm:flex-row items-center gap-4">
           <div className="flex-shrink-0 text-center sm:text-left">
-            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Mainnet Readiness</p>
-            <p className="text-lg font-black">{txCount} <span className="text-gray-500 text-xs">/ 10 Done</span></p>
+            <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Mainnet Readiness Flow</p>
+            <p className="text-lg font-black">{txCount} <span className="text-gray-500 text-xs">/ 10 Unique Wallets</span></p>
           </div>
           
           <input 
             type="text"
             value={manualAddress}
             onChange={(e) => setManualAddress(e.target.value.toUpperCase().trim())}
-            placeholder="Paste User Wallet Address (G...)"
+            placeholder="Recipient Address (G...)"
             className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm font-mono focus:outline-none focus:border-purple-500 w-full"
           />
           
@@ -261,7 +270,7 @@ export default function App() {
             onClick={handleManualTestnetTx}
             className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-6 py-2 rounded-lg font-bold transition-all active:scale-95 shadow-lg shadow-purple-500/20"
           >
-            Send 0.1 Pi
+            Send 0.1 Pi from App
           </button>
         </div>
       </div>
@@ -275,7 +284,7 @@ export default function App() {
   );
 }
 
-// --- Helper Functions (دون تغيير) ---
+// --- Helper Functions ---
 function generateMockWalletData(address: string): WalletData {
   const seed = address.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const random = (min: number, max: number) => {
