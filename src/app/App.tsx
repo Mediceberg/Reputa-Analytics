@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
-import { Settings, X, Zap, ShieldCheck } from 'lucide-react'; // أيقونات إضافية
+import { Settings, X, Zap, ShieldCheck } from 'lucide-react'; 
 import logoImage from '../assets/logo.svg';
 
 // --- Interfaces ---
@@ -39,7 +39,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
 
   // --- حالات لوحة التحكم اليدوية ---
-  const [isAdminOpen, setIsAdminOpen] = useState(false); // التحكم في ظهور اللوحة
+  const [isAdminOpen, setIsAdminOpen] = useState(false); 
   const [manualAddress, setManualAddress] = useState('');
   const [txCount, setTxCount] = useState(0);
 
@@ -187,7 +187,7 @@ export default function App() {
           });
           setTxCount(prev => prev + 1);
           setManualAddress(''); 
-          alert(`✅ App-to-User Sent! [${txCount + 1}/10]`);
+          alert(`✅ App-to-User Sent! [${txCount}/10]`);
         },
         onCancel: () => {},
         onError: () => alert("Transaction failed. Check App Wallet Seed.")
@@ -198,14 +198,15 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white pb-24 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white pb-24 relative overflow-hidden text-slate-900">
       
-      {/* --- الزر الشفاف للمطور (مخفي تقريباً) --- */}
+      {/* --- زر لوحة التحكم المحسن (مرئي الآن بوضوح في أسفل اليسار) --- */}
       <button 
         onClick={() => setIsAdminOpen(true)}
-        className="fixed bottom-4 left-4 w-8 h-8 opacity-5 hover:opacity-100 transition-opacity z-[99] bg-gray-400 rounded-full flex items-center justify-center"
+        className="fixed bottom-6 left-6 w-12 h-12 bg-purple-600 border border-purple-400 rounded-full flex items-center justify-center z-[999] shadow-2xl transition-all active:scale-90 animate-bounce hover:animate-none"
       >
-        <Settings size={14} className="text-white" />
+        <Settings size={24} className="text-white" />
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-ping"></span>
       </button>
 
       {/* Header */}
@@ -257,58 +258,66 @@ export default function App() {
         © 2024-2026 Reputa Analytics • Secured by Pi Network
       </footer>
 
-      {/* --- الواجهة الأساسية للمطور (تظهر عند الضغط على الزر الشفاف) --- */}
+      {/* --- الواجهة الأساسية للمطور --- */}
       {isAdminOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-slate-900 w-full max-w-lg rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[1000] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-slate-900 w-full max-w-lg rounded-3xl border border-purple-500/30 shadow-2xl overflow-hidden relative">
+            
+            <div className="p-6 border-b border-white/5 flex justify-between items-center bg-purple-600/10">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400">
-                  <ShieldCheck size={20} />
+                  <ShieldCheck size={24} />
                 </div>
                 <div>
-                  <h3 className="text-white font-bold">Mainnet Readiness Console</h3>
-                  <p className="text-[10px] text-gray-500 font-mono">APP-TO-USER TRANSACTION TERMINAL</p>
+                  <h3 className="text-white font-bold text-lg">Developer Console</h3>
+                  <p className="text-[10px] text-purple-400 font-mono tracking-tighter">APP-TO-USER PROTOCOL v2</p>
                 </div>
               </div>
-              <button onClick={() => setIsAdminOpen(false)} className="text-gray-400 hover:text-white p-2">
-                <X size={20} />
+              <button 
+                onClick={() => setIsAdminOpen(false)} 
+                className="bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white p-2 rounded-full transition-colors"
+              >
+                <X size={24} />
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-8 space-y-8">
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Status</p>
-                  <p className="text-xl font-black text-emerald-400">{txCount >= 10 ? 'READY' : 'PENDING'}</p>
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/5">
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Mainnet Progress</p>
+                  <p className="text-2xl font-black text-emerald-400">{txCount >= 10 ? 'COMPLETE' : `${txCount}/10`}</p>
                 </div>
-                <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                  <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">Completed</p>
-                  <p className="text-xl font-black text-white">{txCount} <span className="text-gray-600 text-sm">/ 10</span></p>
+                <div className="bg-black/40 p-5 rounded-2xl border border-white/5">
+                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Current Mode</p>
+                  <p className="text-2xl font-black text-purple-400 italic">TESTNET</p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-               <label className="text-[10px] text-gray-400 uppercase font-bold ml-1">Manual Recipient Address</label>
+              <div className="space-y-3">
+                <label className="text-xs text-gray-400 font-bold ml-1 flex justify-between">
+                  <span>RECIPIENT WALLET ADDRESS</span>
+                  <span className="text-[10px] text-purple-500">G-ADDRESS ONLY</span>
+                </label>
                 <input 
                   type="text"
                   value={manualAddress}
                   onChange={(e) => setManualAddress(e.target.value.toUpperCase().trim())}
-                  placeholder="G..."
-                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-mono text-purple-300 focus:outline-none focus:border-purple-500 transition-all"
+                  placeholder="Paste G-Address here..."
+                  className="w-full bg-black/60 border border-purple-500/20 rounded-2xl px-5 py-4 text-sm font-mono text-purple-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all shadow-inner placeholder:text-gray-700"
                 />
               </div>
 
               <button 
                 onClick={handleManualTestnetTx}
-                className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold rounded-xl shadow-xl shadow-purple-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full py-5 bg-gradient-to-br from-purple-600 to-indigo-700 hover:from-purple-500 hover:to-indigo-600 text-white font-black text-lg rounded-2xl shadow-xl shadow-purple-900/40 transition-all active:scale-[0.97] flex items-center justify-center gap-3 border-t border-white/20"
               >
-                Execute Secure Payment (0.1 Pi)
+                EXECUTE PAYMENT (0.1 PI)
               </button>
 
-              <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                <p className="text-[10px] text-blue-400 leading-relaxed italic">
-                  * This terminal initiates payments from the <strong>App Wallet</strong> to the specified user address. Ensure your Backend Secret Key is configured in Vercel.
+              <div className="bg-blue-500/5 p-4 rounded-2xl border border-blue-500/10">
+                <p className="text-[11px] text-blue-400/80 leading-relaxed text-center">
+                  This transaction will be signed by <strong>App Wallet Seed</strong> on the server.
+                  No user wallet approval is required.
                 </p>
               </div>
             </div>
