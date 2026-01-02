@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './app/App';
+import App from './app/App'; // تأكد أن مجلد app يبدأ بحرف صغير كما هو في مشروعك
+
+// استدعاء ملفات التنسيق - تأكد من وجود هذه الملفات في مجلد styles
+// إذا كانت العلامة الحمراء تظهر هنا، فقد يكون السبب هو اسم ملف ناقص
 import './styles/index.css';
 import './styles/fonts.css';
 import './styles/tailwind.css';
@@ -51,13 +54,14 @@ class ErrorBoundary extends React.Component<
 }
 
 // Mount React app
-const root = document.getElementById('root');
+const rootElement = document.getElementById('root');
 
-if (!root) {
+if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-ReactDOM.createRoot(root).render(
+// استخدام متغير rootElement لضمان عدم وجود تضارب أسماء
+ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <App />
