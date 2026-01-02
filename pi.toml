@@ -1,0 +1,31 @@
+# Pi Network App Configuration
+# This file must be served at /.well-known/pi.toml
+
+[app]
+name = "Reputa Score"
+description = "Advanced Pi Network wallet reputation analyzer with AI-powered trust intelligence"
+version = "2.5.0"
+
+[app.developer]
+name = "Reputa Analytics"
+email = "support@reputa-analytics.com"
+
+[app.urls]
+# Production URLs
+home = "https://your-app.vercel.app"
+terms = "https://your-app.vercel.app/terms"
+privacy = "https://your-app.vercel.app/privacy"
+
+[payment]
+# Payment approval endpoint
+approve = "/api/approve"
+# Payment completion endpoint
+complete = "/api/complete"
+
+[authentication]
+# Authentication endpoint
+callback = "/api/auth"
+
+[network]
+# Use "testnet" for testing, "mainnet" for production
+environment = "testnet"
