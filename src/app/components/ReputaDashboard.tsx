@@ -27,9 +27,9 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
 
   useEffect(() => {
     loadReport();
-    // التحقق من حالة الـ VIP عبر السيرفر بدلاً من الحالة المحلية فقط
-    const fetchVIPStatus = async () => {
-      if (userId) {
+    if (userId) {
+      // التحقق الحقيقي من حالة الـ VIP
+      const checkRealVIP = async () => {
         try {
           const res = await fetch(`/api/auth`, {
             method: 'POST',
@@ -41,32 +41,23 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
         } catch {
           setIsVIP(checkVIPStatus(userId));
         }
-      }
-    };
-    fetchVIPStatus();
+      };
+      checkRealVIP();
+    }
   }, [walletAddress, userId]);
 
   const loadReport = async () => {
     setIsLoading(true);
     try {
-      // جلب بيانات المحفظة الحقيقية من الـ API
       const response = await fetch(`/api/get-wallet?walletAddress=${walletAddress}&userId=${userId}`);
       const apiData = await response.json();
-
-      // استخدام البيانات القادمة من السيرفر لتوليد التقرير
-      const newReport = await generateCompleteReport(
-        walletAddress, 
-        userId, 
-        undefined, 
-        isVIP
-      );
-
-      // إذا نجح الاتصال، نقوم بتحديث قيم التقرير ببيانات السيرفر الحقيقية
+      
+      const newReport = await generateCompleteReport(walletAddress, userId, undefined, isVIP);
+      
       if (apiData.success) {
         newReport.walletData.balance = apiData.wallet.balance;
-        newReport.walletData.network = apiData.wallet.network;
       }
-
+      
       setReport(newReport);
     } catch (error) {
       console.error('Failed to load report:', error);
@@ -75,48 +66,53 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
     }
   };
 
-  const handleUpgradeToVIP = async () => {
-    if (!userId) {
-      alert('Please authenticate with Pi Network first.');
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const validation = await verifyImage(file);
+    if (!validation.valid) {
+      alert(validation.error);
       return;
     }
-
+    setUploadingImage(true);
     try {
-      // الخطوة 1: طلب الموافقة من السيرفر الخاص بك
+      const result = await processYearWithPiImage(file, report!.walletData.createdAt);
+      if (result.verified && result.extractedData) {
+        const updatedReport = await generateCompleteReport(walletAddress, userId, result.extractedData, isVIP);
+        setReport(updatedReport);
+        alert(`Mining bonus unlocked: +${result.extractedData.score} points!`);
+      } else {
+        alert('Image verification failed.');
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleUpgradeToVIP = async () => {
+    if (!userId) {
+      alert('Please authenticate first.');
+      return;
+    }
+    try {
       const approveRes = await fetch('/api/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ paymentId: `pay_${Date.now()}`, userId, amount: 1 })
       });
       const approval = await approveRes.json();
-
       if (approval.approved) {
-        // الخطوة 2: استدعاء دالة الدفع الأصلية (التي ستفتح SDK محفظة Pi)
         await createVIPPayment(userId);
-        
-        // الخطوة 3: إبلاغ السيرفر باكتمال الدفع (سيتم تفعيلها حقيقياً بعد رد الـ SDK)
-        await fetch('/api/complete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            paymentId: approval.paymentId, 
-            txid: 'TX_FROM_SDK', 
-            userId, 
-            amount: 1 
-          })
-        });
-
         setIsVIP(true);
         loadReport();
-        alert('VIP status activated!');
       }
     } catch (error) {
-      console.error('VIP upgrade failed:', error);
-      alert('Failed to initiate payment.');
+      alert('VIP upgrade failed.');
     }
   };
 
-  // --- بقية الـ JSX تظل كما هي تماماً دون تغيير أي سطر في الهيكل ---
   if (isLoading || !report) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -131,7 +127,125 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      {/* ... الكود الأصلي المستلم منك يستمر هنا دون تغيير ... */}
       <Card className="max-w-6xl w-full p-6 my-8">
-        {/* Header والـ Cards والـ VIP CTA كما هي في رسالتك الأصلية */}
-        {/* تم اختصار العرض هنا لعدم تكرار مئات الأسطر، لكن الهيكل يبقى ثابتاً */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+              Reputation Dashboard
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {walletData.username} • {walletAddress.slice(0, 8)}...{walletAddress.slice(-8)}
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
+
+        <Card className="p-6 mb-6 bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 mb-1">Total Reputation Score</p>
+              <p className="text-5xl font-bold text-cyan-600">{scores.totalScore}</p>
+              <p className="text-sm text-gray-500 mt-1">out of 1000</p>
+            </div>
+            <div className="text-right">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+                trustLevel === 'Elite' ? 'bg-emerald-100 text-emerald-700' :
+                trustLevel === 'High' ? 'bg-blue-100 text-blue-700' :
+                trustLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                <Shield className="w-5 h-5" />
+                <span className="font-semibold">{trustLevel} Trust</span>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="w-5 h-5 text-purple-500" />
+              <h3 className="font-semibold">Wallet Age</h3>
+            </div>
+            <Progress value={(scores.walletAgeScore / 20) * 100} className="mb-2" />
+            <p className="text-2xl font-bold">{scores.walletAgeScore}/20</p>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-5 h-5 text-blue-500" />
+              <h3 className="font-semibold">Transactions</h3>
+            </div>
+            <Progress value={(scores.transactionScore / 40) * 100} className="mb-2" />
+            <p className="text-2xl font-bold">{scores.transactionScore}/40</p>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              <h3 className="font-semibold">Staking</h3>
+            </div>
+            <Progress value={(scores.stakingScore / 30) * 100} className="mb-2" />
+            <p className="text-2xl font-bold">{scores.stakingScore}/30</p>
+          </Card>
+
+          <Card className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Award className="w-5 h-5 text-yellow-500" />
+              <h3 className="font-semibold">Mining Bonus</h3>
+            </div>
+            <Progress value={(scores.miningScore / 10) * 100} className="mb-2" />
+            <p className="text-2xl font-bold">{scores.miningScore}/10</p>
+          </Card>
+        </div>
+
+        {!miningData && (
+          <Card className="p-4 mb-6 border-2 border-dashed border-gray-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold mb-1">Upload Year with Pi</h3>
+                <p className="text-sm text-gray-600">Add mining screenshot to unlock bonus points</p>
+              </div>
+              <label>
+                <Button disabled={uploadingImage}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  {uploadingImage ? 'Processing...' : 'Upload'}
+                </Button>
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={uploadingImage} />
+              </label>
+            </div>
+          </Card>
+        )}
+
+        <Card className="p-4 mb-6">
+          <h3 className="font-semibold mb-4">Recent Transactions</h3>
+          <div className="space-y-2">
+            {(isVIP ? walletData.transactions : walletData.transactions.slice(0, 3)).map((tx) => (
+              <div key={tx.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1 text-sm">
+                  {tx.type} - {tx.amount} Pi
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {!isVIP && (
+          <Card className="p-6 bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-yellow-800 mb-2">Unlock Full Analysis</h3>
+                <p className="text-sm text-yellow-700">Get all transactions and advanced insights</p>
+              </div>
+              <Button onClick={handleUpgradeToVIP} className="bg-yellow-500 hover:bg-yellow-600">
+                Upgrade for 1 Pi
+              </Button>
+            </div>
+          </Card>
+        )}
+      </Card>
+    </div>
+  );
+}
