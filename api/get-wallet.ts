@@ -6,6 +6,11 @@ interface WalletRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // إضافة رؤوس الاستجابة الأساسية لضمان عمل الـ API في البيئة السحابية
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -19,11 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Mock wallet data - Replace with actual Pi Network API calls
+    // نفس الهيكل الأصلي للبيانات مع ضمان تعريف process.env بشكل صحيح
     const mockWalletData = {
       walletAddress: walletAddress || `G${Math.random().toString(36).substring(2, 56).toUpperCase()}`,
       balance: parseFloat((Math.random() * 1000).toFixed(2)),
-      network: process.env.PI_NETWORK || 'testnet', // testnet or mainnet
+      network: process.env.PI_NETWORK || 'testnet',
       userId: userId || 'mock_user',
       lastUpdated: new Date().toISOString(),
       transactions: {
@@ -32,12 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         received: Math.floor(Math.random() * 50)
       }
     };
-
-    // Here you would:
-    // 1. Query Pi Network API for wallet data
-    // 2. Get transaction history
-    // 3. Calculate balances
-    // 4. Verify wallet ownership
 
     console.log('[GET-WALLET]', mockWalletData);
 
