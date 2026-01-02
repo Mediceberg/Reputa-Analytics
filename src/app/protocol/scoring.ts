@@ -1,39 +1,39 @@
 /**
  * Scoring Module - Calculate comprehensive reputation score
+ * تم تحسينه ليتناسب مع أوزان البلوكشين الحقيقية لعام 2026
  */
 
 import type { ReputationScores, ScoreBreakdown, WalletData, StakingData, MiningData } from './types';
 import { analyzeAllTransactions } from './transactions';
 
-/**
- * Calculate comprehensive reputation score (0-1000 scale)
- */
 export function calculateReputationScore(
   walletData: WalletData,
   stakingData?: StakingData,
   miningData?: MiningData
 ): ReputationScores {
-  // 1. Wallet Age Score (max 20 points)
+  
+  // 1. حساب عمر المحفظة (الحد الأقصى 20 نقطة)
   const walletAgeScore = calculateWalletAgeScore(walletData.accountAge);
   
-  // 2. Transaction Score (max 40 points)
+  // 2. تحليل المعاملات (الحد الأقصى 40 نقطة)
+  // هنا يتم استدعاء analyzeAllTransactions التي تعالج مصفوفة Transactions الحقيقية
   const txAnalysis = analyzeAllTransactions(walletData.transactions);
   const transactionScore = txAnalysis.totalScore;
   
-  // 3. Staking Score (max 30 points)
+  // 3. نقاط الـ Staking (الحد الأقصى 30 نقطة)
   const stakingScore = stakingData?.score || 0;
   
-  // 4. Mining Bonus (max 10 points - optional)
+  // 4. مكافأة التعدين (الحد الأقصى 10 نقاط)
   const miningScore = miningData?.score || 0;
   
-  // 5. Calculate Penalties
+  // 5. حساب الجزاءات (Penalties)
   const penalties = calculatePenalties(txAnalysis);
   
-  // 6. Total Score
+  // 6. المجموع الكلي مع التحجيم (Scale 0-1000)
   const rawTotal = walletAgeScore + transactionScore + stakingScore + miningScore - penalties;
-  const totalScore = Math.max(0, Math.round(rawTotal * 10)); // Scale to 0-1000
+  // نستخدم Math.max لضمان عدم وجود سكور سالب
+  const totalScore = Math.max(0, Math.min(1000, Math.round(rawTotal * 10)));
   
-  // 7. Create breakdown
   const breakdown = createBreakdown(
     walletData,
     walletAgeScore,
@@ -55,33 +55,24 @@ export function calculateReputationScore(
 }
 
 /**
- * Calculate wallet age score (max 20 points)
+ * تحسين حساب عمر المحفظة ليعطي نتائج أدق بناءً على تاريخ أول معاملة
  */
 function calculateWalletAgeScore(days: number): number {
-  if (days >= 180) return 20;
-  if (days >= 91) return 15;
-  if (days >= 31) return 10;
+  if (days >= 365) return 20; // سنة كاملة
+  if (days >= 180) return 15; // 6 أشهر
+  if (days >= 30) return 10;  // شهر
   return 5;
 }
 
-/**
- * Calculate penalties from suspicious/external transactions
- */
 function calculatePenalties(txAnalysis: any): number {
   let penalties = 0;
-  
-  // External transaction penalty (2 points each, max 20)
-  penalties += Math.min(txAnalysis.externalCount * 2, 20);
-  
-  // Suspicious activity penalty (5 points each, max 30)
-  penalties += Math.min(txAnalysis.suspiciousCount * 5, 30);
-  
+  // خصم على المعاملات الخارجية (التي قد تشير لبيع غير قانوني خارج النظام)
+  penalties += Math.min((txAnalysis.externalCount || 0) * 2, 20);
+  // خصم على النشاط المشبوه
+  penalties += Math.min((txAnalysis.suspiciousCount || 0) * 5, 30);
   return penalties;
 }
 
-/**
- * Create detailed score breakdown
- */
 function createBreakdown(
   walletData: WalletData,
   walletAgeScore: number,
@@ -113,49 +104,39 @@ function createBreakdown(
       duration: stakingData?.duration || 0,
       maxScore: 30,
       earnedScore: stakingData?.score || 0,
-      explanation: stakingData?.explanation || 'No staking activity'
+      explanation: stakingData?.explanation || 'No active staking found on-chain.'
     },
     mining: {
       available: !!miningData,
       totalDays: miningData?.totalDays || 0,
       maxScore: 10,
       earnedScore: miningData?.score || 0,
-      explanation: miningData?.explanation || 'Upload "Year with Pi" to unlock bonus'
+      explanation: miningData?.explanation || 'Upload Pi mining history for extra points.'
     },
     penalties: {
-      externalTransactions: txAnalysis.externalCount * 2,
-      suspiciousActivity: txAnalysis.suspiciousCount * 5,
+      externalTransactions: (txAnalysis.externalCount || 0) * 2,
+      suspiciousActivity: (txAnalysis.suspiciousCount || 0) * 5,
       totalPenalty: penalties,
       explanation: getPenaltyExplanation(txAnalysis, penalties)
     }
   };
 }
 
+// دوال المساعدة للتقارير النصية
 function getAgeExplanation(days: number, score: number): string {
-  if (days >= 180) return `Mature wallet (${days} days): Maximum bonus (${score}/20)`;
-  if (days >= 91) return `Established wallet (${days} days): Good bonus (${score}/20)`;
-  if (days >= 31) return `New wallet (${days} days): Moderate bonus (${score}/20)`;
-  return `Very new wallet (${days} days): Minimal bonus (${score}/20)`;
+  if (days >= 365) return `Legacy Wallet (${days} days)`;
+  if (days >= 30) return `Active Member (${days} days)`;
+  return `New Participant (${days} days)`;
 }
 
 function getTxExplanation(analysis: any): string {
-  const parts = [`${analysis.internalCount} internal (positive)`];
-  if (analysis.externalCount > 0) parts.push(`${analysis.externalCount} external (negative)`);
-  if (analysis.suspiciousCount > 0) parts.push(`${analysis.suspiciousCount} suspicious (penalties)`);
-  return `${parts.join(', ')}. Score: ${analysis.totalScore}/40`;
+  return `Analyzing ${analysis.internalCount} verified Pi transactions.`;
 }
 
 function getPenaltyExplanation(analysis: any, total: number): string {
-  if (total === 0) return 'No penalties - excellent history!';
-  const parts = [];
-  if (analysis.externalCount > 0) parts.push(`${analysis.externalCount} external tx (-${analysis.externalCount * 2})`);
-  if (analysis.suspiciousCount > 0) parts.push(`${analysis.suspiciousCount} suspicious (-${analysis.suspiciousCount * 5})`);
-  return `${parts.join(', ')}. Total: -${total}`;
+  return total === 0 ? 'Pure on-chain history.' : `Reduced by ${total} points due to external activity.`;
 }
 
-/**
- * Determine trust level from total score
- */
 export function determineTrustLevel(totalScore: number): 'Low' | 'Medium' | 'High' | 'Elite' {
   if (totalScore >= 900) return 'Elite';
   if (totalScore >= 700) return 'High';
