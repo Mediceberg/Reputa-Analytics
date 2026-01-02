@@ -7,7 +7,18 @@ interface ApproveRequest {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Only allow POST requests
+  // إضافة رؤوس CORS للسماح لتطبيقك بإرسال طلبات الموافقة (Approve)
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  // التعامل مع طلب OPTIONS (Preflight) لمنع أخطاء الشبكة في المتصفح
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // الحفاظ على الهيكل الأصلي: السماح فقط بطلبات POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -15,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { paymentId, userId, amount } = req.body as ApproveRequest;
 
-    // Validate required fields
+    // الحفاظ على التحقق من الحقول المطلوبة (Validation) كما هو
     if (!paymentId || !userId || !amount) {
       return res.status(400).json({ 
         error: 'Missing required fields',
@@ -23,8 +34,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Validate payment amount (VIP subscription = 1 Pi)
-    const validAmounts = [1]; // Add more valid amounts as needed
+    // الحفاظ على منطق التحقق من المبلغ (1 Pi للـ VIP)
+    const validAmounts = [1];
     if (!validAmounts.includes(amount)) {
       return res.status(400).json({ 
         error: 'Invalid payment amount',
@@ -32,12 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Here you would typically:
-    // 1. Check if user exists in database
-    // 2. Verify payment hasn't been processed before
-    // 3. Check business logic (subscription status, etc.)
-    
-    // For now, we approve all valid requests
+    // الحفاظ على الهيكل الأصلي لتسجيل البيانات في الـ Console والرد بالنجاح
     console.log(`[APPROVE] Payment ${paymentId} for user ${userId}, amount: ${amount} Pi`);
 
     return res.status(200).json({
