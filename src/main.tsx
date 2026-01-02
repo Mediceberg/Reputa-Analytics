@@ -1,15 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './app/App'; // تأكد أن مجلد app يبدأ بحرف صغير كما هو في مشروعك
-
-// استدعاء ملفات التنسيق - تأكد من وجود هذه الملفات في مجلد styles
-// إذا كانت العلامة الحمراء تظهر هنا، فقد يكون السبب هو اسم ملف ناقص
+import App from './app/App';
+// استيراد ملفات التنسيق الأساسية للمشروع
 import './styles/index.css';
 import './styles/fonts.css';
 import './styles/tailwind.css';
 import './styles/theme.css';
 
-// Error boundary for production
+/**
+ * ErrorBoundary: مكون لمعالجة الأخطاء البرمجية المفاجئة في بيئة الإنتاج.
+ * يمنع انهيار التطبيق بالكامل ويظهر واجهة مستخدم بديلة (Fallback UI).
+ */
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean }
@@ -19,10 +20,12 @@ class ErrorBoundary extends React.Component<
     this.state = { hasError: false };
   }
 
+  // تحديث الحالة عند حدوث خطأ لإظهار واجهة الطوارئ
   static getDerivedStateFromError() {
     return { hasError: true };
   }
 
+  // تسجيل تفاصيل الخطأ في وحدة التحكم (Console) للتشخيص
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
   }
@@ -53,14 +56,17 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-// Mount React app
+/**
+ * تهيئة تطبيق React وربطه بالعنصر الأساسي في ملف HTML (index.html).
+ */
 const rootElement = document.getElementById('root');
 
+// التحقق من وجود العنصر الجذري لضمان عدم حدوث خطأ عند محاولة العرض (Rendering)
 if (!rootElement) {
-  throw new Error('Root element not found');
+  throw new Error('Root element not found: Ensure index.html has an element with id="root"');
 }
 
-// استخدام متغير rootElement لضمان عدم وجود تضارب أسماء
+// إنشاء جذر التطبيق وبدء عملية العرض
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
