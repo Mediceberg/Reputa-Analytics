@@ -3,9 +3,10 @@ import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { ReputaDashboard } from './components/ReputaDashboard';
-import { fetchWalletData, initializePi, checkVIPStatus } from './protocol'; // الربط مع البروتوكول
+import { fetchWalletData, initializePi } from './protocol'; 
+import { isVIPUser } from './services/piPayments'; // استيراد التحقق من VIP
+import { getCurrentUser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
-import type { WalletData } from './protocol/types';
 
 export default function App() {
   const [walletData, setWalletData] = useState<any | null>(null);
@@ -15,36 +16,38 @@ export default function App() {
   const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // تهيئة SDK عند بدء التطبيق
+  // 1. تهيئة SDK والتحقق من حالة VIP الحالية للمستخدم
   useEffect(() => {
-    initializePi().catch(console.error);
+    const setup = async () => {
+      await initializePi();
+      const user = await getCurrentUser();
+      if (user) {
+        setHasProAccess(isVIPUser(user.uid));
+      }
+    };
+    setup().catch(console.error);
   }, []);
 
   const handleWalletCheck = async (address: string) => {
     setIsLoading(true);
     try {
-      // جلب البيانات الحقيقية من البلوكشين بدلاً من generateMockWalletData
       const realData = await fetchWalletData(address);
       
-      // التحقق من حالة الاشتراك الحقيقية
-      const isVIP = checkVIPStatus(address);
-      
-      // مطابقة البيانات المجلوبة مع الهيكل الذي تتوقعه الواجهة (Mapping)
+      // مطابقة البيانات مع الهيكل المتوقع
       const mappedData = {
         ...realData,
         reputaScore: (realData as any).scores?.totalScore || 500,
         trustLevel: (realData as any).trustLevel || 'Medium',
         consistencyScore: (realData as any).scores?.miningScore || 70,
         networkTrust: 85,
-        riskLevel: 'Low'
+        riskLevel: (realData as any).riskLevel || 'Low'
       };
 
       setWalletData(mappedData);
       setCurrentWalletAddress(address);
-      setHasProAccess(isVIP);
     } catch (error) {
       console.error("Testnet Connection Error:", error);
-      alert("Error: Could not fetch data from Pi Testnet. Check your connection.");
+      alert("Error: Could not fetch data from Pi Testnet.");
     } finally {
       setIsLoading(false);
     }
@@ -60,9 +63,9 @@ export default function App() {
   };
 
   const handleAccessUpgrade = () => {
-    // سيتم استدعاء هذه الدالة بعد نجاح دفع 1 Pi في المتصفح
     setHasProAccess(true);
     setIsUpgradeModalOpen(false);
+    // تحديث البيانات فور الترقية لإظهار المميزات الجديدة
     if (currentWalletAddress) handleWalletCheck(currentWalletAddress);
   };
 
@@ -83,11 +86,22 @@ export default function App() {
                 <p className="text-xs text-gray-500">v2.5 • Pi Testnet Live</p>
               </div>
             </div>
-            {hasProAccess && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg">
-                <span className="text-sm font-semibold text-white">Pro Member</span>
-              </div>
-            )}
+            
+            <div className="flex items-center gap-4">
+              {hasProAccess && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg">
+                  <span className="text-sm font-semibold text-white">Pro Member</span>
+                </div>
+              )}
+              {walletData && (
+                 <button 
+                  onClick={() => setShowDashboard(true)}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                 >
+                   Open Dashboard
+                 </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -97,7 +111,7 @@ export default function App() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-500 font-medium">Fetching Testnet Data...</p>
+            <p className="text-gray-500 font-medium animate-pulse">Scanning Pi Blockchain...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -128,11 +142,8 @@ export default function App() {
         <ReputaDashboard
           walletAddress={currentWalletAddress}
           onClose={() => setShowDashboard(false)}
-          currentUser={null} 
         />
       )}
     </div>
   );
 }
-
-// ملاحظة: قمنا بحذف دالة generateMockWalletData تماماً للاعتماد على البيانات الحقيقية
