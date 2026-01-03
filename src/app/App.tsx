@@ -4,11 +4,14 @@ import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { ReputaDashboard } from './components/ReputaDashboard';
 import { fetchWalletData, initializePi } from './protocol'; 
-import { isVIPUser } from './services/piPayments'; // استيراد التحقق من VIP
+import { isVIPUser } from './services/piPayments'; 
 import { getCurrentUser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
 
-export default function App() {
+// --- إضافات البروتوكول الجديد ---
+import { TrustProvider, useTrust } from './protocol/TrustProvider'; 
+
+function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [hasProAccess, setHasProAccess] = useState(false);
@@ -16,7 +19,9 @@ export default function App() {
   const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. تهيئة SDK والتحقق من حالة VIP الحالية للمستخدم
+  // جلب وظائف البروتوكول لدمجها مع الواجهة
+  const { updateMiningDays, miningDays, trustScore } = useTrust();
+
   useEffect(() => {
     const setup = async () => {
       await initializePi();
@@ -32,17 +37,15 @@ export default function App() {
     setIsLoading(true);
     try {
       const realData = await fetchWalletData(address);
-      
-      // مطابقة البيانات مع الهيكل المتوقع
       const mappedData = {
         ...realData,
-        reputaScore: (realData as any).scores?.totalScore || 500,
+        // دمج trustScore القادم من البروتوكول مع بيانات المحفظة
+        reputaScore: trustScore > 0 ? trustScore * 10 : (realData as any).scores?.totalScore || 500,
         trustLevel: (realData as any).trustLevel || 'Medium',
-        consistencyScore: (realData as any).scores?.miningScore || 70,
+        consistencyScore: miningDays > 0 ? miningDays : (realData as any).scores?.miningScore || 70,
         networkTrust: 85,
         riskLevel: (realData as any).riskLevel || 'Low'
       };
-
       setWalletData(mappedData);
       setCurrentWalletAddress(address);
     } catch (error) {
@@ -58,20 +61,16 @@ export default function App() {
     setShowDashboard(false);
   };
 
-  const handleUpgradePrompt = () => {
-    setIsUpgradeModalOpen(true);
-  };
+  const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
 
   const handleAccessUpgrade = () => {
     setHasProAccess(true);
     setIsUpgradeModalOpen(false);
-    // تحديث البيانات فور الترقية لإظهار المميزات الجديدة
     if (currentWalletAddress) handleWalletCheck(currentWalletAddress);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50">
-      {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -83,22 +82,33 @@ export default function App() {
                 <h1 className="font-bold text-xl bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
                   Reputa Score
                 </h1>
-                <p className="text-xs text-gray-500">v2.5 • Pi Testnet Live</p>
+                <p className="text-xs text-gray-500">v2.5 • Pi Network Protocol</p>
               </div>
             </div>
             
             <div className="flex items-center gap-4">
+              {/* خانة رفع الصورة لزيادة النقاط (Bonus) */}
+              <div className="hidden md:block text-right mr-4">
+                <label className="text-[10px] font-bold text-purple-600 block cursor-pointer hover:underline">
+                  UPLOAD MINING STATS ↑
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => e.target.files && updateMiningDays(e.target.files[0])}
+                  />
+                </label>
+                {miningDays > 0 && <span className="text-[9px] text-green-600">Seniority Applied!</span>}
+              </div>
+
               {hasProAccess && (
                 <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg">
                   <span className="text-sm font-semibold text-white">Pro Member</span>
                 </div>
               )}
               {walletData && (
-                 <button 
-                  onClick={() => setShowDashboard(true)}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                 >
-                   Open Dashboard
+                 <button onClick={() => setShowDashboard(true)} className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                    Open Dashboard
                  </button>
               )}
             </div>
@@ -106,12 +116,11 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-500 font-medium animate-pulse">Scanning Pi Blockchain...</p>
+            <p className="text-gray-500 font-medium animate-pulse">Syncing Trust Protocol...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
@@ -125,10 +134,9 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t bg-white/50 backdrop-blur-sm mt-16">
         <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
-          © 2026 Reputa Analytics. Connected to Pi Network Testnet.
+          © 2026 Reputa Analytics. Protocol Integrated.
         </div>
       </footer>
 
@@ -145,5 +153,179 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+// التعديل الأساسي: تغليف التطبيق بالـ TrustProvider
+export default function App() {
+  return (
+    <TrustProvider>
+      <ReputaAppContent />
+    </TrustProvider>
+  );
+}import { useState, useEffect } from 'react';
+import { WalletChecker } from './components/WalletChecker';
+import { WalletAnalysis } from './components/WalletAnalysis';
+import { AccessUpgradeModal } from './components/AccessUpgradeModal';
+import { ReputaDashboard } from './components/ReputaDashboard';
+import { fetchWalletData, initializePi } from './protocol'; 
+import { isVIPUser } from './services/piPayments'; 
+import { getCurrentUser } from './services/piSdk';
+import logoImage from '../assets/logo.svg';
+
+// --- إضافات البروتوكول الجديد ---
+import { TrustProvider, useTrust } from './protocol/TrustProvider'; 
+
+function ReputaAppContent() {
+  const [walletData, setWalletData] = useState<any | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [hasProAccess, setHasProAccess] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // جلب وظائف البروتوكول لدمجها مع الواجهة
+  const { updateMiningDays, miningDays, trustScore } = useTrust();
+
+  useEffect(() => {
+    const setup = async () => {
+      await initializePi();
+      const user = await getCurrentUser();
+      if (user) {
+        setHasProAccess(isVIPUser(user.uid));
+      }
+    };
+    setup().catch(console.error);
+  }, []);
+
+  const handleWalletCheck = async (address: string) => {
+    setIsLoading(true);
+    try {
+      const realData = await fetchWalletData(address);
+      const mappedData = {
+        ...realData,
+        // دمج trustScore القادم من البروتوكول مع بيانات المحفظة
+        reputaScore: trustScore > 0 ? trustScore * 10 : (realData as any).scores?.totalScore || 500,
+        trustLevel: (realData as any).trustLevel || 'Medium',
+        consistencyScore: miningDays > 0 ? miningDays : (realData as any).scores?.miningScore || 70,
+        networkTrust: 85,
+        riskLevel: (realData as any).riskLevel || 'Low'
+      };
+      setWalletData(mappedData);
+      setCurrentWalletAddress(address);
+    } catch (error) {
+      console.error("Testnet Connection Error:", error);
+      alert("Error: Could not fetch data from Pi Testnet.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReset = () => {
+    setWalletData(null);
+    setShowDashboard(false);
+  };
+
+  const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
+
+  const handleAccessUpgrade = () => {
+    setHasProAccess(true);
+    setIsUpgradeModalOpen(false);
+    if (currentWalletAddress) handleWalletCheck(currentWalletAddress);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center">
+                <img src={logoImage} alt="Reputa Analytics" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <h1 className="font-bold text-xl bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                  Reputa Score
+                </h1>
+                <p className="text-xs text-gray-500">v2.5 • Pi Network Protocol</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {/* خانة رفع الصورة لزيادة النقاط (Bonus) */}
+              <div className="hidden md:block text-right mr-4">
+                <label className="text-[10px] font-bold text-purple-600 block cursor-pointer hover:underline">
+                  UPLOAD MINING STATS ↑
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => e.target.files && updateMiningDays(e.target.files[0])}
+                  />
+                </label>
+                {miningDays > 0 && <span className="text-[9px] text-green-600">Seniority Applied!</span>}
+              </div>
+
+              {hasProAccess && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg">
+                  <span className="text-sm font-semibold text-white">Pro Member</span>
+                </div>
+              )}
+              {walletData && (
+                 <button onClick={() => setShowDashboard(true)} className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                    Open Dashboard
+                 </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-medium animate-pulse">Syncing Trust Protocol...</p>
+          </div>
+        ) : !walletData ? (
+          <WalletChecker onCheck={handleWalletCheck} />
+        ) : (
+          <WalletAnalysis
+            walletData={walletData}
+            isProUser={hasProAccess}
+            onReset={handleReset}
+            onUpgradePrompt={handleUpgradePrompt}
+          />
+        )}
+      </main>
+
+      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
+          © 2026 Reputa Analytics. Protocol Integrated.
+        </div>
+      </footer>
+
+      <AccessUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onUpgrade={handleAccessUpgrade}
+      />
+
+      {showDashboard && currentWalletAddress && (
+        <ReputaDashboard
+          walletAddress={currentWalletAddress}
+          onClose={() => setShowDashboard(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// التعديل الأساسي: تغليف التطبيق بالـ TrustProvider
+export default function App() {
+  return (
+    <TrustProvider>
+      <ReputaAppContent />
+    </TrustProvider>
   );
 }
