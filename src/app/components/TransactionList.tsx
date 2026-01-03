@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react'; 
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import type { Transaction } from '../App';
