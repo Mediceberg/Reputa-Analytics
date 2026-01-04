@@ -1,4 +1,15 @@
-// ... (الإبقاء على الاستيرادات كما هي دون تغيير)
+import { useState, useEffect } from 'react';
+import { WalletChecker } from './components/WalletChecker';
+import { WalletAnalysis } from './components/WalletAnalysis';
+import { AccessUpgradeModal } from './components/AccessUpgradeModal';
+import { ReputaDashboard } from './components/ReputaDashboard';
+import { fetchWalletData, initializePi } from './protocol'; 
+import { isVIPUser } from './services/piPayments'; 
+import { getCurrentUser } from './services/piSdk';
+import logoImage from '../assets/logo.svg';
+
+// --- إضافات البروتوكول الجديد ---
+import { TrustProvider, useTrust } from './protocol/TrustProvider'; 
 
 function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);
@@ -7,12 +18,10 @@ function ReputaAppContent() {
   const [showDashboard, setShowDashboard] = useState(false);
   const [currentWalletAddress, setCurrentWalletAddress] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  // إضافة حالة لاسم المستخدم
   const [userName, setUserName] = useState<string>('Guest');
 
   const { updateMiningDays, miningDays, trustScore } = useTrust();
 
-  // التحقق من البيئة: هل نحن داخل متصفح باي؟
   const isPiBrowser = typeof (window as any).Pi !== 'undefined';
 
   useEffect(() => {
@@ -22,14 +31,14 @@ function ReputaAppContent() {
           await initializePi();
           const user = await getCurrentUser();
           if (user) {
-            setUserName(user.username); // جلب الاسم الحقيقي
+            setUserName(user.username);
             setHasProAccess(isVIPUser(user.uid));
           }
         } catch (error) {
           console.error("SDK Init Error:", error);
         }
       } else {
-        setUserName("Demo User"); // وضع الديمو للمتصفح العادي
+        setUserName("Demo User");
       }
     };
     setup();
@@ -40,10 +49,8 @@ function ReputaAppContent() {
     try {
       let realData;
       if (isPiBrowser) {
-        // جلب بيانات حقيقية من التست نيت
         realData = await fetchWalletData(address);
       } else {
-        // بيانات تجريبية (Mock Data) لمنع خطأ 'Something went wrong'
         realData = {
           balance: 100,
           scores: { totalScore: 650, miningScore: 75 },
@@ -63,14 +70,24 @@ function ReputaAppContent() {
       setWalletData(mappedData);
       setCurrentWalletAddress(address);
     } catch (error) {
-      console.error("Connection Error:", error);
-      alert("Error: Connection failed. Mode: " + (isPiBrowser ? "Real" : "Demo"));
+      alert("Connection failed. Mode: " + (isPiBrowser ? "Real" : "Demo"));
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ... (الإبقاء على handleReset و handleUpgradePrompt و handleAccessUpgrade كما هي)
+  const handleReset = () => {
+    setWalletData(null);
+    setShowDashboard(false);
+  };
+
+  const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
+
+  const handleAccessUpgrade = () => {
+    setHasProAccess(true);
+    setIsUpgradeModalOpen(false);
+    if (currentWalletAddress) handleWalletCheck(currentWalletAddress);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50">
@@ -90,7 +107,6 @@ function ReputaAppContent() {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* تحسين منطقة الأبلود بصرياً مع تفسير الدور */}
               <div className="hidden md:block text-right mr-4 border-l pl-4 border-purple-100">
                 <label className="group flex flex-col cursor-pointer">
                   <span className="text-[10px] font-black text-purple-600 group-hover:text-blue-600 transition-colors">
@@ -108,12 +124,12 @@ function ReputaAppContent() {
               </div>
 
               {hasProAccess && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-md animate-pulse">
-                  <span className="text-[10px] font-bold text-white uppercase tracking-wider">VIP Pro</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-md">
+                  <span className="text-[10px] font-bold text-white">VIP Pro</span>
                 </div>
               )}
               {walletData && (
-                 <button onClick={() => setShowDashboard(true)} className="text-sm font-bold text-blue-600 hover:scale-105 transition-transform">
+                 <button onClick={() => setShowDashboard(true)} className="text-sm font-bold text-blue-600">
                     Dashboard
                  </button>
               )}
@@ -122,4 +138,50 @@ function ReputaAppContent() {
         </div>
       </header>
 
-      {/* ... (باقي الكود في Main و Footer والـ Modals يبقى كما هو تماماً دون تغيير) */}
+      <main className="container mx-auto px-4 py-8">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-medium">Syncing Protocol...</p>
+          </div>
+        ) : !walletData ? (
+          <WalletChecker onCheck={handleWalletCheck} />
+        ) : (
+          <WalletAnalysis
+            walletData={walletData}
+            isProUser={hasProAccess}
+            onReset={handleReset}
+            onUpgradePrompt={handleUpgradePrompt}
+          />
+        )}
+      </main>
+
+      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
+          © 2026 Reputa Analytics. Protocol Integrated.
+        </div>
+      </footer>
+
+      <AccessUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onUpgrade={handleAccessUpgrade}
+      />
+
+      {showDashboard && currentWalletAddress && (
+        <ReputaDashboard
+          walletAddress={currentWalletAddress}
+          onClose={() => setShowDashboard(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <TrustProvider>
+      <ReputaAppContent />
+    </TrustProvider>
+  );
+}
