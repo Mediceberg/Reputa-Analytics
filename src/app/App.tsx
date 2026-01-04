@@ -5,7 +5,7 @@ import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { createVIPPayment, checkVIPStatus } from './protocol/piPayment';
-import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk'; // تأكد من المسار
+import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
 
 function ReputaAppContent() {
@@ -18,7 +18,7 @@ function ReputaAppContent() {
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
   const piBrowserActive = isPiBrowser();
 
-  // 1. إصلاح الربط: استخدام دالة initializePiSDK التي أنشأتها لضمان التزامن
+  // 1. التزامن مع SDK عند الفتح
   useEffect(() => {
     const init = async () => {
       if (piBrowserActive) {
@@ -64,23 +64,18 @@ function ReputaAppContent() {
     }
   };
 
-  // 2. إصلاح الدفع: ربط مباشر مع createVIPPayment وضمان استجابة السيرفر
   const handleAccessUpgrade = async () => {
     if (!piBrowserActive) {
       alert('Please use Pi Browser');
       return;
     }
-
     try {
       const userId = currentUser?.uid;
       if (!userId) {
-        await authenticateUser(); // إعادة المحاولة إذا فقدنا المستخدم
+        await authenticateUser();
       }
-      
-      // استدعاء وظيفة الدفع التي تستخدم السيرفر (Vercel) للـ Approval
       await createVIPPayment(userId);
       
-      // تحسين: فحص الحالة فوراً بدلاً من الانتظار الطويل
       setTimeout(() => {
         const vip = checkVIPStatus(userId);
         if (vip) {
@@ -88,31 +83,30 @@ function ReputaAppContent() {
           setIsUpgradeModalOpen(false);
         }
       }, 5000);
-
     } catch (error) {
       alert('Payment Expired or Denied.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50 overflow-x-hidden">
+    // إضافة overflow-x-hidden لمنع تمدد الصفحة عرضياً بسبب الأرقام الطويلة
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50 overflow-x-hidden flex flex-col">
       <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-[100] shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
-              <img src={logoImage} alt="logo" className="w-10 h-10 flex-shrink-0" />
+              <img src={logoImage} alt="logo" className="w-9 h-9 flex-shrink-0" />
               <div className="min-w-0">
-                <h1 className="font-bold text-lg text-purple-700 truncate">Reputa Score</h1>
-                <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
+                <h1 className="font-bold text-base text-purple-700 truncate leading-tight">Reputa Score</h1>
+                <p className="text-[9px] text-gray-400 font-bold uppercase truncate">
                   {piBrowserActive ? '● Live' : '○ Demo'} • {currentUser?.username || 'Connecting...'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* 3. إصلاح أيقونة الرفع: جعلها واضحة وقابلة للنقر في الجوال */}
-              <label className="flex flex-col items-center bg-purple-50 px-3 py-1 rounded-lg border border-purple-200 cursor-pointer hover:bg-purple-100 active:scale-95 transition-all">
-                <span className="text-[10px] font-black text-purple-600">BOOST ↑</span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <label className="flex flex-col items-center bg-purple-600 px-3 py-1 rounded-md cursor-pointer hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
+                <span className="text-[9px] font-black text-white">BOOST ↑</span>
                 <input 
                   type="file" 
                   className="hidden" 
@@ -125,23 +119,24 @@ function ReputaAppContent() {
               </label>
 
               {hasProAccess && (
-                <div className="px-3 py-1 bg-yellow-400 text-white text-[10px] font-black rounded-full shadow-sm italic uppercase">VIP</div>
+                <div className="px-2 py-1 bg-yellow-400 text-white text-[8px] font-black rounded-full shadow-sm italic uppercase">VIP</div>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      {/* استخدام break-all و max-w-full لضمان بقاء زر الدفع والنتائج داخل الشاشة */}
+      <main className="container mx-auto px-4 py-6 flex-1 w-full max-w-full break-all">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-blue-600">
-            <div className="w-12 h-12 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-[10px] font-bold tracking-widest uppercase">Fetching Testnet Data...</p>
+            <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-[9px] font-bold tracking-widest uppercase">Syncing Blockchain...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
-          <div className="max-w-full">
+          <div className="w-full overflow-hidden">
             <WalletAnalysis
               walletData={walletData}
               isProUser={hasProAccess}
@@ -152,10 +147,11 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="border-t bg-white/50 py-6 text-center text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+      <footer className="border-t bg-white/50 py-4 text-center text-[9px] text-gray-400 font-bold uppercase tracking-widest">
         © 2026 Reputa Analytics • Protocol v2.0
       </footer>
 
+      {/* المودال الخاص بالترقية - سيظهر الآن بشكل صحيح فوق المحتوى */}
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
