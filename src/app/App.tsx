@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
@@ -186,3 +185,4 @@ export default function App() {
     </TrustProvider>
   );
 }
+
