@@ -3,7 +3,7 @@
  */
 
 import type { MiningData, YearWithPiImage } from './types';
-
+ 
 /**
  * Process "Year with Pi" image and extract mining data
  */
