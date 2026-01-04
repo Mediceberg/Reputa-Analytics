@@ -7,6 +7,8 @@ import { fetchWalletData, initializePi, createVIPPayment } from './protocol';
 import { isVIPUser } from './services/piPayments'; 
 import { getCurrentUser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
+
+// --- إضافات البروتوكول الجديد ---
 import { TrustProvider, useTrust } from './protocol/TrustProvider'; 
 
 function ReputaAppContent() {
@@ -20,151 +22,180 @@ function ReputaAppContent() {
 
   const { updateMiningDays, miningDays, trustScore } = useTrust();
 
-  // فحص وجود مكتبة Pi في المتصفح
   const isPiBrowser = typeof (window as any).Pi !== 'undefined';
 
-  // 1. إصلاح ربط الحساب (SDK Auth)
   useEffect(() => {
-    const authPi = async () => {
+    const setup = async () => {
       if (isPiBrowser) {
         try {
-          // انتظار تهيئة المكتبة أولاً
-          await (window as any).Pi.init({ version: "1.5", sandbox: true }); 
-          
-          // طلب المصادقة من المستخدم
-          const auth = await (window as any).Pi.authenticate(['username', 'payments'], (payment: any) => {
-             console.log("Oncomplete payment callback", payment);
-          });
-
-          if (auth && auth.user) {
-            setUserName(auth.user.username);
-            // جلب حالة الـ VIP بناءً على الـ UID الحقيقي
-            const vipStatus = await isVIPUser(auth.user.uid);
+          // تعديل: التأكد من نجاح التهيئة قبل طلب المستخدم
+          await initializePi();
+          const user = await getCurrentUser();
+          if (user) {
+            setUserName(user.username);
+            // جلب حالة الـ VIP الحقيقية
+            const vipStatus = await isVIPUser(user.uid);
             setHasProAccess(!!vipStatus);
           }
         } catch (error) {
-          console.error("Auth Failed:", error);
-          // تنبيه للمساعدة في التشخيص
-          // alert("SDK Sync Error: " + JSON.stringify(error));
+          console.error("SDK Init Error:", error);
         }
+      } else {
+        setUserName("Demo User");
       }
     };
-    authPi();
+    setup();
   }, [isPiBrowser]);
-
-  // 2. إصلاح زر الدفع (Payment Flow)
-  const handleAccessUpgrade = async () => {
-    if (!isPiBrowser) {
-      setHasProAccess(true); // وضع الديمو
-      setIsUpgradeModalOpen(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      // استدعاء دالة الدفع الحقيقية من البروتوكول
-      const result = await createVIPPayment();
-      
-      if (result) {
-        setHasProAccess(true);
-        setIsUpgradeModalOpen(false);
-        alert("Success! VIP Membership Activated.");
-      }
-    } catch (err) {
-      console.error("Payment Flow Error:", err);
-      alert("Payment failed or was cancelled.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
-      let data;
+      let realData;
       if (isPiBrowser) {
-        data = await fetchWalletData(address);
+        // جلب البيانات من Testnet
+        realData = await fetchWalletData(address);
       } else {
-        data = {
-          balance: 314.15,
-          username: "Demo",
-          scores: { totalScore: 700, miningScore: 80 },
-          trustLevel: 'Verified',
-          transactions: []
+        realData = {
+          balance: 100,
+          scores: { totalScore: 650, miningScore: 75 },
+          trustLevel: 'Medium',
+          riskLevel: 'Low'
         };
       }
-      setWalletData({
-        ...data,
-        reputaScore: trustScore > 0 ? trustScore * 10 : (data as any).scores?.totalScore || 500,
-        consistencyScore: miningDays > 0 ? miningDays : (data as any).scores?.miningScore || 70,
-      });
+
+      const mappedData = {
+        ...realData,
+        reputaScore: trustScore > 0 ? trustScore * 10 : (realData as any).scores?.totalScore || 500,
+        trustLevel: (realData as any).trustLevel || 'Medium',
+        consistencyScore: miningDays > 0 ? miningDays : (realData as any).scores?.miningScore || 70,
+        networkTrust: 85,
+        riskLevel: (realData as any).riskLevel || 'Low'
+      };
+      setWalletData(mappedData);
       setCurrentWalletAddress(address);
-    } catch (e) {
-      alert("Testnet Sync Error");
+    } catch (error) {
+      // إظهار تنبيه واضح للخطأ التقني
+      alert("Blockchain Sync Error: Check your connection or Wallet Address.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-white overflow-x-hidden">
-      <header className="border-b bg-white/95 sticky top-0 z-[100] shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 max-w-[60%]">
-            <img src={logoImage} className="w-8 h-8" alt="logo" />
-            <div className="truncate">
-              <h1 className="font-bold text-sm text-indigo-700">Reputa Score</h1>
-              <p className="text-[10px] text-slate-400 font-bold truncate">
-                {isPiBrowser ? '● LIVE' : '○ DEMO'}: {userName}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-             <label className="bg-indigo-50 px-3 py-1 rounded-md cursor-pointer border border-indigo-100 active:scale-95 transition-transform">
-                <span className="text-[10px] font-black text-indigo-600">BOOST ↑</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*" 
-                  onChange={(e) => e.target.files?.[0] && updateMiningDays(e.target.files[0])} 
-                />
-             </label>
+  const handleReset = () => {
+    setWalletData(null);
+    setShowDashboard(false);
+  };
 
-            {hasProAccess && (
-              <span className="bg-amber-400 text-white text-[9px] px-2 py-1 rounded font-black shadow-sm italic">VIP</span>
-            )}
+  const handleUpgradePrompt = () => setIsUpgradeModalOpen(true);
+
+  // تعديل: تفعيل زر الدفع الحقيقي لشبكة باي
+  const handleAccessUpgrade = async () => {
+    if (isPiBrowser) {
+      try {
+        const payment = await createVIPPayment();
+        if (payment) {
+          setHasProAccess(true);
+          setIsUpgradeModalOpen(false);
+          if (currentWalletAddress) handleWalletCheck(currentWalletAddress);
+        }
+      } catch (err) {
+        alert("Payment was not completed.");
+      }
+    } else {
+      setHasProAccess(true);
+      setIsUpgradeModalOpen(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center">
+                <img src={logoImage} alt="Reputa Analytics" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <h1 className="font-bold text-xl bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                  Reputa Score
+                </h1>
+                <p className="text-[10px] text-gray-400">Welcome, {userName}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="hidden md:block text-right mr-4 border-l pl-4 border-purple-100">
+                <label className="group flex flex-col cursor-pointer">
+                  <span className="text-[10px] font-black text-purple-600 group-hover:text-blue-600 transition-colors">
+                    BOOST SCORE (IMAGE) ↑
+                  </span>
+                  <span className="text-[8px] text-gray-400">Upload mining stats to verify seniority</span>
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        updateMiningDays(e.target.files[0]);
+                      }
+                    }}
+                  />
+                </label>
+                {miningDays > 0 && <span className="text-[9px] text-green-600 font-bold">✓ Seniority Verified!</span>}
+              </div>
+
+              {hasProAccess && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full shadow-md">
+                  <span className="text-[10px] font-bold text-white">VIP Pro</span>
+                </div>
+              )}
+              {walletData && (
+                 <button onClick={() => setShowDashboard(true)} className="text-sm font-bold text-blue-600">
+                    Dashboard
+                 </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="flex flex-col items-center py-20 text-indigo-600">
-            <div className="w-10 h-10 border-4 border-t-transparent border-current rounded-full animate-spin"></div>
-            <p className="mt-4 text-[10px] font-black tracking-widest">CONNECTING PROTOCOL...</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 font-medium tracking-widest">Syncing Protocol...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
-          <WalletAnalysis 
-            walletData={walletData} 
-            isProUser={hasProAccess} 
-            onReset={() => setWalletData(null)} 
-            onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
+          <WalletAnalysis
+            walletData={walletData}
+            isProUser={hasProAccess}
+            onReset={handleReset}
+            onUpgradePrompt={handleUpgradePrompt}
           />
         )}
       </main>
 
-      <AccessUpgradeModal 
-        isOpen={isUpgradeModalOpen} 
-        onClose={() => setIsUpgradeModalOpen(false)} 
-        onUpgrade={handleAccessUpgrade} 
+      <footer className="border-t bg-white/50 backdrop-blur-sm mt-16">
+        <div className="container mx-auto px-4 py-6 text-center text-sm text-gray-500">
+          © 2026 Reputa Analytics. Protocol Integrated.
+        </div>
+      </footer>
+
+      <AccessUpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onUpgrade={handleAccessUpgrade}
       />
 
       {showDashboard && currentWalletAddress && (
-        <ReputaDashboard walletAddress={currentWalletAddress} onClose={() => setShowDashboard(false)} />
+        <ReputaDashboard
+          walletAddress={currentWalletAddress}
+          onClose={() => setShowDashboard(false)}
+        />
       )}
     </div>
   );
