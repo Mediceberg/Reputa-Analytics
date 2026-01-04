@@ -1,14 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-// استيراد الدوال من مجلد api الذي ظهر في صورك
-import { getWalletData } from '../api/get-wallet'; 
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 interface TrustContextType {
   miningDays: number;
   trustScore: number;
   isDemo: boolean;
   walletData: any;
-  updateMiningDays: (image: File) => void;
+  updateMiningDays: (image: File) => Promise<void>;
   toggleDemo: () => void;
+  refreshWallet: (address: string) => Promise<void>;
 }
 
 const TrustContext = createContext<TrustContextType | undefined>(undefined);
@@ -16,29 +15,79 @@ const TrustContext = createContext<TrustContextType | undefined>(undefined);
 export const TrustProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [miningDays, setMiningDays] = useState(0);
   const [trustScore, setTrustScore] = useState(0);
-  const [isDemo, setIsDemo] = useState(true);
-  const [walletData, setWalletData] = useState(null);
+  const [isDemo, setIsDemo] = useState(false);
+  const [walletData, setWalletData] = useState<any>(null);
 
-  // دالة استخراج الأيام من الصورة (OCR Logic)
-  const updateMiningDays = async (image: File) => {
+  // OCR simulation for mining image
+  const updateMiningDays = useCallback(async (image: File) => {
     console.log("Processing Pi Mining Screenshot...");
-    // هنا يتم وضع كود OCR مستقبلاً، حالياً سنضع القيمة 1777 كبونيص أقدمية
-    const extractedDays = 1777; 
+    
+    // Simulate OCR processing
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Extract days (mock - in production use Tesseract.js)
+    const extractedDays = Math.floor(Math.random() * 500) + 1000;
     setMiningDays(extractedDays);
+    
+    // Recalculate score
     calculateScore(extractedDays, walletData);
-  };
+  }, [walletData]);
 
-  // معادلة الثقة التي تشجع على البقاء داخل نظام Pi
-  const calculateScore = (days: number, wallet: any) => {
-    let score = 50; // نقطة البداية
-    if (days > 1000) score += 30; // بونيص الأقدمية
-    // تقليل النقاط إذا كان هناك خروج للمنصات (بيانات من api/get-wallet)
-    if (wallet?.externalFlow > 100) score -= 20; 
-    setTrustScore(score);
-  };
+  // Trust score calculation
+  const calculateScore = useCallback((days: number, wallet: any) => {
+    let score = 500; // Base score
+    
+    // Mining days bonus
+    if (days > 1000) score += 100;
+    else if (days > 500) score += 50;
+    
+    // Wallet balance bonus
+    if (wallet?.balance > 100) score += 50;
+    
+    // Transaction penalty for external flows
+    if (wallet?.externalFlow > 50) score -= 50;
+    
+    setTrustScore(Math.min(1000, Math.max(0, score)));
+  }, []);
+
+  // Refresh wallet data from Testnet
+  const refreshWallet = useCallback(async (address: string) => {
+    try {
+      const response = await fetch(`https://api.testnet.minepi.com/accounts/${address}`);
+      if (response.ok) {
+        const data = await response.json();
+        const balance = data.balances?.find((b: any) => b.asset_type === 'native');
+        
+        const wallet = {
+          address,
+          balance: balance ? parseFloat(balance.balance) : 0,
+          externalFlow: 0
+        };
+        
+        setWalletData(wallet);
+        calculateScore(miningDays, wallet);
+      }
+    } catch (error) {
+      console.error('Wallet refresh failed:', error);
+    }
+  }, [miningDays, calculateScore]);
+
+  const toggleDemo = useCallback(() => {
+    setIsDemo(prev => !prev);
+  }, []);
 
   return (
-    <TrustContext.Provider value={{ miningDays, trustScore, isDemo, walletData, updateMiningDays, toggleDemo: () => setIsDemo(!isDemo) }}>
+    <TrustContext.Provider 
+      value={{ 
+        miningDays, 
+        trustScore, 
+        isDemo, 
+        walletData, 
+        updateMiningDays, 
+        toggleDemo,
+        refreshWallet
+      }}
+    >
       {children}
     </TrustContext.Provider>
   );
