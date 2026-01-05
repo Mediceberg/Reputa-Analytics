@@ -18,30 +18,33 @@ function ReputaAppContent() {
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
   const piBrowserActive = isPiBrowser();
 
-  // 1. الربط الذكي: يتم استدعاؤه عند الحاجة فقط ويخزن البيانات
-  const ensureAuth = useCallback(async () => {
+  // 1. وظيفة الربط الموحدة: تستدعى فقط عند الحاجة لمنع التكرار
+  const syncUser = useCallback(async (forceAuth = false) => {
     if (!piBrowserActive) return null;
+    
     try {
       await initializePiSDK();
-      // إذا كان المستخدم مسجلاً بالفعل، لا نطلب الربط مجدداً
-      if (currentUser) return currentUser;
+      
+      // إذا كان المستخدم موجوداً ولا نطلب "ربط إجباري"، نكتفي بالبيانات الحالية
+      if (currentUser && !forceAuth) return currentUser;
 
       const user = await authenticateUser(['username', 'payments']);
       if (user) {
         setCurrentUser(user);
-        setHasProAccess(checkVIPStatus(user.uid));
+        const vip = checkVIPStatus(user.uid);
+        setHasProAccess(vip);
         return user;
       }
-    } catch (e) {
-      console.error("Auth sync failed", e);
+    } catch (error) {
+      console.error("Auth Error:", error);
     }
     return null;
   }, [piBrowserActive, currentUser]);
 
-  // محاولة الربط الصامت عند فتح التطبيق
+  // تشغيل الربط مرة واحدة فقط عند فتح التطبيق (المرة الأولى)
   useEffect(() => {
-    ensureAuth();
-  }, []);
+    syncUser();
+  }, []); // مصفوفة فارغة لضمان التشغيل مرة واحدة فقط
 
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
@@ -69,7 +72,7 @@ function ReputaAppContent() {
     }
   };
 
-  // 2. تدفق الدفع المترابط (بدون تكرار النوافذ)
+  // 2. معالج الدفع المحسن: يربط العمليات ببعضها دون تكرار النوافذ
   const handleAccessUpgrade = async () => {
     if (!piBrowserActive) {
       alert('Please use Pi Browser');
@@ -77,30 +80,36 @@ function ReputaAppContent() {
     }
 
     try {
-      // التأكد من الهوية أولاً (سيعيد المستخدم الحالي دون نافذة منبثقة إذا كان مسجلاً)
-      const user = await ensureAuth();
-      
+      // استخدام الهوية الموجودة فعلياً لمنع طلب الربط للمرة الثانية أو الثالثة
+      let user = currentUser;
+      if (!user) {
+        user = await syncUser(true);
+      }
+
       if (!user?.uid) {
-        alert("Please authorize the app first.");
+        alert("Authentication failed. Please restart the app.");
         return;
       }
 
-      // بدء الدفع مباشرة
+      // استدعاء الدفع
       await createVIPPayment(user.uid);
       
-      // فحص التفعيل تلقائياً
-      const timer = setInterval(() => {
-        if (checkVIPStatus(user.uid)) {
+      // مراقبة النجاح
+      const checkInterval = setInterval(() => {
+        const vip = checkVIPStatus(user.uid);
+        if (vip) {
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
-          clearInterval(timer);
+          clearInterval(checkInterval);
         }
       }, 3000);
       
-      setTimeout(() => clearInterval(timer), 60000);
+      setTimeout(() => clearInterval(checkInterval), 60000);
 
     } catch (error) {
-      alert('Payment initialization failed. Ensure your Pi wallet is open.');
+      // في حال ظهرت رسالة "المطور لم يوافق"، السبب يكون في مسار /api/approve بالسيرفر
+      console.error("Payment failed:", error);
+      alert('Payment process interrupted. Check your Pi Wallet.');
     }
   };
 
@@ -110,17 +119,17 @@ function ReputaAppContent() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0">
-              <img src={logoImage} alt="logo" className="w-9 h-9" />
+              <img src={logoImage} alt="logo" className="w-9 h-9 flex-shrink-0" />
               <div className="min-w-0">
                 <h1 className="font-bold text-base text-purple-700 truncate">Reputa Score</h1>
                 <p className="text-[9px] text-gray-400 font-bold uppercase truncate">
-                  {piBrowserActive ? '● Online' : '○ Demo'} • {currentUser?.username || 'Connecting...'}
+                  {piBrowserActive ? '● Live' : '○ Demo'} • {currentUser?.username || 'Guest'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="bg-purple-600 px-3 py-1 rounded-md cursor-pointer active:scale-95 transition-all">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <label className="flex flex-col items-center bg-purple-600 px-3 py-1 rounded-md cursor-pointer active:scale-95 transition-all">
                 <span className="text-[9px] font-black text-white">BOOST ↑</span>
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                   const file = e.target.files?.[0];
@@ -137,7 +146,7 @@ function ReputaAppContent() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-purple-600">
             <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-[9px] font-bold uppercase tracking-widest">Blockchain Sync...</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest">Syncing...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
