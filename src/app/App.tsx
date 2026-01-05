@@ -18,25 +18,32 @@ function ReputaAppContent() {
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
   const piBrowserActive = isPiBrowser();
 
-  // 1. التزامن مع SDK عند الفتح
-  useEffect(() => {
-    const init = async () => {
-      if (piBrowserActive) {
-        try {
-          await initializePiSDK();
-          const user = await authenticateUser(['username', 'payments']);
-          if (user) {
-            setCurrentUser(user);
-            const vip = checkVIPStatus(user.uid);
-            setHasProAccess(vip);
-          }
-        } catch (error) {
-          console.error("Auth Flow Failed:", error);
-        }
+  // ✅ تعديل الجزء المطلوب: دالة التزامن الموحدة لمنع التضارب
+  const syncUser = useCallback(async () => {
+    if (!piBrowserActive) return null;
+    
+    try {
+      await initializePiSDK();
+      // طلب المصادقة مرة واحدة فقط بصلاحيات كاملة
+      const user = await authenticateUser(['username', 'payments']);
+      
+      if (user) {
+        setCurrentUser(user);
+        // التحقق من حالة الـ VIP فوراً عند تسجيل الدخول
+        const vip = checkVIPStatus(user.uid);
+        setHasProAccess(vip);
+        return user;
       }
-    };
-    init();
+    } catch (error) {
+      console.error("Auth Synchronization Failed:", error);
+    }
+    return null;
   }, [piBrowserActive]);
+
+  // تشغيل التزامن لمرة واحدة عند الفتح
+  useEffect(() => {
+    syncUser();
+  }, [syncUser]);
 
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
@@ -70,12 +77,18 @@ function ReputaAppContent() {
       return;
     }
     try {
-      const userId = currentUser?.uid;
+      // استخدام المستخدم الحالي أو إعادة المزامنة سريعاً
+      const user = currentUser || await syncUser();
+      const userId = user?.uid;
+      
       if (!userId) {
-        await authenticateUser();
+        alert("Authentication required. Please refresh.");
+        return;
       }
+
       await createVIPPayment(userId);
       
+      // فحص الحالة بعد وقت قصير من محاولة الدفع
       setTimeout(() => {
         const vip = checkVIPStatus(userId);
         if (vip) {
@@ -84,29 +97,12 @@ function ReputaAppContent() {
         }
       }, 5000);
     } catch (error) {
-      alert('Payment Expired or Denied.');
+      console.error("Payment Error:", error);
+      alert('Payment initialization failed. Please try again.');
     }
-    // ✅ معالج VIP محسّن
-const handleAccessUpgrade = async () => {
-  // منع الضغط المتكرر
-  // رسائل خطأ واضحة
-  // معالجة Payment Expired
-}
-
-// ✅ معالج إرسال Pi
-const handleSendPi = async (address: string, amount: number) => {
-  // إرسال Pi من المحفظة
-  // تأكيد نجاح العملية
-}
-
-// ✅ استماع لحدث تفعيل VIP
-useEffect(() => {
-  window.addEventListener('vip-activated', handleVIPActivation);
-}, []);
   };
 
   return (
-    // إضافة overflow-x-hidden لمنع تمدد الصفحة عرضياً بسبب الأرقام الطويلة
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-yellow-50 overflow-x-hidden flex flex-col">
       <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-[100] shadow-sm">
         <div className="container mx-auto px-4 py-3">
@@ -123,7 +119,7 @@ useEffect(() => {
 
             <div className="flex items-center gap-2 flex-shrink-0">
               <label className="flex flex-col items-center bg-purple-600 px-3 py-1 rounded-md cursor-pointer hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
-                <span className="text-[9px] font-black text-white">BOOST ↑</span>
+                <span className="text-[9px] font-black text-white uppercase">Boost ↑</span>
                 <input 
                   type="file" 
                   className="hidden" 
@@ -143,10 +139,9 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* استخدام break-all و max-w-full لضمان بقاء زر الدفع والنتائج داخل الشاشة */}
       <main className="container mx-auto px-4 py-6 flex-1 w-full max-w-full break-all">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-blue-600">
+          <div className="flex flex-col items-center justify-center py-20 text-purple-600">
             <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-[9px] font-bold tracking-widest uppercase">Syncing Blockchain...</p>
           </div>
@@ -168,7 +163,6 @@ useEffect(() => {
         © 2026 Reputa Analytics • Protocol v2.0
       </footer>
 
-      {/* المودال الخاص بالترقية - سيظهر الآن بشكل صحيح فوق المحتوى */}
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
