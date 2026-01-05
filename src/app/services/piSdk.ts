@@ -34,7 +34,7 @@ export async function initializePiSDK(): Promise<void> {
     // تفعيل sandbox بناءً على متغيرات البيئة أو افتراضياً لشبكة الاختبار
     await Pi.init({
       version: '2.0',
-      sandbox: true // نضعها true دائماً لضمان العمل على Testnet حالياً
+      sandbox: false // نضعها true دائماً لضمان العمل على Testnet حالياً
     });
     console.log('[PI SDK] Initialized successfully on Testnet');
   } catch (error) {
