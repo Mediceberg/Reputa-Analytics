@@ -18,14 +18,17 @@ function ReputaAppContent() {
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
   const piBrowserActive = isPiBrowser();
 
-  // ✅ دالة التزامن الموحدة لمنع التضارب
-  const syncUser = useCallback(async () => {
+  // 1. وظيفة الربط الموحدة: تستدعى فقط عند الحاجة لمنع التكرار
+  const syncUser = useCallback(async (forceAuth = false) => {
     if (!piBrowserActive) return null;
     
     try {
       await initializePiSDK();
-      const user = await authenticateUser(['username', 'payments']);
       
+      // إذا كان المستخدم موجوداً ولا نطلب "ربط إجباري"، نكتفي بالبيانات الحالية
+      if (currentUser && !forceAuth) return currentUser;
+
+      const user = await authenticateUser(['username', 'payments']);
       if (user) {
         setCurrentUser(user);
         const vip = checkVIPStatus(user.uid);
@@ -33,15 +36,15 @@ function ReputaAppContent() {
         return user;
       }
     } catch (error) {
-      console.error("Auth Synchronization Failed:", error);
+      console.error("Auth Error:", error);
     }
     return null;
-  }, [piBrowserActive]);
+  }, [piBrowserActive, currentUser]);
 
-  // تشغيل التزامن لمرة واحدة عند الفتح
+  // تشغيل الربط مرة واحدة فقط عند فتح التطبيق (المرة الأولى)
   useEffect(() => {
     syncUser();
-  }, [syncUser]);
+  }, []); // مصفوفة فارغة لضمان التشغيل مرة واحدة فقط
 
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
@@ -63,13 +66,13 @@ function ReputaAppContent() {
         trustLevel: enhancedScore >= 800 ? 'Elite' : enhancedScore >= 600 ? 'High' : 'Medium'
       });
     } catch (error) {
-      alert('Blockchain Sync Error. Please retry.');
+      alert('Blockchain Sync Error.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ✅ الجزء المعدل: معالج VIP محسن يمنع فشل التهيئة
+  // 2. معالج الدفع المحسن: يربط العمليات ببعضها دون تكرار النوافذ
   const handleAccessUpgrade = async () => {
     if (!piBrowserActive) {
       alert('Please use Pi Browser');
@@ -77,34 +80,36 @@ function ReputaAppContent() {
     }
 
     try {
-      // تجديد المصادقة فوراً قبل طلب الدفع لضمان وجود توكن نشط
-      const user = await syncUser(); 
-      const userId = user?.uid;
-      
-      if (!userId) {
-        alert("Authentication required. Please refresh the page.");
+      // استخدام الهوية الموجودة فعلياً لمنع طلب الربط للمرة الثانية أو الثالثة
+      let user = currentUser;
+      if (!user) {
+        user = await syncUser(true);
+      }
+
+      if (!user?.uid) {
+        alert("Authentication failed. Please restart the app.");
         return;
       }
 
-      // بدء عملية الدفع
-      await createVIPPayment(userId);
+      // استدعاء الدفع
+      await createVIPPayment(user.uid);
       
-      // مراقبة حالة التفعيل لمدة دقيقتين
+      // مراقبة النجاح
       const checkInterval = setInterval(() => {
-        const vip = checkVIPStatus(userId);
+        const vip = checkVIPStatus(user.uid);
         if (vip) {
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
           clearInterval(checkInterval);
         }
       }, 3000);
-
-      // تنظيف المؤقت تلقائياً
-      setTimeout(() => clearInterval(checkInterval), 120000);
+      
+      setTimeout(() => clearInterval(checkInterval), 60000);
 
     } catch (error) {
-      console.error("Payment Flow Error:", error);
-      alert('Payment initialization failed. Please ensure your wallet is ready and try again.');
+      // في حال ظهرت رسالة "المطور لم يوافق"، السبب يكون في مسار /api/approve بالسيرفر
+      console.error("Payment failed:", error);
+      alert('Payment process interrupted. Check your Pi Wallet.');
     }
   };
 
@@ -116,52 +121,42 @@ function ReputaAppContent() {
             <div className="flex items-center gap-3 min-w-0">
               <img src={logoImage} alt="logo" className="w-9 h-9 flex-shrink-0" />
               <div className="min-w-0">
-                <h1 className="font-bold text-base text-purple-700 truncate leading-tight">Reputa Score</h1>
+                <h1 className="font-bold text-base text-purple-700 truncate">Reputa Score</h1>
                 <p className="text-[9px] text-gray-400 font-bold uppercase truncate">
-                  {piBrowserActive ? '● Live' : '○ Demo'} • {currentUser?.username || 'Connecting...'}
+                  {piBrowserActive ? '● Live' : '○ Demo'} • {currentUser?.username || 'Guest'}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              <label className="flex flex-col items-center bg-purple-600 px-3 py-1 rounded-md cursor-pointer hover:bg-purple-700 active:scale-95 transition-all shadow-sm">
-                <span className="text-[9px] font-black text-white uppercase">Boost ↑</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) updateMiningDays(file);
-                  }}
-                />
+              <label className="flex flex-col items-center bg-purple-600 px-3 py-1 rounded-md cursor-pointer active:scale-95 transition-all">
+                <span className="text-[9px] font-black text-white">BOOST ↑</span>
+                <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) updateMiningDays(file);
+                }} />
               </label>
-
-              {hasProAccess && (
-                <div className="px-2 py-1 bg-yellow-400 text-white text-[8px] font-black rounded-full shadow-sm italic uppercase">VIP</div>
-              )}
+              {hasProAccess && <div className="px-2 py-1 bg-yellow-400 text-white text-[8px] font-black rounded-full italic">VIP</div>}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 flex-1 w-full max-w-full break-all">
+      <main className="container mx-auto px-4 py-6 flex-1 w-full max-w-full">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-purple-600">
             <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-[9px] font-bold tracking-widest uppercase">Syncing Blockchain...</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest">Syncing...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
-          <div className="w-full overflow-hidden">
-            <WalletAnalysis
-              walletData={walletData}
-              isProUser={hasProAccess}
-              onReset={() => setWalletData(null)}
-              onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
-            />
-          </div>
+          <WalletAnalysis
+            walletData={walletData}
+            isProUser={hasProAccess}
+            onReset={() => setWalletData(null)}
+            onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
+          />
         )}
       </main>
 
