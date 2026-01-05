@@ -18,14 +18,19 @@ function ReputaAppContent() {
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
   const piBrowserActive = isPiBrowser();
 
-  // 1. وظيفة الربط الموحدة: تستدعى فقط عند الحاجة لمنع التكرار
+  // ✅ تعديل: وظيفة الربط الموحدة تدعم وضع الـ Demo الآن
   const syncUser = useCallback(async (forceAuth = false) => {
-    if (!piBrowserActive) return null;
+    // إذا لم نكن في متصفح باي (وضع Demo)
+    if (!piBrowserActive) {
+      const demoUser = { uid: 'demo-user-123', username: 'Demo User' };
+      setCurrentUser(demoUser);
+      setHasProAccess(true); // تفعيل VIP تلقائياً في وضع الديمو
+      return demoUser;
+    }
     
     try {
       await initializePiSDK();
       
-      // إذا كان المستخدم موجوداً ولا نطلب "ربط إجباري"، نكتفي بالبيانات الحالية
       if (currentUser && !forceAuth) return currentUser;
 
       const user = await authenticateUser(['username', 'payments']);
@@ -41,10 +46,9 @@ function ReputaAppContent() {
     return null;
   }, [piBrowserActive, currentUser]);
 
-  // تشغيل الربط مرة واحدة فقط عند فتح التطبيق (المرة الأولى)
   useEffect(() => {
     syncUser();
-  }, []); // مصفوفة فارغة لضمان التشغيل مرة واحدة فقط
+  }, []); 
 
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
@@ -72,15 +76,16 @@ function ReputaAppContent() {
     }
   };
 
-  // 2. معالج الدفع المحسن: يربط العمليات ببعضها دون تكرار النوافذ
+  // ✅ تعديل: معالج الدفع يتخطى القيود في وضع الـ Demo
   const handleAccessUpgrade = async () => {
     if (!piBrowserActive) {
-      alert('Please use Pi Browser');
+      setHasProAccess(true);
+      setIsUpgradeModalOpen(false);
+      alert('Demo Mode: VIP Access Unlocked!');
       return;
     }
 
     try {
-      // استخدام الهوية الموجودة فعلياً لمنع طلب الربط للمرة الثانية أو الثالثة
       let user = currentUser;
       if (!user) {
         user = await syncUser(true);
@@ -91,10 +96,8 @@ function ReputaAppContent() {
         return;
       }
 
-      // استدعاء الدفع
       await createVIPPayment(user.uid);
       
-      // مراقبة النجاح
       const checkInterval = setInterval(() => {
         const vip = checkVIPStatus(user.uid);
         if (vip) {
@@ -107,7 +110,6 @@ function ReputaAppContent() {
       setTimeout(() => clearInterval(checkInterval), 60000);
 
     } catch (error) {
-      // في حال ظهرت رسالة "المطور لم يوافق"، السبب يكون في مسار /api/approve بالسيرفر
       console.error("Payment failed:", error);
       alert('Payment process interrupted. Check your Pi Wallet.');
     }
@@ -123,7 +125,7 @@ function ReputaAppContent() {
               <div className="min-w-0">
                 <h1 className="font-bold text-base text-purple-700 truncate">Reputa Score</h1>
                 <p className="text-[9px] text-gray-400 font-bold uppercase truncate">
-                  {piBrowserActive ? '● Live' : '○ Demo'} • {currentUser?.username || 'Guest'}
+                  {piBrowserActive ? '● Live' : '○ Demo Mode'} • {currentUser?.username || 'Guest'}
                 </p>
               </div>
             </div>
@@ -136,7 +138,12 @@ function ReputaAppContent() {
                   if (file) updateMiningDays(file);
                 }} />
               </label>
-              {hasProAccess && <div className="px-2 py-1 bg-yellow-400 text-white text-[8px] font-black rounded-full italic">VIP</div>}
+              {/* أيقونة VIP تظهر الآن في وضع الـ Demo أو الدفع الفعلي */}
+              {hasProAccess && (
+                <div className="px-2 py-1 bg-yellow-400 text-white text-[8px] font-black rounded-full shadow-sm italic animate-pulse">
+                  VIP
+                </div>
+              )}
             </div>
           </div>
         </div>
