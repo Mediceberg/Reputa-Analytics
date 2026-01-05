@@ -85,7 +85,7 @@ function ReputaAppContent() {
           <div className="flex items-center gap-2">
             <img src={logoImage} alt="logo" className="w-8 h-8" />
             <div>
-              <h1 className="font-bold text-purple-700">Reputa VIP</h1>
+              <h1 className="font-bold text-purple-700">Reputa Score</h1>
               <p className="text-[10px] text-gray-500 uppercase">
                 {piBrowserActive ? '● Live Network' : 'PRO DEMO MODE'}
               </p>
