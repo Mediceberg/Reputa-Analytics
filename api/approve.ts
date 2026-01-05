@@ -1,17 +1,39 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import axios from 'axios'; // يفضل استخدام axios لاستقرار الطلبات
+import axios from 'axios';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // ... (إبقاء إعدادات CORS كما هي)
+  // 1. إعدادات CORS (ضرورية جداً لمتصفح Pi)
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  // 2. التحقق من طريقة الطلب
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   try {
-    const { paymentId, userId, amount } = req.body;
-    const PI_API_KEY = process.env.PI_API_KEY; // تأكد من تسميته هكذا في Vercel
+    const { paymentId } = req.body;
+    const PI_API_KEY = process.env.PI_API_KEY;
 
-    // 1. الاتصال بخادم Pi Network لإبلاغهم بموافقتك الرسمية
+    if (!paymentId) {
+      return res.status(400).json({ error: 'Missing paymentId' });
+    }
+
+    // 3. الاتصال بخادم Pi Network (تأكد من الرابط الصحيح v2)
+    // ملاحظة: الرابط الرسمي هو api.mine.pi وليس api.minepi.com (تعديل مهم)
     const piResponse = await axios.post(
-      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
-      {}, // لا يحتاج body
+      `https://api.mine.pi/v2/payments/${paymentId}/approve`,
+      {}, 
       {
         headers: {
           'Authorization': `Key ${PI_API_KEY}`,
@@ -20,16 +42,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     );
 
-    if (piResponse.status !== 200) {
-      throw new Error('Pi Network rejected the approval');
-    }
-
-    console.log(`[APPROVE SUCCESS] Payment ${paymentId} officially approved by Pi Server`);
-
+    // 4. الرد بنجاح (متصفح باي يتوقع استلام كائن الدفع كاملاً أو المعرف)
+    console.log(`[APPROVE SUCCESS] Payment ${paymentId} approved`);
+    
     return res.status(200).json({
       approved: true,
-      paymentId: piResponse.data.identifier, // نستخدم المعرف العائد من باي
-      message: 'Payment approved successfully'
+      // Pi SDK يتوقع إرجاع بيانات العملية الأصلية أو المعرف
+      ...piResponse.data 
     });
 
   } catch (error: any) {
