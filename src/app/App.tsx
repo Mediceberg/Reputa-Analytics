@@ -13,16 +13,17 @@ function ReputaAppContent() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // ✅ إصلاح: تهيئة الحالة بشكل مباشر لضمان الظهور الفوري
+  // ✅ تحديد البيئة فوراً عند التحميل
   const piBrowserActive = isPiBrowser();
-  const [currentUser, setCurrentUser] = useState<any>(!piBrowserActive ? { username: "Demo_User", uid: "demo123" } : null);
+  
+  // ✅ في وضع Demo، نفترض وجود مستخدم وهمي وصلاحيات VIP كاملة منذ البداية
+  const [currentUser, setCurrentUser] = useState<any>(!piBrowserActive ? { username: "Explorer_User", uid: "demo-uid" } : null);
   const [hasProAccess, setHasProAccess] = useState(!piBrowserActive);
 
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
 
   useEffect(() => {
     let isMounted = true;
-
     const initApp = async () => {
       if (piBrowserActive) {
         try {
@@ -30,16 +31,13 @@ function ReputaAppContent() {
           const user = await authenticateUser(['username', 'payments']);
           if (user && isMounted) {
             setCurrentUser(user);
-            // التحقق من حالة الـ VIP الحقيقية
-            const vipStatus = checkVIPStatus(user.uid);
-            setHasProAccess(vipStatus);
+            setHasProAccess(checkVIPStatus(user.uid));
           }
         } catch (e) {
           console.error("Auth error:", e);
         }
       }
     };
-
     initApp();
     return () => { isMounted = false; };
   }, [piBrowserActive]);
@@ -51,16 +49,16 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
       
-      // في وضع الديمو أو اللايف، نضمن نتيجة VIP
-      const score = 885; 
+      // ✅ تخصيص بيانات "فخمة" لوضع الـ Demo لإظهار جمالية التقارير
+      const score = !piBrowserActive ? 942 : 720; 
 
       setWalletData({
         ...data,
         reputaScore: score,
         trustScore: score / 10,
-        consistencyScore: 98,
-        networkTrust: 92,
-        trustLevel: 'Elite'
+        consistencyScore: !piBrowserActive ? 99 : 75,
+        networkTrust: !piBrowserActive ? 95 : 60,
+        trustLevel: score >= 800 ? 'Elite' : 'High'
       });
     } catch (error) {
       alert('Sync Error');
@@ -70,21 +68,21 @@ function ReputaAppContent() {
   };
 
   const handleAccessUpgrade = async () => {
-    if (!piBrowserActive) {
-      setHasProAccess(true);
+    // في وضع اللايف، يتم تفعيل الدفع
+    if (piBrowserActive && currentUser?.uid) {
+      try {
+        await createVIPPayment(currentUser.uid);
+      } catch (e) {
+        alert("Payment process failed.");
+      }
+    } else {
+      // في وضع الديمو، نغلق النافذة فقط لأن الصلاحية موجودة مسبقاً
       setIsUpgradeModalOpen(false);
-      return;
-    }
-    try {
-      if (currentUser?.uid) await createVIPPayment(currentUser.uid);
-    } catch (e) {
-      alert("Payment Error");
     }
   };
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden flex flex-col">
-      {/* الـ Header مع ضمان ظهور الاسم والـ VIP */}
       <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-[100] shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -92,19 +90,20 @@ function ReputaAppContent() {
             <div className="min-w-0">
               <h1 className="font-bold text-base text-purple-700 truncate leading-tight">Reputa Score</h1>
               <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
-                {piBrowserActive ? '● Live Network' : '○ PRO DEMO MODE'} • {currentUser?.username || 'Connecting...'}
+                {!piBrowserActive ? '○ VIP DEMO ACTIVE' : '● PI NETWORK LIVE'} • {currentUser?.username || 'Syncing...'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* ✅ أيقونة VIP تظهر الآن فوراً في وضع الديمو */}
             {hasProAccess && (
-              <div className="px-2 py-1 bg-yellow-400 text-black text-[9px] font-black rounded-full italic animate-bounce shadow-sm">
-                VIP ACTIVE
+              <div className="px-3 py-1 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white text-[9px] font-black rounded-full italic shadow-lg animate-pulse">
+                VIP UNLOCKED
               </div>
             )}
-            <label className="bg-purple-600 px-3 py-1 rounded-md cursor-pointer active:scale-95 transition-all">
-              <span className="text-[9px] font-black text-white uppercase">Boost ↑</span>
+            <label className="bg-purple-600 px-3 py-1 rounded-md cursor-pointer active:scale-95 transition-all shadow-md">
+              <span className="text-[9px] font-black text-white uppercase tracking-tighter">Boost ↑</span>
               <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) updateMiningDays(file);
@@ -117,13 +116,14 @@ function ReputaAppContent() {
       <main className="container mx-auto px-4 py-6 flex-1">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-purple-600">
-            <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-[10px] font-bold uppercase tracking-widest">Analyzing VIP Data...</p>
+            <div className="w-12 h-12 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-[10px] font-bold uppercase tracking-widest italic">Generating VIP Analytics...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
           <div className="w-full">
+            {/* ✅ تمرير hasProAccess التي تكون true دائماً في الديمو لفتح التقرير فوراً */}
             <WalletAnalysis
               walletData={walletData}
               isProUser={hasProAccess} 
@@ -134,15 +134,18 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="border-t bg-white py-4 text-center text-[9px] text-gray-300 font-bold uppercase tracking-[0.2em]">
-        © 2026 Reputa Analytics • All Features Unlocked
+      <footer className="border-t bg-gray-50 py-4 text-center text-[9px] text-gray-400 font-bold uppercase tracking-[0.3em]">
+        Reputa Analytics • VIP Preview Mode
       </footer>
 
-      <AccessUpgradeModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={handleAccessUpgrade}
-      />
+      {/* المودال سيظهر فقط إذا لم يكن المستخدم VIP (وهذا لن يحدث في الديمو) */}
+      {!hasProAccess && (
+        <AccessUpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          onUpgrade={handleAccessUpgrade}
+        />
+      )}
     </div>
   );
 }
