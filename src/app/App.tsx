@@ -12,33 +12,36 @@ function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   
-  // ✅ التغيير الجذري: تحديد حالة الـ VIP بناءً على المتصفح مباشرة
+  // ✅ إصلاح: تهيئة الحالة بشكل مباشر لضمان الظهور الفوري
   const piBrowserActive = isPiBrowser();
-  const [hasProAccess, setHasProAccess] = useState(!piBrowserActive); // true فوراً إذا لم يكن متصفح باي
+  const [currentUser, setCurrentUser] = useState<any>(!piBrowserActive ? { username: "Demo_User", uid: "demo123" } : null);
+  const [hasProAccess, setHasProAccess] = useState(!piBrowserActive);
 
   const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
 
-  // تحديث البيانات عند فتح التطبيق
   useEffect(() => {
+    let isMounted = true;
+
     const initApp = async () => {
       if (piBrowserActive) {
         try {
           await initializePiSDK();
           const user = await authenticateUser(['username', 'payments']);
-          if (user) {
+          if (user && isMounted) {
             setCurrentUser(user);
-            setHasProAccess(checkVIPStatus(user.uid));
+            // التحقق من حالة الـ VIP الحقيقية
+            const vipStatus = checkVIPStatus(user.uid);
+            setHasProAccess(vipStatus);
           }
-        } catch (e) { console.error(e); }
-      } else {
-        // وضع الديمو الإجباري
-        setCurrentUser({ username: "Demo_User", uid: "demo123" });
-        setHasProAccess(true);
+        } catch (e) {
+          console.error("Auth error:", e);
+        }
       }
     };
+
     initApp();
+    return () => { isMounted = false; };
   }, [piBrowserActive]);
 
   const handleWalletCheck = async (address: string) => {
@@ -48,15 +51,15 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
       
-      // حساب سكورد تجريبي مرتفع للديمو
-      const score = 850; 
+      // في وضع الديمو أو اللايف، نضمن نتيجة VIP
+      const score = 885; 
 
       setWalletData({
         ...data,
         reputaScore: score,
         trustScore: score / 10,
-        consistencyScore: 95,
-        networkTrust: 88,
+        consistencyScore: 98,
+        networkTrust: 92,
         trustLevel: 'Elite'
       });
     } catch (error) {
@@ -72,53 +75,67 @@ function ReputaAppContent() {
       setIsUpgradeModalOpen(false);
       return;
     }
-    // منطق الدفع الحقيقي في متصفح باي
     try {
       if (currentUser?.uid) await createVIPPayment(currentUser.uid);
-    } catch (e) { alert("Payment Error"); }
+    } catch (e) {
+      alert("Payment Error");
+    }
   };
 
   return (
     <div className="min-h-screen bg-white overflow-x-hidden flex flex-col">
-      <header className="border-b p-4 bg-white sticky top-0 z-50">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <img src={logoImage} alt="logo" className="w-8 h-8" />
-            <div>
-              <h1 className="font-bold text-purple-700">Reputa Score</h1>
-              <p className="text-[10px] text-gray-500 uppercase">
-                {piBrowserActive ? '● Live Network' : 'PRO DEMO MODE'}
+      {/* الـ Header مع ضمان ظهور الاسم والـ VIP */}
+      <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-[100] shadow-sm">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logoImage} alt="logo" className="w-9 h-9" />
+            <div className="min-w-0">
+              <h1 className="font-bold text-base text-purple-700 truncate leading-tight">Reputa Score</h1>
+              <p className="text-[10px] text-gray-400 font-bold uppercase truncate">
+                {piBrowserActive ? '● Live Network' : '○ PRO DEMO MODE'} • {currentUser?.username || 'Connecting...'}
               </p>
             </div>
           </div>
-          
-          <div className="flex gap-2">
+
+          <div className="flex items-center gap-2">
             {hasProAccess && (
-              <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-1 rounded animate-bounce">
-                VIP UNLOCKED
-              </span>
+              <div className="px-2 py-1 bg-yellow-400 text-black text-[9px] font-black rounded-full italic animate-bounce shadow-sm">
+                VIP ACTIVE
+              </div>
             )}
+            <label className="bg-purple-600 px-3 py-1 rounded-md cursor-pointer active:scale-95 transition-all">
+              <span className="text-[9px] font-black text-white uppercase">Boost ↑</span>
+              <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) updateMiningDays(file);
+              }} />
+            </label>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 flex-1">
+      <main className="container mx-auto px-4 py-6 flex-1">
         {isLoading ? (
-          <div className="text-center py-20">Loading VIP Analysis...</div>
+          <div className="flex flex-col items-center justify-center py-20 text-purple-600">
+            <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-[10px] font-bold uppercase tracking-widest">Analyzing VIP Data...</p>
+          </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
-          <WalletAnalysis
-            walletData={walletData}
-            isProUser={true} // فرضه كـ VIP دائماً في هذا الكود للتجربة
-            onReset={() => setWalletData(null)}
-            onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
-          />
+          <div className="w-full">
+            <WalletAnalysis
+              walletData={walletData}
+              isProUser={hasProAccess} 
+              onReset={() => setWalletData(null)}
+              onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
+            />
+          </div>
         )}
       </main>
 
-      <footer className="p-4 text-center text-[10px] text-gray-400 border-t">
-        DEMO MODE v2.1 - ALL FEATURES UNLOCKED
+      <footer className="border-t bg-white py-4 text-center text-[9px] text-gray-300 font-bold uppercase tracking-[0.2em]">
+        © 2026 Reputa Analytics • All Features Unlocked
       </footer>
 
       <AccessUpgradeModal
@@ -137,3 +154,4 @@ export default function App() {
     </TrustProvider>
   );
 }
+
