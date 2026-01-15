@@ -5,7 +5,7 @@ import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
-import { createVIPPayment, checkVIPStatus } from './protocol/piPayment';
+import { checkVIPStatus, createVIPPayment } from './protocol/piPayment';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
 
@@ -15,11 +15,11 @@ function ReputaAppContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasProAccess, setHasProAccess] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false); // ✅ حالة جديدة للتحكم في الديمو
 
   const piBrowserActive = isPiBrowser();
   const { refreshWallet } = useTrust();
 
+  // ✅ 1. تسجيل الدخول لمرة واحدة فقط عند بداية تشغيل التطبيق
   useEffect(() => {
     const initApp = async () => {
       if (piBrowserActive) {
@@ -31,16 +31,11 @@ function ReputaAppContent() {
             const isVIP = await checkVIPStatus(user.uid);
             setHasProAccess(isVIP);
           }
-        } catch (e) { 
-          console.error(e);
-          // إذا فشل الاتصال بـ Pi، نفعل الديمو تلقائياً لضمان عمل التطبيق
-          setIsDemoMode(true);
-        }
+        } catch (e) { console.error("Pi Auth Failed", e); }
       } else {
-        // خارج متصفح باي: ديمو إجباري
-        setCurrentUser({ username: "Guest_Visitor", uid: "guest_id" });
-        setIsDemoMode(true);
-        setHasProAccess(true);
+        // وضع الديمو للمتصفح العادي
+        setCurrentUser({ username: "Demo_User", uid: "demo_123" });
+        setHasProAccess(true); 
       }
     };
     initApp();
@@ -52,33 +47,18 @@ function ReputaAppContent() {
     try {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
-      setWalletData({
-        ...data,
-        reputaScore: 850,
-        trustLevel: 'Elite'
-      });
+      setWalletData({ ...data, reputaScore: 850, trustLevel: 'Elite' });
     } catch (error) {
-      alert('Wallet Sync Error');
-    } finally {
-      setIsLoading(false);
-    }
+      alert('Sync Error');
+    } finally { setIsLoading(false); }
   };
 
   const handleAccessUpgrade = async () => {
-    if (isDemoMode && !piBrowserActive) {
-      setHasProAccess(true);
-      setIsUpgradeModalOpen(false);
-      return;
-    }
-    
+    if (!piBrowserActive) { setHasProAccess(true); setIsUpgradeModalOpen(false); return; }
     try {
       if (currentUser?.uid) {
         const success = await createVIPPayment(currentUser.uid);
-        if (success) {
-          setHasProAccess(true);
-          setIsDemoMode(false); // إيقاف وضع الديمو لأنه أصبح VIP حقيقي
-          setIsUpgradeModalOpen(false);
-        }
+        if (success) { setHasProAccess(true); setIsUpgradeModalOpen(false); }
       }
     } catch (e) { alert("Payment Error"); }
   };
@@ -91,53 +71,42 @@ function ReputaAppContent() {
             <img src={logoImage} alt="logo" className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-purple-700">Reputa Score</h1>
+              {/* عرض اسم المستخدم المسجل لمرة واحدة فقط هنا */}
               <p className="text-[10px] text-gray-500 font-mono">
                 {currentUser ? `👤 ${currentUser.username}` : 'Connecting...'}
-                {isDemoMode && <span className="ml-1 text-blue-500">[DEMO]</span>}
               </p>
             </div>
           </div>
           
+          {/* ✅ تم إزالة جميع الأزرار من هنا (الـ Header) لمنع التكرار مع المكونات الأصلية */}
           <div className="flex gap-2">
-            {/* زر الديمو داخل متصفح باي */}
-            {piBrowserActive && !hasProAccess && !isDemoMode && (
-              <button 
-                onClick={() => setIsDemoMode(true)}
-                className="text-[10px] border border-blue-500 text-blue-500 px-2 py-1 rounded-full"
-              >
-                Try Demo
-              </button>
-            )}
-
-            {hasProAccess ? (
-              <span className="bg-yellow-400 text-black text-[10px] font-bold px-3 py-1 rounded-full">👑 VIP</span>
-            ) : (
-              <button 
-                onClick={() => setIsUpgradeModalOpen(true)}
-                className="bg-purple-600 text-white text-[10px] px-3 py-1 rounded-full"
-              >
-                {isDemoMode ? 'Get Real VIP' : 'UPGRADE'}
-              </button>
-            )}
+             {hasProAccess && (
+               <span className="text-[10px] font-bold text-yellow-500">VIP ACTIVE</span>
+             )}
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {!walletData ? (
-          <WalletChecker onCheck={handleWalletCheck} />
+          <WalletChecker 
+            onCheck={handleWalletCheck} 
+            // نمرر المستخدم الحالي للمكون الداخلي لكي لا يطلب التسجيل مرة ثانية
+            currentUser={currentUser} 
+          />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={hasProAccess || isDemoMode} // السماح برؤية التقرير إذا كان ديمو
+            isProUser={hasProAccess} 
             onReset={() => setWalletData(null)}
+            // نستخدم المودال الموجود في App.tsx عند ضغط زر VIP الداخلي
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
       <footer className="p-3 text-center text-[9px] text-gray-400 border-t bg-gray-50">
-        {isDemoMode ? 'VIEWING DEMO REPORT' : 'SECURE PI NETWORK SESSION'}
+        LOGGED IN AS: {currentUser?.username || 'GUEST'}
       </footer>
 
       <AccessUpgradeModal
