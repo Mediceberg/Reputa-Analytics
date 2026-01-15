@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'; 
+import { useState, useEffect } from 'react'; 
+// استيراد أداة التحليلات
+import { Analytics } from '@vercel/analytics/react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -14,14 +16,18 @@ function ReputaAppContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   
-  // ✅ التغيير الجذري: تحديد حالة الـ VIP بناءً على المتصفح مباشرة
   const piBrowserActive = isPiBrowser();
-  const [hasProAccess, setHasProAccess] = useState(!piBrowserActive); // true فوراً إذا لم يكن متصفح باي
+  const [hasProAccess, setHasProAccess] = useState(!piBrowserActive);
 
-  const { updateMiningDays, miningDays, trustScore, refreshWallet } = useTrust();
+  const { refreshWallet } = useTrust();
 
-  // تحديث البيانات عند فتح التطبيق
+  // إضافة سكريبت Pi SDK برمجياً لضمان التحميل في المتصفح
   useEffect(() => {
+    const script = document.createElement('script');
+    script.src = "https://sdk.minepi.com/pi-sdk.js";
+    script.async = true;
+    document.head.appendChild(script);
+
     const initApp = async () => {
       if (piBrowserActive) {
         try {
@@ -33,7 +39,6 @@ function ReputaAppContent() {
           }
         } catch (e) { console.error(e); }
       } else {
-        // وضع الديمو الإجباري
         setCurrentUser({ username: "Demo_User", uid: "demo123" });
         setHasProAccess(true);
       }
@@ -47,10 +52,7 @@ function ReputaAppContent() {
     try {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
-      
-      // حساب سكورد تجريبي مرتفع للديمو
       const score = 850; 
-
       setWalletData({
         ...data,
         reputaScore: score,
@@ -72,7 +74,6 @@ function ReputaAppContent() {
       setIsUpgradeModalOpen(false);
       return;
     }
-    // منطق الدفع الحقيقي في متصفح باي
     try {
       if (currentUser?.uid) await createVIPPayment(currentUser.uid);
     } catch (e) { alert("Payment Error"); }
@@ -87,7 +88,7 @@ function ReputaAppContent() {
             <div>
               <h1 className="font-bold text-purple-700">Reputa Score</h1>
               <p className="text-[10px] text-gray-500 uppercase">
-                {piBrowserActive ? '● Live Network' : 'PRO DEMO MODE'}
+                {piBrowserActive ? '● Live Network' : 'PRO DEMO MODE'} • {currentUser?.username}
               </p>
             </div>
           </div>
@@ -110,7 +111,7 @@ function ReputaAppContent() {
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={true} // فرضه كـ VIP دائماً في هذا الكود للتجربة
+            isProUser={true} 
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
@@ -126,6 +127,9 @@ function ReputaAppContent() {
         onClose={() => setIsUpgradeModalOpen(false)}
         onUpgrade={handleAccessUpgrade}
       />
+      
+      {/* تفعيل أداة تتبع الزوار */}
+      <Analytics />
     </div>
   );
 }
