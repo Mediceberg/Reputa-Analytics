@@ -14,34 +14,29 @@ function ReputaAppContent() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [hasProAccess, setHasProAccess] = useState(false); // الحالة الافتراضية مغلق
+  const [hasProAccess, setHasProAccess] = useState(false);
 
   const piBrowserActive = isPiBrowser();
   const { refreshWallet } = useTrust();
 
   useEffect(() => {
     const initApp = async () => {
-      // تحميل اسم المستخدم المخزن سابقاً إن وجد
-      const savedUser = localStorage.getItem('reputa_user');
-      if (savedUser) setCurrentUser(JSON.parse(savedUser));
-
-      if (piBrowserActive) {
-        try {
+      try {
+        if (piBrowserActive) {
           await initializePiSDK();
           const user = await authenticateUser(['username', 'payments']);
           if (user) {
             setCurrentUser(user);
-            localStorage.setItem('reputa_user', JSON.stringify(user)); // حفظ المستخدم
             const isVIP = await checkVIPStatus(user.uid);
             setHasProAccess(isVIP);
           }
-        } catch (e) { console.error("Pi SDK Error", e); }
-      } else {
-        // في المتصفح العادي: نترك المستخدم يرى الديمو ولكن زر الـ VIP متاح للتجربة
-        if (!savedUser) {
-          const demoUser = { username: "Guest_User", uid: "demo123" };
-          setCurrentUser(demoUser);
+        } else {
+          // ✅ وضع الديمو: اسم مستخدم وهمي وفتح صلاحيات الـ VIP تلقائياً للمعاينة
+          setCurrentUser({ username: "Demo_Preview", uid: "demo123" });
+          setHasProAccess(true); 
         }
+      } catch (e) {
+        console.error("Initialization error:", e);
       }
     };
     initApp();
@@ -54,7 +49,6 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       await refreshWallet(address);
       
-      // بيانات تجريبية
       setWalletData({
         ...data,
         reputaScore: 850,
@@ -64,29 +58,32 @@ function ReputaAppContent() {
         trustLevel: 'Elite'
       });
     } catch (error) {
-      alert('Sync Error');
+      alert('Sync Error: Please check wallet address');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAccessUpgrade = async () => {
+    // في وضع الديمو (خارج متصفح باي) الزر لن يفعل شيئاً لأن الصلاحيات مفتوحة أصلاً
     if (!piBrowserActive) {
-      // محاكاة دفع في المتصفح العادي
-      alert("Demo: Payment Simulated Successfully!");
-      setHasProAccess(true);
       setIsUpgradeModalOpen(false);
       return;
     }
-    
+
+    if (!currentUser) {
+      alert("Wait for Pi authentication...");
+      return;
+    }
+
     try {
-      if (currentUser?.uid) {
-        await createVIPPayment(currentUser.uid);
-        setHasProAccess(true); // تفعيل بعد الدفع
+      const paymentResult = await createVIPPayment(currentUser.uid);
+      if (paymentResult) {
+        setHasProAccess(true);
         setIsUpgradeModalOpen(false);
       }
-    } catch (e) { 
-      alert("Payment failed or cancelled"); 
+    } catch (e) {
+      alert("Payment failed");
     }
   };
 
@@ -98,24 +95,26 @@ function ReputaAppContent() {
             <img src={logoImage} alt="logo" className="w-8 h-8" />
             <div>
               <h1 className="font-bold text-purple-700">Reputa Score</h1>
-              {/* عرض اسم المستخدم هنا ليبقى ظاهراً */}
-              <p className="text-[10px] text-gray-500 font-mono">
-                {currentUser ? `Hi, ${currentUser.username}` : 'Initializing...'}
+              <p className="text-[10px] text-gray-500 font-medium">
+                {currentUser?.username ? `👤 ${currentUser.username}` : 'Connecting...'}
+                {!piBrowserActive && <span className="ml-2 text-orange-500">[DEMO MODE]</span>}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div>
             {hasProAccess ? (
-              <span className="bg-yellow-400 text-black text-[10px] font-bold px-2 py-1 rounded shadow-sm">
-                👑 VIP MEMBER
-              </span>
+              <div className="flex items-center gap-2">
+                 <span className="bg-yellow-400 text-black text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">
+                  👑 VIP UNLOCKED
+                </span>
+              </div>
             ) : (
               <button 
                 onClick={() => setIsUpgradeModalOpen(true)}
-                className="bg-purple-600 text-white text-[10px] px-3 py-1 rounded-full animate-pulse"
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-lg"
               >
-                UPGRADE TO VIP
+                UPGRADE
               </button>
             )}
           </div>
@@ -123,12 +122,17 @@ function ReputaAppContent() {
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
-        {!walletData ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-purple-700">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-current mb-4"></div>
+            <p>Generating VIP Report...</p>
+          </div>
+        ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={hasProAccess} // سيتغير المحتوى بناءً على الدفع
+            isProUser={hasProAccess} // ستكون true دائماً في المتصفح العادي (Demo)
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
@@ -136,7 +140,7 @@ function ReputaAppContent() {
       </main>
 
       <footer className="p-4 text-center text-[9px] text-gray-400 border-t bg-gray-50">
-        Logged in as: {currentUser?.username || 'Guest'} | ID: {currentUser?.uid?.substring(0,8)}...
+        {piBrowserActive ? '● LIVE PI NETWORK' : '○ DEMO MODE - PREVIEWING VIP FEATURES'}
       </footer>
 
       <AccessUpgradeModal
@@ -144,6 +148,7 @@ function ReputaAppContent() {
         onClose={() => setIsUpgradeModalOpen(false)}
         onUpgrade={handleAccessUpgrade}
       />
+      
       <Analytics />
     </div>
   );
