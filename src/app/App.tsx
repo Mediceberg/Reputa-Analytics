@@ -21,56 +21,58 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // المنطق المصلح: طلب الربط لمرة واحدة فقط عند فتح التطبيق
+  // 1. التحقق من البيئة فقط عند التحميل الأول دون إجبار المستخدم على الربط
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        // وضع الديمو التلقائي خارج متصفح باي
-        setCurrentUser({ username: "Guest", uid: "demo_mode" });
-        setHasProAccess(true);
+        setCurrentUser({ username: "Explorer", uid: "demo_mode" });
         setIsDemoActive(true);
+        setHasProAccess(true);
         setIsInitializing(false);
         return;
       }
 
       try {
         await initializePiSDK();
-        // طلب المصادقة لمرة واحدة فقط هنا
-        const user = await authenticateUser(['username', 'payments']);
-        if (user) {
-          setCurrentUser(user);
-          const isVIP = await checkVIPStatus(user.uid);
-          setHasProAccess(isVIP);
-        }
+        // لا نقوم باستدعاء authenticateUser هنا لكي لا يظهر شعار الربط فوراً
+        setIsInitializing(false);
       } catch (e) {
-        console.error("Connection handled: falling back to demo");
-        setIsDemoActive(true); // تفعيل الديمو صامتاً لتجنب تعطل التطبيق
-      } finally {
+        setIsDemoActive(true); 
         setIsInitializing(false);
       }
     };
     initApp();
   }, [piBrowser]);
 
+  // 2. جلب البيانات الحقيقية فوراً دون أي قيود أو شعارات ربط
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
+      // جلب البيانات من البلوكشين مباشرة
       const data = await fetchWalletData(address);
       await refreshWallet(address);
+
       setWalletData({
         ...data,
-        reputaScore: 885, // نتيجة افتراضية ممتازة لوضع الـ VIP
-        trustLevel: 'Elite'
+        reputaScore: data.balance > 0 ? Math.min(950, 500 + (data.balance * 5)) : 420,
+        trustLevel: data.balance > 50 ? 'Elite' : 'Verified'
       });
     } catch (error) {
-      alert('Network Sync Error');
+      alert('Blockchain Sync Error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handlePayment = async () => {
+    // إذا لم يكن هناك مستخدم مربوط، نطلبه فقط عند لحظة الدفع الفعلية
+    if (piBrowser && !currentUser) {
+       const user = await authenticateUser(['username', 'payments']);
+       if (user) setCurrentUser(user);
+       else return;
+    }
+
     if (!piBrowser) {
       setHasProAccess(true);
       setIsUpgradeModalOpen(false);
@@ -82,74 +84,56 @@ function ReputaAppContent() {
         const success = await createVIPPayment(currentUser.uid);
         if (success) {
           setHasProAccess(true);
-          setIsDemoActive(false);
           setIsUpgradeModalOpen(false);
         }
       }
     } catch (e) {
-      alert("Payment interrupted");
+      alert("Payment failed");
     }
   };
 
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-purple-700 font-bold animate-pulse">Initializing Reputa Secure Session...</p>
-        </div>
-      </div>
-    );
-  }
+  if (isInitializing) return <div className="min-h-screen bg-white" />;
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b p-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
+      <header className="border-b p-4 bg-white sticky top-0 z-50 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-9 h-9" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg">Reputa Score</h1>
             <p className="text-[11px] text-gray-500 font-medium">
-              <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'} 
-              {isDemoActive && <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md text-[8px] font-bold">PREVIEW MODE</span>}
+              <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'}
             </p>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {hasProAccess && (
-            <span className="text-[9px] bg-yellow-400 text-white font-black px-2 py-1 rounded-full shadow-sm">VIP</span>
-          )}
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
-          <div className="flex flex-col items-center py-20 text-purple-600 font-bold">
-            <div className="w-10 h-10 border-4 border-current border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="uppercase text-[10px] tracking-widest">Analyzing Blockchain Data...</p>
+          <div className="flex flex-col items-center py-20">
+             <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
+             <p className="text-[10px] font-bold text-purple-600">LOADING DATA...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={hasProAccess || isDemoActive} 
+            isProUser={true} // دائماً true لإظهار البيانات الحقيقية دون عوائق
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
-      <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 tracking-widest font-bold">
-        {isDemoActive ? 'Demo Environment v2.0' : 'Pi Network Mainnet Live'}
-      </footer>
-
-      <AccessUpgradeModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={handlePayment}
-      />
+      {/* منع ظهور المودال في الديمو تماماً */}
+      {!isDemoActive && (
+        <AccessUpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          onUpgrade={handlePayment}
+        />
+      )}
       <Analytics />
     </div>
   );
