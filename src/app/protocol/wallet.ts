@@ -1,4 +1,4 @@
-import type { WalletData, Transaction } from './types';
+import type { WalletData, Transaction } from './types'; 
 
 export async function fetchWalletData(walletAddress: string): Promise<WalletData> {
   try {
