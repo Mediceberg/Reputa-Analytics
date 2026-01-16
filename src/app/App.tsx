@@ -14,7 +14,8 @@ function ReputaAppContent() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [hasProAccess, setHasProAccess] = useState(false);
+  // نجعلها true افتراضياً لضمان فتح الميزات للجميع (ديمو دائم)
+  const [hasProAccess, setHasProAccess] = useState(true); 
   const [isInitializing, setIsInitializing] = useState(true);
 
   const piBrowser = isPiBrowser();
@@ -23,24 +24,21 @@ function ReputaAppContent() {
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        setCurrentUser({ username: "Guest", uid: "demo" });
+        setCurrentUser({ username: "Explorer_Guest", uid: "demo" });
         setIsInitializing(false);
         return;
       }
       try {
-        await Promise.race([
-          initializePiSDK(),
-          new Promise((_, reject) => setTimeout(() => reject(), 3000))
-        ]);
-        // محاولة التعرف على المستخدم إذا كان قد سجل سابقاً (بدون إظهار نافذة)
+        await initializePiSDK();
         const user = await authenticateUser(['username']).catch(() => null);
         if (user) {
           setCurrentUser(user);
+          // حتى لو لم يكن VIP، سنتركه يستمتع بميزات الديمو المجانية
           const isVIP = await checkVIPStatus(user.uid);
-          setHasProAccess(isVIP);
+          if (isVIP) setHasProAccess(true);
         }
       } catch (e) {
-        console.log("SDK Ready");
+        console.log("SDK Bypass");
       } finally {
         setIsInitializing(false);
       }
@@ -48,38 +46,35 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
-  const handleManualLogin = async () => {
-    if (!piBrowser) return;
-    try {
-      const user = await authenticateUser(['username', 'payments']);
-      if (user) {
-        setCurrentUser(user);
-        const isVIP = await checkVIPStatus(user.uid);
-        setHasProAccess(isVIP);
-      }
-    } catch (e) {
-      alert("Login cancelled");
-    }
-  };
-
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
-      // ✅ جلب البيانات الحقيقية فوراً للجميع (بدون قيود)
+      // ✅ جلب البيانات الحقيقية من البروتوكول
       const data = await fetchWalletData(address);
       if (data) {
         await refreshWallet(address);
+        // تحديث البيانات الحقيقية في الحالة
         setWalletData({
           ...data,
-          reputaScore: 314, // السكور يظهر للجميع
+          reputaScore: data.balance > 0 ? 314 : 100, // قيمة رمزية تعبر عن البروتوكول
           trustLevel: 'Verified'
         });
       }
     } catch (error) {
-      alert("Wallet not found on Blockchain");
+      alert("Blockchain Error: Connection failed");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleManualLink = async () => {
+    if (!piBrowser) return;
+    try {
+      const user = await authenticateUser(['username', 'payments']);
+      if (user) setCurrentUser(user);
+    } catch (e) {
+      alert("Auth Cancelled");
     }
   };
 
@@ -87,33 +82,29 @@ function ReputaAppContent() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b p-4 bg-white sticky top-0 z-50 flex justify-between items-center shadow-sm">
+      <header className="border-b p-4 bg-white flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-8 h-8" />
-          <div className="leading-tight">
+          <div>
             <h1 className="font-bold text-purple-700">Reputa Score</h1>
-            <p className="text-[11px] text-gray-500 font-medium">
-              <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'}
+            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+              Welcome, {currentUser?.username || 'Guest'}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {piBrowser && !currentUser?.uid && (
-            <button onClick={handleManualLogin} className="text-[10px] border border-purple-200 text-purple-600 px-3 py-1 rounded-full font-bold">
-              Link Account
-            </button>
-          )}
-          {hasProAccess && (
-            <span className="text-[9px] bg-yellow-400 text-white px-2 py-0.5 rounded-full font-black">VIP</span>
-          )}
-        </div>
+        {/* زر الربط الأنيق والمتوسط */}
+        {piBrowser && !currentUser?.uid && (
+          <button onClick={handleManualLink} className="text-[10px] bg-purple-50 text-purple-600 px-3 py-1.5 rounded-full border border-purple-100 font-bold">
+            Link Account
+          </button>
+        )}
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
-          <div className="flex flex-col items-center py-20 animate-pulse text-purple-600 font-bold uppercase text-[10px]">
-            Syncing Blockchain...
+          <div className="flex flex-col items-center py-20 animate-pulse text-purple-600 font-black text-[10px]">
+            SYNCING WITH BLOCKCHAIN...
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto">
@@ -122,8 +113,7 @@ function ReputaAppContent() {
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            // ✅ المفتاح هنا: نمرر true دائماً لخانة الـ ProUser 
-            // لكي يفتح الديمو (المجاني) في جميع الحالات وبدون استثناء
+            // ✅ الفرض البرمجي: نرسل true دائماً لقتل أي عائق دفع في جميع المكونات
             isProUser={true} 
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
@@ -131,14 +121,15 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 font-bold uppercase tracking-widest">
-        Free Blockchain Protocol v3.0
+      <footer className="p-4 text-center text-[9px] text-gray-300 border-t font-black uppercase tracking-[0.3em]">
+        Protocol Active - Demo Unlocked
       </footer>
 
+      {/* المودال يبقى موجوداً لكنه لا يعيق المستخدم عن رؤية الميزات */}
       <AccessUpgradeModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={async () => { /* الدفع يبقى خياراً إضافياً للمستخدم */ }}
+        onUpgrade={() => {}}
       />
       <Analytics />
     </div>
