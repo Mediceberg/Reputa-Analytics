@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'; 
-// ✅ التصحيح: إضافة الشرطة المائلة المفقودة في المسار
-import { Analytics } from '@vercel/analytics/react'; 
+import { Analytics } from '@vercel/analytics/react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
-import { createVIPPayment, checkVIPStatus } from './protocol/piPayment';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.svg';
 
@@ -31,11 +29,8 @@ function ReputaAppContent() {
         await initializePiSDK();
         const user = await authenticateUser(['username']).catch(() => null);
         if (user) setCurrentUser(user);
-      } catch (e) {
-        console.warn("SDK Initialized in fallback mode");
-      } finally {
-        setIsInitializing(false);
-      }
+      } catch (e) { console.warn("Fallback Mode"); }
+      finally { setIsInitializing(false); }
     };
     initApp();
   }, [piBrowser]);
@@ -43,21 +38,23 @@ function ReputaAppContent() {
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
+    setWalletData(null); // مسح البيانات القديمة لتجنب التضارب
     try {
-      // ✅ نعتمد كلياً على البيانات الديناميكية من ملف wallet.ts المحدث
       const data = await fetchWalletData(address);
-      if (data) {
+      if (data && data.balance !== undefined) {
         setWalletData({
           ...data,
-          // السكور والحالة يتم تحديدهما بناءً على المعطيات الحقيقية المجلوبة
-          reputaScore: data.reputaScore, 
-          trustLevel: data.reputaScore >= 600 ? 'Elite' : data.reputaScore >= 300 ? 'Verified' : 'New Account'
+          // ✅ السكور الآن ديناميكي تماماً من البروتوكول
+          reputaScore: data.reputaScore || 100, 
+          // ✅ الحالة تتغير بناءً على السكور الفعلي
+          trustLevel: (data.reputaScore || 0) > 600 ? 'Elite Wallet' : 'Verified User'
         });
-        
         setTimeout(() => refreshWallet(address).catch(() => null), 100);
+      } else {
+        throw new Error("Invalid Data");
       }
     } catch (error) {
-      alert("Blockchain Error: Unable to fetch wallet data.");
+      alert("Blockchain Sync Error: Wallet not found or inactive.");
     } finally {
       setIsLoading(false);
     }
@@ -68,38 +65,33 @@ function ReputaAppContent() {
     try {
       const user = await authenticateUser(['username', 'payments']);
       if (user) setCurrentUser(user);
-    } catch (e) {
-      alert("Sign-in cancelled");
-    }
+    } catch (e) { alert("Link Cancelled"); }
   };
 
   if (isInitializing && piBrowser) {
-    return <div className="min-h-screen bg-white flex items-center justify-center text-purple-600 font-bold uppercase tracking-widest animate-pulse">Initializing...</div>;
+    return <div className="min-h-screen bg-white flex items-center justify-center text-purple-600 font-bold animate-pulse uppercase tracking-widest">Initialising...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b p-4 bg-white/90 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
+    <div className="min-h-screen bg-white flex flex-col font-sans">
+      <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa</h1>
-            <p className="text-[10px] text-gray-400 font-bold">
-              <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'}
+            <p className="text-[10px] text-gray-400 font-black uppercase">
+              <span className="text-purple-400">Pioneer:</span> {currentUser?.username || 'Guest'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {piBrowser && !currentUser?.uid && (
-            <button 
-              onClick={handleManualLink}
-              className="p-2 bg-purple-50 text-purple-600 rounded-lg border border-purple-100 hover:bg-purple-100 transition-all flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            <button onClick={handleManualLink} className="p-2 bg-purple-50 text-purple-600 rounded-lg border border-purple-100 flex items-center gap-2 hover:bg-purple-100 transition-all">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
               </svg>
-              <span className="text-[10px] font-black uppercase tracking-wider">Link Account</span>
+              <span className="text-[9px] font-black uppercase tracking-tighter">Link Account</span>
             </button>
           )}
         </div>
@@ -107,33 +99,29 @@ function ReputaAppContent() {
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
-          <div className="flex flex-col items-center py-20">
-            <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-4 font-black text-purple-600 tracking-[0.2em]">SYNCING PROTOCOL...</p>
+          <div className="flex flex-col items-center py-24">
+            <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Syncing Pi Protocol...</p>
           </div>
         ) : !walletData ? (
-          <div className="max-w-md mx-auto py-10">
+          <div className="max-w-md mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
           </div>
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={true} 
+            isProUser={true} // الحفاظ على ميزة الديمو المفتوح للعامة
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
-      <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 font-black tracking-[0.3em] uppercase">
-        Standalone Explorer v3.5
+      <footer className="p-6 text-center text-[9px] text-gray-300 border-t bg-gray-50/30 font-black tracking-[0.4em] uppercase">
+        Reputa Explorer v4.0.1
       </footer>
 
-      <AccessUpgradeModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={() => {}}
-      />
+      <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} onUpgrade={() => {}} />
       <Analytics />
     </div>
   );
