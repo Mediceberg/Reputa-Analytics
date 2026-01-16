@@ -1,4 +1,4 @@
-"use client";
+"use client"; 
 import React from 'react';
 import { usePiConnection, usePiPurchase } from 'pi-sdk-react';
 import { PaymentData } from 'pi-sdk-js';
