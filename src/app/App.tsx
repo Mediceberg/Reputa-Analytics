@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'; 
 import { Analytics } from '@vercel/analytics/react';
+import { Send } from 'lucide-react'; // ✅ استيراد أيقونة التلغرام
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -35,10 +36,8 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
-  // ✅ إضافة دالة الديمو لضمان عمل الزر دون أخطاء NaN
   const handleTryDemo = () => {
     setIsLoading(true);
-    // محاكاة تحميل بسيطة لواقعية الديمو
     setTimeout(() => {
       const demoData = {
         address: "GDU72WEH7M3O...MWPDYFBT",
@@ -47,8 +46,7 @@ function ReputaAppContent() {
         reputaScore: 632,
         accountAge: 1751,
         createdAt: new Date('2019-03-14'),
-        totalTransactions: 142, // رقم حقيقي وليس Active
-        // توفير بيانات معاملات كافية للحسابات
+        totalTransactions: 142,
         transactions: Array(15).fill(null).map((_, i) => ({
           id: `tx-demo-${i}`,
           amount: Math.random() * 20,
@@ -68,7 +66,6 @@ function ReputaAppContent() {
   };
 
   const handleWalletCheck = async (address: string) => {
-    // ✅ التحقق إذا كان المستخدم ضغط على زر الديمو
     if (address === 'demo') {
       handleTryDemo();
       return;
@@ -80,11 +77,9 @@ function ReputaAppContent() {
     
     try {
       const data = await fetchWalletData(address);
-      
       if (data && typeof data.reputaScore === 'number') {
         setWalletData({
           ...data,
-          // ضمان وجود قيم افتراضية لمنع أخطاء الحسابات
           totalTransactions: data.totalTransactions || data.transactions?.length || 0,
           trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified'
         });
@@ -110,25 +105,39 @@ function ReputaAppContent() {
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
-            <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa</h1>
+            {/* ✅ تحديث اسم التطبيق */}
+            <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
             <p className="text-[10px] text-gray-400 font-black uppercase">
-               {currentUser?.username || 'Guest'}
+               {/* ✅ إضافة كلمة Welcome */}
+               Welcome, {currentUser?.username || 'Guest'}
             </p>
           </div>
         </div>
 
-        {piBrowser && !currentUser?.uid && (
-          <button onClick={() => authenticateUser(['username']).then(setCurrentUser)} className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100">
-            Link Account
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {/* ✅ أيقونة التلغرام في الهيدر */}
+          <a 
+            href="https://t.me/+zxYP2x_4IWljOGM0" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="p-2 text-[#229ED9] bg-blue-50 rounded-full hover:bg-blue-100 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </a>
+
+          {piBrowser && !currentUser?.uid && (
+            <button onClick={() => authenticateUser(['username']).then(setCurrentUser)} className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100">
+              Link Account
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Syncing Protocol...</p>
+            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase text-center">Syncing Protocol...</p>
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
@@ -146,8 +155,20 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-6 text-center text-[9px] text-gray-300 border-t font-black tracking-[0.4em] uppercase">
-        Reputa Explorer v4.2 Stable
+      <footer className="p-6 text-center border-t flex flex-col items-center gap-4">
+        {/* ✅ زر التلغرام في الفوتر */}
+        <a 
+          href="https://t.me/+zxYP2x_4IWljOGM0" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#229ED9] text-white rounded-full text-[10px] font-black uppercase shadow-sm hover:shadow-md transition-all active:scale-95"
+        >
+          <Send className="w-3 h-3" />
+          Join Telegram
+        </a>
+        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">
+          Reputa Score v4.2 Stable
+        </div>
       </footer>
 
       <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} onUpgrade={() => {}} />
