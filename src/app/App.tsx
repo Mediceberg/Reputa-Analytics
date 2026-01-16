@@ -29,7 +29,6 @@ function ReputaAppContent() {
       }
       try {
         await initializePiSDK();
-        // محاولة التعرف على المستخدم المسجل مسبقاً دون إزعاج
         const user = await authenticateUser(['username']).catch(() => null);
         if (user) setCurrentUser(user);
       } catch (e) {
@@ -41,21 +40,22 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
-  // 2. معالجة المحفظة: منع التعليق عبر التحديث الفوري
+  // 2. معالجة المحفظة: التعديل لجلب السكور الحقيقي بدلاً من 314
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
-      // جلب البيانات الحقيقية من البلوكشين
       const data = await fetchWalletData(address);
       if (data) {
-        // تحديث الواجهة فوراً بالبيانات الحقيقية
         setWalletData({
           ...data,
-          reputaScore: 314, // سكور البروتوكول الافتراضي
-          trustLevel: 'Elite'
+          // ✅ تم التعديل: نأخذ السكور المحسوب من البروتوكول مباشرة
+          reputaScore: data.reputaScore, 
+          // ✅ تم التعديل: تحديد الحالة بناءً على قوة المحفظة الحقيقية
+          trustLevel: data.reputaScore > 600 ? 'Elite' : data.reputaScore > 300 ? 'Verified' : 'New Account'
         });
-        // تحديث البروتوكول يتم في الخلفية لكي لا يعلق التحميل
+        
+        // تحديث البروتوكول في الخلفية لعدم تعليق الواجهة
         setTimeout(() => refreshWallet(address).catch(() => null), 100);
       }
     } catch (error) {
@@ -93,7 +93,6 @@ function ReputaAppContent() {
           </div>
         </div>
 
-        {/* أيقونة الربط: متوسطة الحجم وواضحة جداً */}
         <div className="flex items-center gap-3">
           {piBrowser && !currentUser?.uid && (
             <button 
@@ -122,8 +121,7 @@ function ReputaAppContent() {
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            // ✅ الفرض البرمجي النهائي: فتح كل الميزات بدون استثناء
-            isProUser={true} 
+            isProUser={true} // الحفاظ على ميزة الديمو مفتوحة للجميع
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
