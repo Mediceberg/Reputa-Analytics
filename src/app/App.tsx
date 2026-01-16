@@ -60,7 +60,7 @@ function ReputaAppContent() {
       await refreshWallet(address);
       setWalletData({
         ...data,
-        reputaScore: 314, // نتيجة افتراضية ممتازة لوضع الـ VIP
+        reputaScore: 885, // نتيجة افتراضية ممتازة لوضع الـ VIP
         trustLevel: 'Elite'
       });
     } catch (error) {
