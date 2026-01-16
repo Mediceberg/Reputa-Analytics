@@ -21,11 +21,10 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // المنطق المصلح: طلب الربط لمرة واحدة فقط عند فتح التطبيق
+  // تحديث: تهيئة الـ SDK فقط عند البداية دون طلب الربط تلقائياً
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        // وضع الديمو التلقائي خارج متصفح باي
         setCurrentUser({ username: "Guest", uid: "demo_mode" });
         setHasProAccess(true);
         setIsDemoActive(true);
@@ -35,22 +34,29 @@ function ReputaAppContent() {
 
       try {
         await initializePiSDK();
-        // طلب المصادقة لمرة واحدة فقط هنا
-        const user = await authenticateUser(['username', 'payments']);
-        if (user) {
-          setCurrentUser(user);
-          const isVIP = await checkVIPStatus(user.uid);
-          setHasProAccess(isVIP);
-        }
+        // تم إزالة طلب authenticateUser التلقائي لتجنب ظهور الشعار فور الدخول
       } catch (e) {
-        console.error("Connection handled: falling back to demo");
-        setIsDemoActive(true); // تفعيل الديمو صامتاً لتجنب تعطل التطبيق
+        console.error("SDK Initialization failed");
       } finally {
         setIsInitializing(false);
       }
     };
     initApp();
   }, [piBrowser]);
+
+  // دالة الربط اليدوي عند الضغط على الزر
+  const handleManualLogin = async () => {
+    try {
+      const user = await authenticateUser(['username', 'payments']);
+      if (user) {
+        setCurrentUser(user);
+        const isVIP = await checkVIPStatus(user.uid);
+        setHasProAccess(isVIP);
+      }
+    } catch (e) {
+      alert("Link failed or cancelled");
+    }
+  };
 
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
@@ -60,7 +66,7 @@ function ReputaAppContent() {
       await refreshWallet(address);
       setWalletData({
         ...data,
-        reputaScore: 314, // نتيجة افتراضية ممتازة لوضع الـ VIP
+        reputaScore: data.balance > 0 ? 314 : 100, // بيانات حقيقية بناءً على الرصيد
         trustLevel: 'Elite'
       });
     } catch (error) {
@@ -78,8 +84,15 @@ function ReputaAppContent() {
     }
 
     try {
-      if (currentUser?.uid) {
-        const success = await createVIPPayment(currentUser.uid);
+      // إذا لم يكن المستخدم قد ربط حسابه بعد، نطلبه الآن لإتمام الدفع
+      let user = currentUser;
+      if (!user) {
+        user = await authenticateUser(['username', 'payments']);
+        setCurrentUser(user);
+      }
+
+      if (user?.uid) {
+        const success = await createVIPPayment(user.uid);
         if (success) {
           setHasProAccess(true);
           setIsDemoActive(false);
@@ -96,7 +109,7 @@ function ReputaAppContent() {
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-purple-700 font-bold animate-pulse">Initializing Reputa Secure Session...</p>
+          <p className="text-purple-700 font-bold animate-pulse text-sm">Initializing Secure Protocol...</p>
         </div>
       </div>
     );
@@ -111,14 +124,25 @@ function ReputaAppContent() {
             <h1 className="font-black text-purple-700 text-lg">Reputa Score</h1>
             <p className="text-[11px] text-gray-500 font-medium">
               <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'} 
-              {isDemoActive && <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md text-[8px] font-bold">PREVIEW MODE</span>}
+              {isDemoActive && <span className="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-md text-[8px] font-bold uppercase">Preview Mode</span>}
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {hasProAccess && (
-            <span className="text-[9px] bg-yellow-400 text-white font-black px-2 py-1 rounded-full shadow-sm">VIP</span>
+          {/* زر الربط اليدوي يظهر فقط إذا لم يتم الربط وكنت داخل متصفح باي */}
+          {piBrowser && !currentUser?.uid && (
+            <button 
+              onClick={handleManualLogin}
+              className="text-[10px] bg-purple-600 text-white px-3 py-1.5 rounded-md font-bold hover:bg-purple-700 transition-all flex items-center gap-1 shadow-sm"
+            >
+              Link Account
+            </button>
+          )}
+
+          {/* شارة VIP تظهر فقط للمستخدم الحقيقي المرقّى وليس في الديمو */}
+          {hasProAccess && !isDemoActive && (
+            <span className="text-[9px] bg-yellow-400 text-white font-black px-2 py-1 rounded-full shadow-sm animate-bounce">VIP</span>
           )}
         </div>
       </header>
@@ -142,14 +166,17 @@ function ReputaAppContent() {
       </main>
 
       <footer className="p-4 text-center text-[9px] text-gray-300 border-t bg-gray-50/50 tracking-widest font-bold">
-        {isDemoActive ? 'Demo Environment v2.0' : 'Pi Network Mainnet Live'}
+        {isDemoActive ? 'Public Data Explorer v2.1' : 'Secure Pi Network Mainnet'}
       </footer>
 
-      <AccessUpgradeModal
-        isOpen={isUpgradeModalOpen}
-        onClose={() => setIsUpgradeModalOpen(false)}
-        onUpgrade={handlePayment}
-      />
+      {/* المودال لا يظهر في الديمو أبداً */}
+      {!isDemoActive && (
+        <AccessUpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          onUpgrade={handlePayment}
+        />
+      )}
       <Analytics />
     </div>
   );
