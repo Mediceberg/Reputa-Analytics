@@ -35,20 +35,57 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
+  // ✅ إضافة دالة الديمو لضمان عمل الزر دون أخطاء NaN
+  const handleTryDemo = () => {
+    setIsLoading(true);
+    // محاكاة تحميل بسيطة لواقعية الديمو
+    setTimeout(() => {
+      const demoData = {
+        address: "GDU72WEH7M3O...MWPDYFBT",
+        username: "Demo_Pioneer",
+        balance: 82.27,
+        reputaScore: 632,
+        accountAge: 1751,
+        createdAt: new Date('2019-03-14'),
+        totalTransactions: 142, // رقم حقيقي وليس Active
+        // توفير بيانات معاملات كافية للحسابات
+        transactions: Array(15).fill(null).map((_, i) => ({
+          id: `tx-demo-${i}`,
+          amount: Math.random() * 20,
+          type: i % 2 === 0 ? 'internal' : 'external',
+          timestamp: new Date(),
+          from: "GDX_SOURCE",
+          to: "GDU_DEST",
+          memo: "Demo Tx"
+        })),
+        trustLevel: "Elite",
+        consistencyScore: 88,
+        networkTrust: 92
+      };
+      setWalletData(demoData);
+      setIsLoading(false);
+    }, 800);
+  };
+
   const handleWalletCheck = async (address: string) => {
+    // ✅ التحقق إذا كان المستخدم ضغط على زر الديمو
+    if (address === 'demo') {
+      handleTryDemo();
+      return;
+    }
+
     if (!address) return;
     setIsLoading(true);
-    // ✅ خطوة حاسمة: تصفير البيانات القديمة تماماً لمنع تداخل الأرقام المليونية
     setWalletData(null); 
     
     try {
       const data = await fetchWalletData(address);
       
-      // ✅ التحقق من سلامة البيانات قبل إرسالها للمكون
       if (data && typeof data.reputaScore === 'number') {
         setWalletData({
           ...data,
-          // التأكد من أن حالة الثقة تتبع السكور الحقيقي وليست ثابتة
+          // ضمان وجود قيم افتراضية لمنع أخطاء الحسابات
+          totalTransactions: data.totalTransactions || data.transactions?.length || 0,
           trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified'
         });
         setTimeout(() => refreshWallet(address).catch(() => null), 200);
@@ -91,14 +128,13 @@ function ReputaAppContent() {
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Decoding Ledger...</p>
+            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Syncing Protocol...</p>
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
           </div>
         ) : (
-          // ✅ تغليف المكون بحماية إضافية
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
              <WalletAnalysis
               walletData={walletData}
