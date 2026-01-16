@@ -19,60 +19,61 @@ function ReputaAppContent() {
   const [isInitializing, setIsInitializing] = useState(true);
 
   const piBrowser = isPiBrowser();
-  const { refreshWallet } = useTrust();
+  const { refreshWallet, updateMiningDays } = useTrust();
 
-  // 1. التحقق من البيئة فقط عند التحميل الأول دون إجبار المستخدم على الربط
+  // 1. تهيئة الـ SDK بصمت تام عند التشغيل
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
+        // وضع الديمو (خارج متصفح باي)
         setCurrentUser({ username: "Explorer", uid: "demo_mode" });
-        setIsDemoActive(true);
         setHasProAccess(true);
+        setIsDemoActive(true);
         setIsInitializing(false);
-        return;
-      }
-
-      try {
-        await initializePiSDK();
-        // لا نقوم باستدعاء authenticateUser هنا لكي لا يظهر شعار الربط فوراً
-        setIsInitializing(false);
-      } catch (e) {
-        setIsDemoActive(true); 
-        setIsInitializing(false);
+      } else {
+        // داخل متصفح باي: نشغل الـ SDK فقط دون طلب تسجيل دخول (Auth)
+        try {
+          await initializePiSDK();
+          // نفحص إذا كان المستخدم مسجلاً مسبقاً (صمت)
+          const user = await authenticateUser(['username']).catch(() => null);
+          if (user) {
+            setCurrentUser(user);
+            setHasProAccess(checkVIPStatus(user.uid));
+          }
+        } catch (e) {
+          console.log("Silent init");
+        } finally {
+          setIsInitializing(false);
+        }
       }
     };
     initApp();
   }, [piBrowser]);
 
-  // 2. جلب البيانات الحقيقية فوراً دون أي قيود أو شعارات ربط
+  // 2. معالجة إدخال المحفظة - بيانات حقيقية 100%
   const handleWalletCheck = async (address: string) => {
     if (!address) return;
     setIsLoading(true);
     try {
-      // جلب البيانات من البلوكشين مباشرة
+      // جلب البيانات الفعلية من البلوكشين
       const data = await fetchWalletData(address);
       await refreshWallet(address);
 
       setWalletData({
         ...data,
-        reputaScore: data.balance > 0 ? Math.min(950, 500 + (data.balance * 5)) : 420,
-        trustLevel: data.balance > 50 ? 'Elite' : 'Verified'
+        // حساب السكور بناءً على البيانات الحقيقية المستلمة
+        reputaScore: data.balance > 0 ? Math.min(950, 550 + (data.balance * 3)) : 450,
+        trustLevel: data.balance > 100 ? 'Elite' : 'Verified'
       });
     } catch (error) {
-      alert('Blockchain Sync Error');
+      alert('Error fetching blockchain data. Please check the address.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 3. منطق الدفع - يطلب الربط فقط عند الضغط على الزر
   const handlePayment = async () => {
-    // إذا لم يكن هناك مستخدم مربوط، نطلبه فقط عند لحظة الدفع الفعلية
-    if (piBrowser && !currentUser) {
-       const user = await authenticateUser(['username', 'payments']);
-       if (user) setCurrentUser(user);
-       else return;
-    }
-
     if (!piBrowser) {
       setHasProAccess(true);
       setIsUpgradeModalOpen(false);
@@ -80,15 +81,22 @@ function ReputaAppContent() {
     }
 
     try {
-      if (currentUser?.uid) {
-        const success = await createVIPPayment(currentUser.uid);
+      // إذا لم يكن الحساب مربوطاً، نربطه الآن فقط
+      let user = currentUser;
+      if (!user) {
+        user = await authenticateUser(['username', 'payments']);
+        setCurrentUser(user);
+      }
+
+      if (user?.uid) {
+        const success = await createVIPPayment(user.uid);
         if (success) {
           setHasProAccess(true);
           setIsUpgradeModalOpen(false);
         }
       }
     } catch (e) {
-      alert("Payment failed");
+      alert("Action required: Please sign in to complete payment.");
     }
   };
 
@@ -96,37 +104,48 @@ function ReputaAppContent() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <header className="border-b p-4 bg-white sticky top-0 z-50 flex justify-between items-center">
+      <header className="border-b p-4 bg-white sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <img src={logoImage} alt="logo" className="w-9 h-9" />
           <div className="leading-tight">
-            <h1 className="font-black text-purple-700 text-lg">Reputa Score</h1>
-            <p className="text-[11px] text-gray-500 font-medium">
-              <span className="text-purple-400">Welcome,</span> {currentUser?.username || 'Guest'}
+            <h1 className="font-extrabold text-purple-700 text-lg tracking-tight">Reputa Score</h1>
+            <p className="text-[11px] text-gray-400 font-bold">
+              <span className="text-purple-300">Welcome,</span> {currentUser?.username || 'Explorer'}
             </p>
           </div>
+        </div>
+        
+        {/* إخفاء أيقونات VIP تماماً في وضع الديمو ليكون Explorer نظيف */}
+        <div className="flex gap-2">
+           {hasProAccess && !isDemoActive && (
+             <span className="bg-yellow-400 text-white text-[8px] px-2 py-0.5 rounded-full font-black animate-pulse">PRO</span>
+           )}
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
-          <div className="flex flex-col items-center py-20">
-             <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
-             <p className="text-[10px] font-bold text-purple-600">LOADING DATA...</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-[10px] font-black text-purple-700 tracking-[0.2em] uppercase">Syncing Blockchain...</p>
           </div>
         ) : !walletData ? (
           <WalletChecker onCheck={handleWalletCheck} />
         ) : (
           <WalletAnalysis
             walletData={walletData}
-            isProUser={true} // دائماً true لإظهار البيانات الحقيقية دون عوائق
+            isProUser={true} // مفتوح دائماً لعرض البيانات الحقيقية
             onReset={() => setWalletData(null)}
             onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
           />
         )}
       </main>
 
-      {/* منع ظهور المودال في الديمو تماماً */}
+      <footer className="p-4 text-center text-[9px] text-gray-300 border-t font-bold uppercase tracking-widest bg-gray-50/30">
+        {isDemoActive ? 'Public Explorer Mode' : 'Pi Network Protocol'}
+      </footer>
+
+      {/* المودال يظهر في اللايف فقط لمن يريد الترقية الحقيقية */}
       {!isDemoActive && (
         <AccessUpgradeModal
           isOpen={isUpgradeModalOpen}
