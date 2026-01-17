@@ -72,8 +72,8 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
   };
 
   const gaugeColor = getGaugeColor(trustLevel);
-  const normalizedScore = score / 10;
-  const rotation = (normalizedScore / 100) * 180 - 90;
+  // تعديل الحسابات لضمان دوران سلس بعيداً عن المركز
+  const rotation = (score / 1000) * 180 - 90;
 
   return (
     <Card className="p-6">
@@ -86,69 +86,69 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
       </div>
       
       <div className="flex flex-col md:flex-row items-center gap-8">
-        {/* Gauge Visual */}
-        <div className="relative w-64 h-36 flex-shrink-0">
-          <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible">
+        {/* Gauge Visual - زيادة الارتفاع لضمان عدم التداخل */}
+        <div className="relative w-64 h-40 flex-shrink-0 flex items-center justify-center">
+          <svg viewBox="0 0 200 120" className="w-full h-full overflow-visible">
             <defs>
               <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#ef4444" />
-                <stop offset="25%" stopColor="#f97316" />
                 <stop offset="50%" stopColor="#eab308" />
-                <stop offset="75%" stopColor="#3b82f6" />
                 <stop offset="100%" stopColor="#10b981" />
               </linearGradient>
             </defs>
             
+            {/* القوس الخلفي - تم إنزاله قليلاً للإحداثي 100 */}
             <path
-              d="M 20 80 A 80 80 0 0 1 180 80"
+              d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
-              stroke="#e5e7eb"
+              stroke="#f3f4f6"
               strokeWidth="12"
               strokeLinecap="round"
             />
             
+            {/* القوس الملون */}
             <motion.path
-              d="M 20 80 A 80 80 0 0 1 180 80"
+              d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
               stroke="url(#gaugeGradient)"
               strokeWidth="12"
               strokeLinecap="round"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: animatedScore / 1000 }}
-              transition={{ duration: 1, ease: 'easeOut' }}
+              transition={{ duration: 1.5, ease: 'easeOut' }}
             />
 
-            {/* Needle - Adjusted y2 to 35 to stay away from the score */}
+            {/* ✅ السهم: تم تعديل الطول ونقطة الارتكاز ليكون خلف الرقم أو تحته */}
             <motion.line
               x1="100"
-              y1="80"
+              y1="100"
               x2="100"
-              y2="35"
+              y2="40" 
               stroke={gaugeColor}
               strokeWidth="4"
               strokeLinecap="round"
               initial={{ rotate: -90 }}
               animate={{ rotate: rotation }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-              style={{ transformOrigin: '100px 80px' }}
+              transition={{ duration: 1.5, ease: 'easeOut' }}
+              style={{ transformOrigin: '100px 100px' }}
             />
             
-            {/* Center dot - Reduced radius */}
-            <circle cx="100" cy="80" r="4" fill={gaugeColor} />
+            {/* النقطة المركزية */}
+            <circle cx="100" cy="100" r="5" fill={gaugeColor} stroke="white" strokeWidth="2" />
           </svg>
 
-          {/* Score Display - Centered and lifted with Z-index */}
-          <div className="absolute inset-x-0 top-[45%] flex flex-col items-center justify-center z-10 pointer-events-none">
+          {/* ✅ عرض السكور: تم رفعه وتغيير مكانه ليكون فوق نقطة الارتكاز تماماً وبمنأى عن رأس السهم */}
+          <div className="absolute top-[40%] inset-x-0 flex flex-col items-center justify-center z-50 pointer-events-none">
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.5, type: 'spring' }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
               className="flex flex-col items-center"
             >
-              <span className="font-black text-4xl leading-none" style={{ color: gaugeColor }}>
+              <span className="font-black text-5xl leading-none drop-shadow-sm" style={{ color: gaugeColor }}>
                 {displayScore}
               </span>
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+              <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-1">
                 out of 1000
               </span>
             </motion.div>
