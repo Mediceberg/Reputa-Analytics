@@ -54,7 +54,6 @@ function ReputaAppContent() {
         
         if (user) {
           setCurrentUser(user);
-          // ✅ حفظ تلقائي عند فتح التطبيق
           savePioneerToDatabase(user);
         }
         
@@ -117,7 +116,6 @@ function ReputaAppContent() {
           trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified'
         });
 
-        // ✅ حفظ البيانات في Upstash أيضاً عند فحص المحفظة لزيادة التفاعل
         if (currentUser && currentUser.uid !== "demo") {
            savePioneerToDatabase(currentUser);
         }
@@ -144,81 +142,85 @@ function ReputaAppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col font-sans">
-      <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3">
-          <img src={logoImage} alt="logo" className="w-8 h-8" />
-          <div className="leading-tight">
-            <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
-            <p className="text-[10px] text-gray-400 font-black uppercase">
-               Welcome, {currentUser?.username || 'Guest'}
-            </p>
+    /* ✅ حاوية التوسيط والتحكم في الحجم للحاسوب والمتصفح العادي */
+    <div className="min-h-screen bg-gray-50 flex justify-center items-start overflow-x-hidden">
+      <div className="w-full max-w-2xl min-h-screen bg-white shadow-2xl flex flex-col font-sans relative">
+        
+        <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
+          <div className="flex items-center gap-3">
+            <img src={logoImage} alt="logo" className="w-8 h-8" />
+            <div className="leading-tight">
+              <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
+              <p className="text-[10px] text-gray-400 font-black uppercase">
+                 Welcome, {currentUser?.username || 'Guest'}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
+            <a 
+              href="https://t.me/+zxYP2x_4IWljOGM0" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-2 text-[#229ED9] bg-blue-50 rounded-full hover:bg-blue-100 transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </a>
+
+            {piBrowser && !currentUser?.uid && (
+              <button 
+                onClick={() => authenticateUser(['username', 'wallet_address']).then((user) => {
+                  setCurrentUser(user);
+                  savePioneerToDatabase(user);
+                })} 
+                className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100"
+              >
+                Link Account
+              </button>
+            )}
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8 flex-1">
+          {isLoading ? (
+            <div className="flex flex-col items-center py-24">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase text-center">Syncing Protocol...</p>
+            </div>
+          ) : !walletData ? (
+            <div className="max-w-md mx-auto py-6">
+              <WalletChecker onCheck={handleWalletCheck} />
+            </div>
+          ) : (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+               <WalletAnalysis
+                walletData={walletData}
+                isProUser={true} 
+                onReset={() => setWalletData(null)}
+                onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
+              />
+            </div>
+          )}
+        </main>
+
+        <footer className="p-6 text-center border-t flex flex-col items-center gap-4 bg-white">
           <a 
             href="https://t.me/+zxYP2x_4IWljOGM0" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="p-2 text-[#229ED9] bg-blue-50 rounded-full hover:bg-blue-100 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#229ED9] text-white rounded-full text-[10px] font-black uppercase shadow-sm hover:shadow-md transition-all active:scale-95"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3 h-3" />
+            Join Telegram
           </a>
-
-          {piBrowser && !currentUser?.uid && (
-            <button 
-              onClick={() => authenticateUser(['username', 'wallet_address']).then((user) => {
-                setCurrentUser(user);
-                savePioneerToDatabase(user);
-              })} 
-              className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100"
-            >
-              Link Account
-            </button>
-          )}
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 flex-1">
-        {isLoading ? (
-          <div className="flex flex-col items-center py-24">
-            <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase text-center">Syncing Protocol...</p>
+          <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">
+            Reputa Score v4.2 Stable
           </div>
-        ) : !walletData ? (
-          <div className="max-w-md mx-auto py-6">
-            <WalletChecker onCheck={handleWalletCheck} />
-          </div>
-        ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <WalletAnalysis
-              walletData={walletData}
-              isProUser={true} 
-              onReset={() => setWalletData(null)}
-              onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
-            />
-          </div>
-        )}
-      </main>
+        </footer>
 
-      <footer className="p-6 text-center border-t flex flex-col items-center gap-4">
-        <a 
-          href="https://t.me/+zxYP2x_4IWljOGM0" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#229ED9] text-white rounded-full text-[10px] font-black uppercase shadow-sm hover:shadow-md transition-all active:scale-95"
-        >
-          <Send className="w-3 h-3" />
-          Join Telegram
-        </a>
-        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">
-          Reputa Score v4.2 Stable
-        </div>
-      </footer>
-
-      <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} onUpgrade={() => {}} />
-      <Analytics />
+        <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} onUpgrade={() => {}} />
+        <Analytics />
+      </div>
     </div>
   );
 }
