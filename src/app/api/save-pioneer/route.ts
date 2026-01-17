@@ -1,15 +1,17 @@
-import { Redis } from '@upstash/redis'; 
-import { NextResponse } from 'next/server';
+import { Redis } from '@upstash/redis'
+import { NextResponse } from 'next/server'
 
-// الاتصال التلقائي باستخدام المتغيرات التي أضافها Vercel الآن
-const redis = Redis.fromEnv();
+// استخدام الأسماء التي ظهرت في صورتك لضمان الاتصال
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL!,
+  token: process.env.KV_REST_API_TOKEN!,
+})
 
 export async function POST(req: Request) {
   try {
     const { username, wallet } = await req.json();
-
-    // حفظ بيانات الرائد في قائمة 'registered_pioneers'
-    // هذا سيساعدك في إثبات شرط الـ 5 رواد لحجز الدومين reputa.pi
+    
+    // الحفظ في القائمة
     await redis.lpush('registered_pioneers', JSON.stringify({
       username,
       wallet,
@@ -18,6 +20,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: 'Database Connection Failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed' }, { status: 500 });
   }
 }
