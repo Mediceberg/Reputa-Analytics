@@ -1,33 +1,36 @@
 import { Redis } from '@upstash/redis'
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL!,
-  token: process.env.KV_REST_API_TOKEN!,
-})
-
 export default async function handler(req, res) {
-  // للتحقق من الاتصال
-  if (req.method === 'GET') {
-    return res.status(200).json({ status: "API is working with Upstash" });
+  // 1. تحقق من وجود المفاتيح قبل البدء
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+
+  if (!url || !token) {
+    return res.status(500).json({ error: "Missing Environment Variables" });
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  const redis = new Redis({ url, token });
+
+  if (req.method === 'GET') {
+    return res.status(200).json({ status: "API Ready" });
   }
 
   try {
-    const { username, wallet } = req.body;
+    const { username, wallet } = req.body || {};
     
-    // تسجيل البيانات في القائمة
+    if (!username) {
+       return res.status(400).json({ error: "Username is required" });
+    }
+
     await redis.rpush('registered_pioneers', JSON.stringify({
       username,
       wallet,
       timestamp: new Date().toISOString()
     }));
 
-    return res.status(200).json({ success: true, message: "Pioneer saved" });
+    return res.status(200).json({ success: true });
   } catch (error) {
     console.error("Redis Error:", error);
-    return res.status(500).json({ error: "Internal Server Error", details: error.message });
+    return res.status(500).json({ error: "Database Connection Failed", message: error.message });
   }
 }
