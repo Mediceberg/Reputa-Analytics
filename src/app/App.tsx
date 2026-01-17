@@ -19,24 +19,24 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // ✅ وظيفة حفظ بيانات الرائد مع جلب عنوان المحفظة الحقيقي
+  // ✅ تعديل: وظيفة حفظ البيانات لجلب عنوان المحفظة الحقيقي (G...)
   const savePioneerToDatabase = async (user: any) => {
     try {
       if (!user || user.uid === "demo") return;
       
-      // نستخدم wallet_address إذا وجد، وإلا نستخدم الـ uid كاحتياط
-      const walletIdentifier = user.wallet_address || user.uid;
-
+      // الأولوية لعنوان المحفظة العام wallet_address، وإذا لم يوجد نستخدم uid
+      const realWalletAddress = user.wallet_address || user.uid;
+      
       await fetch('/api/save-pioneer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: user.username,
-          wallet: walletIdentifier, 
+          wallet: realWalletAddress, 
           timestamp: new Date().toISOString()
         }),
       });
-      console.log("Success: Wallet Address synced to Upstash.");
+      console.log("Pioneer data (Real Wallet) synced to Upstash.");
     } catch (error) {
       console.error("Failed to sync pioneer data:", error);
     }
@@ -53,8 +53,7 @@ function ReputaAppContent() {
         const sdkTimeout = setTimeout(() => setIsInitializing(false), 5000);
         
         await initializePiSDK();
-        
-        // ✅ طلب صلاحية الوصول لعنوان المحفظة (wallet_address)
+        // ✅ التأكد من طلب صلاحية wallet_address هنا
         const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
         
         if (user) {
@@ -147,28 +146,27 @@ function ReputaAppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center items-start overflow-x-hidden md:py-8">
-      <div className="w-full max-w-[450px] min-h-screen md:min-h-[850px] bg-white md:rounded-[3rem] md:shadow-2xl flex flex-col font-sans relative overflow-hidden border-x border-gray-100">
+    /* ✅ الحفاظ على تنسيق حجم التطبيق في المتصفح العادي والحاسوب */
+    <div className="min-h-screen bg-gray-50 flex justify-center items-start">
+      <div className="w-full max-w-2xl min-h-screen bg-white shadow-xl flex flex-col font-sans relative border-x border-gray-100">
         
-        <header className="border-b p-5 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
+        <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="bg-purple-50 p-1.5 rounded-xl">
-               <img src={logoImage} alt="logo" className="w-7 h-7" />
-            </div>
+            <img src={logoImage} alt="logo" className="w-8 h-8" />
             <div className="leading-tight">
-              <h1 className="font-black text-purple-700 text-base tracking-tighter uppercase">Reputa Score</h1>
-              <p className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                 Hi, {currentUser?.username || 'Guest'}
+              <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
+              <p className="text-[10px] text-gray-400 font-black uppercase">
+                 Welcome, {currentUser?.username || 'Guest'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <a 
               href="https://t.me/+zxYP2x_4IWljOGM0" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="p-2 text-[#229ED9] bg-blue-50 rounded-full hover:bg-blue-100 transition-all active:scale-90"
+              className="p-2 text-[#229ED9] bg-blue-50 rounded-full hover:bg-blue-100 transition-colors"
             >
               <Send className="w-4 h-4" />
             </a>
@@ -179,30 +177,26 @@ function ReputaAppContent() {
                   setCurrentUser(user);
                   savePioneerToDatabase(user);
                 })} 
-                className="px-3 py-1.5 bg-purple-600 text-white rounded-full text-[9px] font-black uppercase shadow-lg shadow-purple-200 active:scale-95 transition-all"
+                className="p-2 bg-purple-50 text-purple-600 rounded-lg text-[9px] font-black uppercase border border-purple-100"
               >
-                Link
+                Link Account
               </button>
             )}
           </div>
         </header>
 
-        <main className="container mx-auto px-5 py-6 flex-1">
+        <main className="container mx-auto px-4 py-8 flex-1">
           {isLoading ? (
-            <div className="flex flex-col items-center py-20">
-              <div className="w-14 h-14 border-[5px] border-purple-100 border-t-purple-600 rounded-full animate-spin"></div>
-              <p className="text-[10px] mt-8 font-black text-purple-600 tracking-[0.4em] uppercase text-center animate-pulse">Analyzing Chain...</p>
+            <div className="flex flex-col items-center py-24">
+              <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase text-center">Syncing Protocol...</p>
             </div>
           ) : !walletData ? (
-            <div className="max-w-md mx-auto">
-              <div className="mb-8 text-center">
-                <h2 className="text-2xl font-black text-gray-800 tracking-tight uppercase">Trust Protocol</h2>
-                <p className="text-xs text-gray-400 font-medium">Verify on-chain reputation instantly</p>
-              </div>
+            <div className="max-w-md mx-auto py-6">
               <WalletChecker onCheck={handleWalletCheck} />
             </div>
           ) : (
-            <div className="animate-in fade-in zoom-in-95 duration-500">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                <WalletAnalysis
                 walletData={walletData}
                 isProUser={true} 
@@ -213,21 +207,18 @@ function ReputaAppContent() {
           )}
         </main>
 
-        <footer className="p-8 text-center border-t flex flex-col items-center gap-5 bg-gray-50/50">
+        <footer className="p-6 text-center border-t flex flex-col items-center gap-4">
           <a 
             href="https://t.me/+zxYP2x_4IWljOGM0" 
             target="_blank" 
             rel="noopener noreferrer"
-            className="w-full max-w-[200px] flex items-center justify-center gap-2 py-3 bg-[#229ED9] text-white rounded-2xl text-[11px] font-black uppercase shadow-xl shadow-blue-100 hover:shadow-blue-200 transition-all active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#229ED9] text-white rounded-full text-[10px] font-black uppercase shadow-sm hover:shadow-md transition-all active:scale-95"
           >
-            <Send className="w-3.5 h-3.5" />
-            Community Group
+            <Send className="w-3 h-3" />
+            Join Telegram
           </a>
-          <div className="space-y-1">
-            <div className="text-[10px] text-gray-400 font-black tracking-[0.3em] uppercase">
-              Reputa Protocol v4.5
-            </div>
-            <div className="text-[8px] text-gray-300 font-medium uppercase">Secure • Decentralized • Transparent</div>
+          <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">
+            Reputa Score v4.2 Stable
           </div>
         </footer>
 
