@@ -3,7 +3,7 @@
  * الربط الحقيقي مع شبكة الاختبار وتفعيل المصادقة الفعلية
  */
 
-import type { PiUser } from '../protocol/types'; 
+import type { PiUser } from '../protocol/types';
 
 // التحقق مما إذا كان التطبيق يعمل داخل متصفح Pi
 export function isPiBrowser(): boolean {
@@ -34,7 +34,7 @@ export async function initializePiSDK(): Promise<void> {
     // تفعيل sandbox بناءً على متغيرات البيئة أو افتراضياً لشبكة الاختبار
     await Pi.init({
       version: '2.0',
-      sandbox: false // نضعها true دائماً لضمان العمل على Testnet حالياً
+      sandbox: true // نضعها true دائماً لضمان العمل على Testnet حالياً
     });
     console.log('[PI SDK] Initialized successfully on Testnet');
   } catch (error) {
