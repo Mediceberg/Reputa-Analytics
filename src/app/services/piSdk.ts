@@ -7,44 +7,39 @@ export function isPiBrowser(): boolean {
   return typeof window !== 'undefined' && 'Pi' in window;
 }
 
-function getPiSDK() {
-  return (window as any).Pi;
-}
-
 /**
- * ✅ التعديل الحاسم: محاولة التهيئة في كل مرة يتم استدعاء المصادقة لضمان عدم التجمد
+ * ✅ التعديل الحاسم: تهيئة سريعة تمنع تعليق المتصفح
  */
 export async function initializePiSDK(): Promise<void> {
   if (!isPiBrowser()) return;
-
   try {
-    const Pi = getPiSDK();
-    // نستخدم await هنا لضمان اكتمال التهيئة قبل أي خطوة أخرى
-    await Pi.init({ version: '2.0', sandbox: true }); 
-    console.log('[PI SDK] Sandbox Initialized');
+    const Pi = (window as any).Pi;
+    // إضافة timeout بسيط للتهيئة لمنع التجمد اللانهائي
+    await Promise.race([
+      Pi.init({ version: '2.0', sandbox: true }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Init Timeout")), 3000))
+    ]);
+    console.log('[PI SDK] Sandbox Ready');
   } catch (error) {
-    // إذا كانت مهيأة مسبقاً، سيمر الكود بسلام
-    console.warn('[PI SDK] Already initialized or check portal settings');
+    console.warn('[PI SDK] Init skipped or already active');
   }
 }
 
 /**
- * ✅ تعديل المصادقة: استدعاء التهيئة يدوياً داخل الدالة لضمان استجابة الزر
+ * ✅ تعديل المصادقة: إجبار نافذة الربط على الظهور
  */
 export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<any> {
-  if (!isPiBrowser()) {
-    return { username: "Guest_Explorer", uid: "demo" };
-  }
+  if (!isPiBrowser()) return { username: "Guest_Explorer", uid: "demo" };
 
   try {
-    const Pi = getPiSDK();
-    
-    // 💡 إضافة ذكية: إذا لم يستجب الـ SDK، نقوم بإعادة تهيئته فوراً
-    if (!Pi || !Pi.authenticate) {
-       await initializePiSDK();
+    const Pi = (window as any).Pi;
+
+    // 💡 خطوة الإنقاذ: إذا كان الـ SDK غير مستجيب، نحاول تهيئته فوراً قبل طلب الربط
+    if (typeof Pi.authenticate !== 'function') {
+      await initializePiSDK();
     }
 
-    // طلب المصادقة
+    // إطلاق عملية المصادقة
     const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
     
     return {
@@ -54,20 +49,20 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
       accessToken: auth.accessToken
     };
   } catch (error: any) {
-    console.error('[PI SDK] Authentication failed:', error);
-    // تنبيه المستخدم بالخطأ الحقيقي (مثل عدم تطابق الرابط المسجل في البوابة)
-    alert("Pi Browser Link Error: " + (error.message || "Please refresh the page"));
+    console.error('[PI SDK] Auth Error:', error);
+    // إذا وصلنا هنا، سيعرف المستخدم السبب الحقيقي (مثلاً: الرابط غير مطابق للبوابة)
+    alert("Pi Auth Detail: " + (error.message || "Connection refused by Pi Browser"));
     throw error;
   }
 }
 
 function onIncompletePaymentFound(payment: any) {
   console.log('[PI SDK] Incomplete payment found:', payment);
-  if (payment) {
+  if (payment && payment.identifier) {
      fetch('/api/pi-payment', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction.txid, action: 'complete' })
-     });
+       body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, action: 'complete' })
+     }).catch(err => console.error("Recovery failed", err));
   }
 }
