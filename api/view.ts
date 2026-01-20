@@ -45,136 +45,143 @@ export default async function handler(req: any, res: any) {
       const walletArray = Array.from(u.wallets);
       const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || 'N/A';
       
-      const walletsData = JSON.stringify(walletArray).replace(/'/g, "&apos;");
-      const timesData = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString())).replace(/'/g, "&apos;");
+      // تحويل البيانات لنصوص ليتم قراءتها بواسطة الـ JavaScript المنبثق
+      const walletsJson = JSON.stringify(walletArray);
+      const timesJson = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString()));
 
       return `
       <tr>
-        <td class="user-cell" onclick='openPanel("${u.username}", ${walletsData}, ${timesData})' style="cursor:pointer">
+        <td class="user-cell">
             <div class="user-info">
               <span class="name">${u.username}</span>
-              <span class="visit-badge">${u.count}x Visits <small>(Click to view)</small></span>
+              <span class="visit-badge" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>${u.count}x Visits (View History)</span>
             </div>
         </td>
         <td class="wallet-cell">
           <span class="status-dot ${primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
           <code>${primaryWallet}</code>
-          ${walletArray.length > 1 ? `<span class="multi-tag">+${walletArray.length - 1} more</span>` : ''}
+          ${walletArray.length > 1 ? `<span class="multi-tag" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>+${walletArray.length - 1} More</span>` : ''}
         </td>
-        <td class="date-cell">${new Date(u.timestamps[0]).toLocaleString()}</td>
-      </tr>`;
-    }).join('');
+        <td class="date-cell">
+          <div class="last-seen">Last: ${new Date(u.timestamps[0]).toLocaleString()}</div>
+        </td>
+      </tr>
+    `}).join('');
 
     return res.status(200).send(`
       <!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
-        <title>Reputa Admin Console</title>
+        <title>Pioneer Admin Console</title>
         <style>
           :root { --bg: #f8fafc; --primary: #0f172a; --accent: #38bdf8; --border: #e2e8f0; }
-          body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; overflow-x: hidden; }
-          .container { max-width: 1240px; margin: 0 auto; transition: margin-right 0.3s; }
+          body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+          .container { max-width: 1240px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--primary); padding: 20px; border-radius: 12px; color: white; }
-          .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+          .grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+          .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
           table { width: 100%; border-collapse: collapse; }
           th { background: #f1f5f9; padding: 14px 20px; text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; }
           td { padding: 14px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-          .user-info .name { font-weight: 700; color: #6366f1; text-decoration: underline; }
-          .visit-badge { font-size: 10px; color: #64748b; font-weight: 600; }
-          .multi-tag { font-size: 10px; color: #ef4444; background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 5px; }
+          .user-info .name { font-weight: 700; color: var(--primary); display: block; }
+          .visit-badge { font-size: 10px; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 800; }
+          .multi-tag { font-size: 10px; color: #ef4444; background: #fee2e2; padding: 2px 6px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 800; }
           .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
-          .active { background: #10b981; } .inactive { background: #94a3b8; }
-          code { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 12px; }
-
-          /* Right Side Panel */
-          #sidePanel { position: fixed; right: -400px; top: 0; width: 380px; height: 100%; background: white; box-shadow: -5px 0 25px rgba(0,0,0,0.1); transition: 0.3s; z-index: 2000; padding: 30px; box-sizing: border-box; overflow-y: auto; }
-          #sidePanel.open { right: 0; }
-          .panel-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.3); display:none; z-index: 1500; }
-          .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); padding-bottom: 15px; margin-bottom: 20px; }
-          .close-panel { cursor: pointer; font-size: 24px; font-weight: bold; }
+          .active { background: #10b981; } .inactive { background: #ef4444; }
+          code { background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
           
-          .wallet-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 15px; }
-          .wallet-card code { display: block; word-break: break-all; margin-bottom: 10px; background: white; padding: 10px; border: 1px solid #eee; }
-          .copy-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
-          .copy-btn:active { background: var(--accent); }
-          .timeline-item { font-size: 12px; color: #64748b; padding: 8px 0; border-bottom: 1px dashed #eee; }
+          /* Modal Styles */
+          #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+          .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 16px; padding: 25px; max-height: 80vh; overflow-y: auto; position: relative; }
+          .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
+          .close-btn { cursor: pointer; font-size: 24px; color: #94a3b8; }
+          .wallet-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+          .copy-btn { background: var(--accent); color: var(--primary); border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
+          .time-item { font-size: 11px; color: #64748b; padding: 5px 0; border-bottom: 1px dashed #eee; }
           
-          .pagination { margin-top: 25px; text-align: center; }
-          .pg-btn { padding: 10px 20px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; font-weight: 600; }
+          .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
+          .pagination { margin-top: 20px; text-align: center; }
+          .pg-btn { padding: 10px 20px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; }
         </style>
       </head>
       <body>
-        <div class="panel-overlay" id="overlay" onclick="closePanel()"></div>
-        <div id="sidePanel">
-          <div class="panel-header">
-            <h2 id="panelTitle" style="margin:0; font-size:18px;">Pioneer Details</h2>
-            <span class="close-panel" onclick="closePanel()">&times;</span>
-          </div>
-          <div id="panelContent"></div>
-        </div>
-
         <div class="container">
           <header class="header">
-            <h1 style="margin:0; font-size: 20px;">🛡️ Reputa Admin Terminal</h1>
-            <div>Total: ${totalItems}</div>
+            <h1 style="margin:0; font-size: 20px;">🛡️ Pioneer Intelligence Console</h1>
+            <div>Total Unique: ${totalItems}</div>
           </header>
 
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Pioneer (Click to view)</th><th>Primary Wallet</th><th>Last Seen</th></tr></thead>
-              <tbody>${rows}</tbody>
-            </table>
-          </div>
+          <div class="grid-layout">
+            <div class="main-content">
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Pioneer</th><th>Wallet Identity</th><th>Activity</th></tr></thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
+              <div class="pagination">
+                 ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">Previous</a>` : ''}
+                 <span class="pg-btn" style="background:var(--primary); color:white;">Page ${currentPage}</span>
+                 ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next</a>` : ''}
+              </div>
+            </div>
 
-          <div class="pagination">
-             ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">← Previous</a>` : ''}
-             <span class="pg-btn" style="background:var(--primary); color:white;">Page ${currentPage}</span>
-             ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next →</a>` : ''}
+            <div class="feedback-panel">
+              <h3 style="margin-top:0; font-size: 14px; color: #64748b; border-bottom: 2px solid var(--accent); padding-bottom: 10px;">LATEST FEEDBACK</h3>
+              ${rawFeedbacks.slice(0, 10).map((f: any) => {
+                const data = typeof f === 'string' ? JSON.parse(f) : f;
+                return `<div style="font-size:12px; padding:10px 0; border-bottom:1px solid #f1f5f9;"><b>@${data.username}:</b> ${data.text}</div>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div id="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="modalTitle" style="margin:0; font-size:16px;">Details</h3>
+              <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modalBody"></div>
           </div>
         </div>
 
         <script>
-          function openPanel(username, wallets, times) {
-            const panel = document.getElementById('sidePanel');
-            const overlay = document.getElementById('overlay');
-            const content = document.getElementById('panelContent');
-            document.getElementById('panelTitle').innerText = username;
+          function showModal(username, wallets, times) {
+            const modal = document.getElementById('modal');
+            const body = document.getElementById('modalBody');
+            document.getElementById('modalTitle').innerText = "History for " + username;
             
-            let html = '<h3 style="font-size:13px; color:#64748b; text-transform:uppercase;">Registered Wallets</h3>';
-            wallets.forEach((w, index) => {
+            let html = '<h4 style="font-size:12px; color:#64748b;">RECOGNIZED WALLETS</h4>';
+            wallets.forEach(w => {
               html += \`
-                <div class="wallet-card">
-                  <code>\${w}</code>
-                  <button class="copy-btn" onclick="copyWallet(this, '\${w}')">COPY WALLET ADDRESS</button>
+                <div class="wallet-item">
+                  <code style="font-size:11px; word-break:break-all;">\${w}</code>
+                  <button class="copy-btn" onclick="copyText('\${w}')">COPY</button>
                 </div>\`;
             });
 
-            html += '<h3 style="font-size:13px; color:#64748b; text-transform:uppercase; margin-top:30px;">Activity Logs</h3>';
+            html += '<h4 style="font-size:12px; color:#64748b; margin-top:20px;">VISIT TIMELINE</h4>';
             times.forEach(t => {
-              html += \`<div class="timeline-item">🕒 \${t}</div>\`;
+              html += \`<div class="time-item">Visited on: \${t}</div>\`;
             });
 
-            content.innerHTML = html;
-            panel.classList.add('open');
-            overlay.style.display = 'block';
+            body.innerHTML = html;
+            modal.style.display = 'flex';
           }
 
-          function closePanel() {
-            document.getElementById('sidePanel').classList.remove('open');
-            document.getElementById('overlay').style.display = 'none';
+          function closeModal() {
+            document.getElementById('modal').style.display = 'none';
           }
 
-          function copyWallet(btn, text) {
-            navigator.clipboard.writeText(text).then(() => {
-              const originalText = btn.innerText;
-              btn.innerText = '✅ COPIED!';
-              btn.style.background = '#10b981';
-              setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.background = '';
-              }, 2000);
-            });
+          function copyText(text) {
+            navigator.clipboard.writeText(text);
+            alert('Wallet copied to clipboard!');
+          }
+
+          window.onclick = function(event) {
+            if (event.target == document.getElementById('modal')) closeModal();
           }
         </script>
       </body>
