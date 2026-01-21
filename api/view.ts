@@ -23,9 +23,19 @@ export default async function handler(req: any, res: any) {
     rawPioneers.forEach((item: any) => {
       try {
         const p = typeof item === 'string' ? JSON.parse(item) : item;
-        const username = p.username || 'Anonymous';
+        
+        // التحقق مما إذا كان الدخول من متصفح خارجي (بدون بيانات Pi)
+        const isExternal = !p.username || p.username === 'Anonymous';
+        const username = isExternal ? '🌐 External User / Browser' : p.username;
+        
         if (!pioneerMap.has(username)) {
-          pioneerMap.set(username, { username, wallets: new Set(p.wallet ? [p.wallet] : []), timestamps: [p.timestamp], count: 1 });
+          pioneerMap.set(username, { 
+            username, 
+            wallets: new Set(p.wallet ? [p.wallet] : []), 
+            timestamps: [p.timestamp], 
+            count: 1,
+            isExternal: isExternal
+          });
         } else {
           const existing = pioneerMap.get(username);
           existing.count += 1;
@@ -43,27 +53,26 @@ export default async function handler(req: any, res: any) {
 
     const rows = paginatedPioneers.map((u: any) => {
       const walletArray = Array.from(u.wallets);
-      const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || 'N/A';
+      const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || (u.isExternal ? '⚠️ Data missing (External Browser)' : 'N/A');
       
-      // تحويل البيانات لنصوص ليتم قراءتها بواسطة الـ JavaScript المنبثق
       const walletsJson = JSON.stringify(walletArray);
       const timesJson = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString()));
 
       return `
-      <tr>
+      <tr style="${u.isExternal ? 'background-color: #fff8f8;' : ''}">
         <td class="user-cell">
             <div class="user-info">
-              <span class="name">${u.username}</span>
-              <span class="visit-badge" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>${u.count}x Visits (View History)</span>
+              <span class="name" style="${u.isExternal ? 'color: #ef4444;' : ''}">${u.username}</span>
+              <span class="visit-badge" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>${u.count}x Visits</span>
             </div>
         </td>
         <td class="wallet-cell">
           <span class="status-dot ${primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
-          <code>${primaryWallet}</code>
+          <code style="${u.isExternal ? 'color: #94a3b8; border-color: #fee2e2;' : ''}">${primaryWallet}</code>
           ${walletArray.length > 1 ? `<span class="multi-tag" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>+${walletArray.length - 1} More</span>` : ''}
         </td>
         <td class="date-cell">
-          <div class="last-seen">Last: ${new Date(u.timestamps[0]).toLocaleString()}</div>
+          <div class="last-seen">${new Date(u.timestamps[0]).toLocaleString()}</div>
         </td>
       </tr>
     `}).join('');
@@ -91,7 +100,6 @@ export default async function handler(req: any, res: any) {
           .active { background: #10b981; } .inactive { background: #ef4444; }
           code { background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
           
-          /* Modal Styles */
           #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
           .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 16px; padding: 25px; max-height: 80vh; overflow-y: auto; position: relative; }
           .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
@@ -109,14 +117,17 @@ export default async function handler(req: any, res: any) {
         <div class="container">
           <header class="header">
             <h1 style="margin:0; font-size: 20px;">🛡️ Pioneer Intelligence Console</h1>
-            <div>Total Unique: ${totalItems}</div>
+            <div style="text-align:right">
+                <div style="font-size:10px; opacity:0.7">TOTAL REGISTERED</div>
+                <div style="font-size:18px; font-weight:800">${totalItems}</div>
+            </div>
           </header>
 
           <div class="grid-layout">
             <div class="main-content">
               <div class="table-wrapper">
                 <table>
-                  <thead><tr><th>Pioneer</th><th>Wallet Identity</th><th>Activity</th></tr></thead>
+                  <thead><tr><th>Pioneer / Browser Source</th><th>Wallet Identity</th><th>Activity</th></tr></thead>
                   <tbody>${rows}</tbody>
                 </table>
               </div>
@@ -151,9 +162,15 @@ export default async function handler(req: any, res: any) {
           function showModal(username, wallets, times) {
             const modal = document.getElementById('modal');
             const body = document.getElementById('modalBody');
-            document.getElementById('modalTitle').innerText = "History for " + username;
+            document.getElementById('modalTitle').innerText = username;
             
-            let html = '<h4 style="font-size:12px; color:#64748b;">RECOGNIZED WALLETS</h4>';
+            let html = '';
+            if (username.includes('External')) {
+                html += '<div style="background:#fff4f4; border:1px solid #ffcccc; padding:10px; border-radius:8px; color:#cc0000; font-size:12px; margin-bottom:15px;">⚠️ This user is accessing via a standard browser. Wallet data cannot be retrieved unless they use Pi Browser.</div>';
+            }
+
+            html += '<h4 style="font-size:12px; color:#64748b;">RECOGNIZED WALLETS</h4>';
+            if (wallets.length === 0) html += '<p style="font-size:12px; color:#94a3b8;">No wallets found.</p>';
             wallets.forEach(w => {
               html += \`
                 <div class="wallet-item">
@@ -170,19 +187,8 @@ export default async function handler(req: any, res: any) {
             body.innerHTML = html;
             modal.style.display = 'flex';
           }
-
-          function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-          }
-
-          function copyText(text) {
-            navigator.clipboard.writeText(text);
-            alert('Wallet copied to clipboard!');
-          }
-
-          window.onclick = function(event) {
-            if (event.target == document.getElementById('modal')) closeModal();
-          }
+          function closeModal() { document.getElementById('modal').style.display = 'none'; }
+          function copyText(text) { navigator.clipboard.writeText(text); alert('Copied!'); }
         </script>
       </body>
       </html>
