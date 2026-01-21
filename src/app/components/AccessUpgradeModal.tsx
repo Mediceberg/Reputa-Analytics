@@ -1,50 +1,67 @@
-import { useState } from 'react';
-import { Sparkles, Check } from 'lucide-react';
+import { Sparkles, Lock, Check } from 'lucide-react';  
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { createVIPPayment } from '../services/piPayments';
 
 interface AccessUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpgrade: () => void;
-  currentUser?: any;
+  currentUser?: any; 
 }
 
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
-
+  
   const handlePayment = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
+    if (!currentUser) return;
+
     // ---- Demo Mode ----
-    if (!currentUser || currentUser.uid === 'demo') {
-      alert('⚡ Demo Mode: VIP unlocked!');
+    if (currentUser.uid === "demo") {
       onUpgrade();
       onClose();
+      alert("✅ VIP Unlocked (Demo)!");
       return;
     }
-
-    if (!window.Pi) {
-      alert('❌ Please open this app in Pi Browser');
-      return;
-    }
-
-    if (isProcessing) return;
-    setIsProcessing(true);
 
     try {
-      await createVIPPayment(currentUser.uid, () => {
+      // 1️⃣ إنشاء عملية دفع على backend
+      const paymentId = await createVIPPayment(currentUser.uid);
+      if (!paymentId) throw new Error("Could not start Pi payment");
+
+      // 2️⃣ الموافقة على الدفع
+      const approveRes = await fetch('/api/piPayment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve', paymentId })
+      });
+      if (!approveRes.ok) throw new Error("Payment approval failed");
+
+      // 3️⃣ انتظار الـ txid من Pi Network (تستبدل بالوظيفة الصحيحة لجلب txid)
+      const txid = await getTxidFromPi(paymentId); // dummy function placeholder
+      if (!txid) throw new Error("Transaction ID not found");
+
+      // 4️⃣ إتمام الدفع
+      const completeRes = await fetch('/api/piPayment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', paymentId, txid, uid: currentUser.uid })
+      });
+      const completeData = await completeRes.json();
+
+      if (completeRes.ok && completeData.success) {
         onUpgrade();
         onClose();
-        alert('✅ VIP Unlocked!');
-      });
-    } catch (err) {
+        alert("✅ VIP Unlocked!");
+      } else {
+        throw new Error("Payment completion failed");
+      }
+
+    } catch (err: any) {
       console.error(err);
-      alert('❌ Payment failed. Try again.');
-    } finally {
-      setIsProcessing(false);
+      alert(`❌ VIP could not be unlocked: ${err.message}`);
     }
   };
 
@@ -69,35 +86,8 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
                 <li className="flex items-center gap-2"><Check className="w-3 h-3"/> Public Metrics</li>
               </ul>
             </div>
+
             <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg border-2 border-cyan-200">
               <h3 className="font-semibold text-cyan-700 text-sm mb-3">VIP Insights</h3>
               <ul className="space-y-2 text-xs text-gray-700">
-                <li className="flex items-center gap-2"><Check className="w-3 h-3 text-cyan-600"/> AI Behavior Analysis</li>
-                <li className="flex items-center gap-2"><Check className="w-3 h-3 text-cyan-600"/> Risk Heatmaps</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 bg-white border-t">
-          <div className="text-center mb-4">
-            <div className="flex items-center justify-center gap-1.5">
-              <span className="text-3xl font-black text-gray-900">1</span>
-              <span className="text-xl font-bold text-purple-600">π</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            onClick={handlePayment}
-            disabled={isProcessing}
-            className={`w-full h-14 ${isProcessing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-600 to-blue-700'} text-white rounded-xl shadow-lg font-black uppercase`}
-          >
-            <Sparkles className="w-5 h-5 mr-2" />
-            {isProcessing ? 'Processing...' : 'Unlock Now'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
+                <li className="flex items-center gap-2"><Check className="w-3 h-3 text-cyan-600"/> AI Beha
