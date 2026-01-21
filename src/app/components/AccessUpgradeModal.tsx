@@ -2,6 +2,7 @@ import { Sparkles, Lock, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { createVIPPayment } from '../services/piPayments';
+import { useState } from 'react';
 
 interface AccessUpgradeModalProps {
   isOpen: boolean;
@@ -11,22 +12,42 @@ interface AccessUpgradeModalProps {
 }
 
 export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
-  
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const handlePayment = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // ---- Demo Mode: VIP opens directly ----
     if (!currentUser || currentUser.uid === "demo") {
-      alert("Please link your Pi account first.");
+      alert("⚡ Demo Mode: VIP unlocked for testing!");
+      onUpgrade();
+      onClose();
       return;
     }
 
-    // استدعاء الدالة باسم المتغير الصحيح uid
-    await createVIPPayment(currentUser.uid, () => {
-      onUpgrade();
-      onClose();
-      alert("✅ VIP Unlocked!");
-    });
+    // ---- Real Mode ----
+    if (!window.Pi) {
+      alert("❌ Please open this app in Pi Browser");
+      return;
+    }
+
+    if (isProcessing) return; // منع الضغط المتكرر
+    setIsProcessing(true);
+
+    try {
+      await createVIPPayment(currentUser.uid, () => {
+        // ✅ VIP فقط بعد إتمام الدفع
+        onUpgrade();
+        onClose();
+        alert("✅ VIP Unlocked!");
+      });
+    } catch (err) {
+      console.error(err);
+      alert("❌ Payment failed. Try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -72,10 +93,13 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
           <Button 
             type="button"
             onClick={handlePayment}
-            className="w-full h-14 bg-gradient-to-r from-cyan-600 to-blue-700 text-white rounded-xl shadow-lg font-black uppercase"
+            disabled={isProcessing}
+            className={`w-full h-14 ${
+              isProcessing ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-cyan-600 to-blue-700'
+            } text-white rounded-xl shadow-lg font-black uppercase`}
           >
             <Sparkles className="w-5 h-5 mr-2" />
-            Unlock Now
+            {isProcessing ? 'Processing...' : 'Unlock Now'}
           </Button>
         </div>
       </DialogContent>
