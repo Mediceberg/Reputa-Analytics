@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './app/App';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 // استيراد ملفات التنسيق الأساسية للمشروع
 import './styles/index.css';
 import './styles/fonts.css';
@@ -72,5 +73,6 @@ ReactDOM.createRoot(rootElement).render(
     <ErrorBoundary>
       <App />
     </ErrorBoundary>
+    <SpeedInsights />
   </React.StrictMode>
 );
