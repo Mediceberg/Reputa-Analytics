@@ -1,3 +1,17 @@
+
+/**
+ * ⚠️ DISABLED
+ * Pi payment must be called directly from UI component
+ * This service is intentionally disabled
+ */
+
+export function createPiPayment() {
+  throw new Error(
+    "Pi Payment service disabled. Use Pi.createPayment directly in component."
+  );
+}
+
+
 export const createVIPPayment = async (uid: string, onSuccess: () => void) => {
   // 1. فحص وجود Pi في النافذة
   const Pi = (window as any).Pi;
