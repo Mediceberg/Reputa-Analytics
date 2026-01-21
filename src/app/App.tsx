@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';  
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Send, MessageSquare } from 'lucide-react'; // أضفت أيقونة MessageSquare للتعليقات
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
@@ -249,6 +250,7 @@ function ReputaAppContent() {
         }} 
       />
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
