@@ -1,5 +1,5 @@
 // /api/checkVip.ts
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import { VercelRequest, VercelResponse } from '@vercel/node'; 
 import { Redis } from '@upstash/redis';
 
 // ---- إعداد Redis ----
