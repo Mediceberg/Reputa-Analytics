@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';  
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare } from 'lucide-react'; // أضفت أيقونة MessageSquare للتعليقات
+import { Send, MessageSquare } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون خانة آراء الرواد الجديد (مدمج بتنسيق متناسق) ---
+// --- مكون FeedbackSection ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -220,13 +220,11 @@ function ReputaAppContent() {
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
-            {/* إضافة خانة الآراء في الصفحة الرئيسية قبل إدخال المحفظة */}
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
              <WalletAnalysis walletData={walletData} isProUser={isVip} onReset={() => setWalletData(null)} onUpgradePrompt={() => setIsUpgradeModalOpen(true)} />
-             {/* إضافة خانة الآراء بعد ظهور تحليل المحفظة */}
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}
@@ -244,13 +242,27 @@ function ReputaAppContent() {
         onClose={() => setIsUpgradeModalOpen(false)} 
         currentUser={currentUser}
         onUpgrade={() => {
-          setIsVip(true);
+          // VIP لن يتم تفعيله إلا بعد التأكد من الدفع
+          if (currentUser?.uid === "demo") {
+            setIsVip(true); // Demo mode يسمح بالفتح مباشرة
+          } else {
+            fetch(`/api/check-vip?uid=${currentUser.uid}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data.isVip) setIsVip(true);
+                else alert("❌ VIP not unlocked yet. Complete your payment first.");
+              })
+              .catch(() => alert("❌ Could not verify VIP status."));
+          }
           setIsUpgradeModalOpen(false);
         }} 
       />
+
       <Analytics />
     </div>
   );
 }
 
-export default function App() { return (<TrustProvider><ReputaAppContent /></TrustProvider>); }
+export default function App() { 
+  return (<TrustProvider><ReputaAppContent /></TrustProvider>); 
+}
