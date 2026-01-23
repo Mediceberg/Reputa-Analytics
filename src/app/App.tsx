@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';   
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck } from 'lucide-react';
+import { Send, MessageSquare, Lock } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection (لم يتم تغيير أي شيء فيه) ---
+// --- مكون FeedbackSection (بدون تغيير في الروح مع تحسين التباعد) ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -80,29 +80,37 @@ function ReputaAppContent() {
   }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
-    setIsLoading(true);
-    // إصلاح مشكلة الديمو: التنفيذ الفوري
+    // إصلاح Demo جذرياً: التأكد من كسر حالة التحميل فوراً
     if (address.toLowerCase().trim() === 'demo') {
+      setIsLoading(true);
+      // استخدام تزامني بسيط لضمان تحديث الـ State
+      const demoData = {
+        address: "GDU22WEH7M3O...DEMO",
+        username: "Demo_Pioneer",
+        reputaScore: 632,
+        trustLevel: "Elite",
+        transactions: []
+      };
+      
       setTimeout(() => {
-        setWalletData({
-          address: "GDU22WEH7M3O...DEMO",
-          username: "Demo_Pioneer",
-          reputaScore: 632,
-          trustLevel: "Elite",
-          transactions: []
-        });
+        setWalletData(demoData);
         setIsLoading(false);
-      }, 500);
+      }, 400); 
       return;
     }
 
+    setIsLoading(true);
     try {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
         refreshWallet(address).catch(() => null);
       }
-    } catch (error) { alert("Blockchain sync error."); } finally { setIsLoading(false); }
+    } catch (error) { 
+      alert("Blockchain sync error."); 
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   if (isInitializing && piBrowser) {
@@ -114,7 +122,7 @@ function ReputaAppContent() {
     );
   }
 
-  // حالة الفتح (VIP أو دفع أو ديمو)
+  // منطق الفتح الذكي: الديمو يفتح التقرير دائماً
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   return (
@@ -148,10 +156,9 @@ function ReputaAppContent() {
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
              
-             {/* الحاوية النسبية لقفل التقرير فقط */}
-             <div className="relative">
+             <div className="relative group">
                 <WalletAnalysis 
                   walletData={walletData} 
                   isProUser={isUnlocked} 
@@ -159,22 +166,31 @@ function ReputaAppContent() {
                   onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
                 />
 
-                {/* طبقة القفل: تغطي الجزء السفلي (التقرير) فقط وتترك السكور والمعاملات مفتوحة */}
+                {/* طبقة القفل الاحترافية: تشغل مساحة أقل (35%) مع تلاشي ناعم جداً */}
                 {!isUnlocked && (
-                  <div className="absolute inset-x-0 bottom-0 h-[50%] z-20 backdrop-blur-md bg-white/70 flex flex-col items-center justify-center p-8 text-center rounded-b-[40px] border-t border-purple-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-                    <div className="bg-white p-3 rounded-2xl shadow-lg mb-3 border border-purple-50">
-                      <Lock className="w-5 h-5 text-purple-600" />
+                  <div className="absolute inset-x-0 bottom-0 h-[38%] z-20 rounded-b-[40px] overflow-hidden">
+                    {/* خلفية متدرجة تعطي إيحاء بالغموض وليس الانغلاق التام */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[8px]" />
+                    
+                    <div className="relative h-full flex flex-col items-center justify-center p-6 text-center">
+                      <div className="w-12 h-12 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-3 border border-purple-50 ring-4 ring-purple-50/50 animate-pulse">
+                        <Lock className="w-5 h-5 text-purple-600" />
+                      </div>
+                      
+                      <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-[0.2em]">Detailed Audit Locked</h3>
+                      
+                      <button 
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="mt-4 px-8 py-3 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all active:scale-95"
+                      >
+                        Unlock Full Report
+                      </button>
+                      
+                      <div className="mt-3 flex items-center gap-2 opacity-60">
+                         <div className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
+                         <span className="text-[7px] font-black text-gray-500 uppercase">1 Testnet Pi Required</span>
+                      </div>
                     </div>
-                    <h3 className="text-[11px] font-black text-gray-900 uppercase tracking-widest">Professional Audit Locked</h3>
-                    <p className="text-[9px] text-gray-500 mt-2 max-w-[220px] font-bold uppercase">
-                      Pay <span className="text-purple-600">1 Testnet Pi</span> to reveal full report.
-                    </p>
-                    <button 
-                      onClick={() => setIsUpgradeModalOpen(true)}
-                      className="mt-5 px-10 py-3 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-lg active:scale-95 transition-all"
-                    >
-                      Unlock Now
-                    </button>
                   </div>
                 )}
              </div>
@@ -184,7 +200,7 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-6 text-center border-t">
+      <footer className="p-6 text-center border-t border-gray-50">
         <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
@@ -192,7 +208,11 @@ function ReputaAppContent() {
         isOpen={isUpgradeModalOpen} 
         onClose={() => setIsUpgradeModalOpen(false)} 
         currentUser={currentUser}
-        onUpgrade={() => { setIsVip(true); setPaymentCount(1); setIsUpgradeModalOpen(false); }} 
+        onUpgrade={() => { 
+          setIsVip(true); 
+          setPaymentCount(1); 
+          setIsUpgradeModalOpen(false); 
+        }} 
       />
       <Analytics />
     </div>
