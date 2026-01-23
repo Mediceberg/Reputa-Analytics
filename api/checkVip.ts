@@ -8,7 +8,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-// ---- دالة التحقق من حالة VIP ----
+// ---- دالة التحقق من حالة VIP وعدد المعاملات ----
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { uid } = req.query;
@@ -18,12 +18,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'Missing uid' });
     }
 
-    // قراءة حالة VIP من Redis
+    // 1. قراءة حالة VIP من Redis
     const vipStatus = await redis.get(`vip_status:${uid}`);
     const isVip = vipStatus === 'active';
 
-    // إعادة النتيجة
-    return res.status(200).json({ isVip });
+    // 2. قراءة عدد المعاملات الناجحة للمستخدم
+    // نستخدم مفتاحاً خاصاً لكل مستخدم يتم زيادته عند كل عملية دفع ناجحة
+    const txCount = await redis.get(`tx_count:${uid}`);
+    
+    // تحويل القيمة إلى رقم، وإذا لم توجد نعتبرها 0
+    const count = parseInt(txCount as string) || 0;
+
+    // إعادة النتيجة الشاملة
+    return res.status(200).json({ 
+      isVip, 
+      count 
+    });
+
   } catch (error) {
     console.error('Check VIP Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
