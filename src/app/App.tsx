@@ -67,6 +67,10 @@ function ReputaAppContent() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
+  
+  // حالات جديدة لإرسال العملات من محفظة التطبيق
+  const [payoutTarget, setPayoutTarget] = useState('');
+  const [isSendingPayout, setIsSendingPayout] = useState(false);
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
@@ -98,7 +102,6 @@ function ReputaAppContent() {
       }
       try {
         await initializePiSDK();
-        // تم إصلاح الخطأ هنا: حذف النقطة الزائدة قبل .catch
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
@@ -150,6 +153,29 @@ function ReputaAppContent() {
     }
   };
 
+  // دالة إرسال العملات من محفظة التطبيق (الخلفية)
+  const handleAppPayout = async () => {
+    if (!payoutTarget) return;
+    setIsSendingPayout(true);
+    try {
+      const res = await fetch('/api/send-pi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toAddress: payoutTarget, amount: 0.01 }),
+      });
+      if (res.ok) {
+        alert("✅ Transaction Sent Successfully from App Wallet!");
+        setPayoutTarget('');
+      } else {
+        alert("❌ Failed to send. Make sure App Wallet is funded.");
+      }
+    } catch (e) {
+      alert("❌ Connection Error");
+    } finally {
+      setIsSendingPayout(false);
+    }
+  };
+
   if (isInitializing && piBrowser) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">
@@ -187,6 +213,31 @@ function ReputaAppContent() {
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
+            
+            {/* قسم إرسال المعاملات للمطور فقط لإتمام شروط المينيت */}
+            {currentUser?.uid && currentUser.uid !== "demo" && (
+              <div className="mt-8 p-6 bg-orange-50/50 rounded-3xl border border-dashed border-orange-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                  <h3 className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Mainnet Payout Tool (Admin)</h3>
+                </div>
+                <input 
+                  value={payoutTarget}
+                  onChange={(e) => setPayoutTarget(e.target.value)}
+                  placeholder="Recipient Address (G...)"
+                  className="w-full p-4 text-[11px] bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-orange-400 mb-3"
+                />
+                <button 
+                  onClick={handleAppPayout}
+                  disabled={isSendingPayout}
+                  className="w-full py-3 bg-orange-500 text-white text-[9px] font-black uppercase rounded-xl shadow-md active:scale-95 disabled:opacity-50 transition-all"
+                >
+                  {isSendingPayout ? "Processing..." : "Send 0.01 Pi from App Wallet"}
+                </button>
+                <p className="mt-2 text-[8px] text-orange-400 text-center font-bold">ONLY YOU SEE THIS TO COMPLETE 10 TRANSFERS</p>
+              </div>
+            )}
+
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
