@@ -11,7 +11,6 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
-    // أضفنا recipientUid لكي نأخذه من واجهة التطبيق
     const { toAddress, amount, recipientUid } = req.body;
 
     if (!toAddress || !amount || !recipientUid) {
@@ -29,29 +28,29 @@ export default async function handler(req: any, res: any) {
           amount: parseFloat(amount),
           memo: "Mainnet Checklist Transaction",
           metadata: { type: "app_payout" },
-          uid: recipientUid, // تم التعديل: نستخدم الـ UID الحقيقي للمستلم المسجل في باي
+          uid: recipientUid, 
           recipient_address: toAddress
         }
       })
     });
 
-    // قراءة البيانات مرة واحدة لتجنب خطأ Body is unusable
+    // قراءة الاستجابة الخام
     const responseData = await response.json();
 
     if (response.ok) {
         await redis.incr('total_app_transactions');
         return res.status(200).json({ success: true, data: responseData });
     } else {
-        console.error("Pi API Error Detail:", responseData);
-        // نعيد تفاصيل الخطأ بدقة لنعرف سبب الرفض (مثلاً رصيد غير كافٍ)
+        // طباعة الخطأ كاملاً في سجلات Vercel لنعرف السبب (مثلاً: insufficient_funds)
+        console.error("PI_NETWORK_REJECTION:", responseData);
+        
         return res.status(400).json({ 
-          error: responseData.error_message || responseData.message || "Transaction Rejected",
-          code: responseData.error || "unknown_error"
+          error: responseData.error_message || "Transaction Rejected",
+          details: responseData
         });
     }
 
   } catch (error: any) {
-    console.error("Server Error:", error.message);
-    return res.status(500).json({ error: "Internal Server Error", message: error.message });
+    return res.status(500).json({ error: "Server Error", message: error.message });
   }
 }
