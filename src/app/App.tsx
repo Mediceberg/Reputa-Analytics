@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';   
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, Lock, CheckCircle2 } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -48,7 +48,7 @@ function FeedbackSection({ username }: { username: string }) {
         value={feedback}
         onChange={(e) => setFeedback(e.target.value)}
         placeholder="Help us improve Reputa Score..."
-        className="w-full p-4 text-[11px] bg-white rounded-2xl border-none shadow-inner focus:ring-2 focus:ring-purple-400 min-h-[100px] placeholder:text-gray-300 transition-all"
+        className="w-full p-4 text-[11px] bg-white rounded-2xl border-none shadow-inner focus:ring-2 focus:ring-purple-400 min-h-[100px] transition-all"
       />
       <button 
         onClick={submitFeedback}
@@ -67,30 +67,10 @@ function ReputaAppContent() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
-  
-  const [payoutTarget, setPayoutTarget] = useState('');
-  const [isSendingPayout, setIsSendingPayout] = useState(false);
+  const [paymentCount, setPaymentCount] = useState(0); // عداد عمليات الدفع
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
-
-  const savePioneerToDatabase = async (user: any, manualAddress?: string) => {
-    try {
-      if (!user || user.uid === "demo") return;
-      const finalWallet = manualAddress || user.wallet_address || user.uid;
-      await fetch('/api/save-pioneer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: user.username,
-          wallet: finalWallet,
-          timestamp: new Date().toISOString()
-        }),
-      });
-    } catch (error) {
-      console.error("Database sync failed:", error);
-    }
-  };
 
   useEffect(() => {
     const initApp = async () => {
@@ -104,12 +84,13 @@ function ReputaAppContent() {
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          savePioneerToDatabase(user);
-          const vipRes = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false}));
-          if (vipRes.isVip) setIsVip(true);
+          // جلب حالة الـ VIP وعدد العمليات من السيرفر
+          const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+          setIsVip(res.isVip);
+          setPaymentCount(res.count || 0);
         }
       } catch (e) { 
-        console.warn("Pi SDK initialization failed"); 
+        console.warn("Pi SDK failed"); 
       } finally { 
         setIsInitializing(false); 
       }
@@ -118,7 +99,7 @@ function ReputaAppContent() {
   }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
-    // --- إرجاع ميزة الـ DEMO ---
+    // --- إرجاع بيانات الـ DEMO الأصلية ---
     if (address === 'demo') {
       setIsLoading(true);
       setTimeout(() => {
@@ -143,43 +124,12 @@ function ReputaAppContent() {
           ...data,
           trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified'
         });
-        if (currentUser && currentUser.uid !== "demo") savePioneerToDatabase(currentUser, address);
         refreshWallet(address).catch(() => null);
       }
     } catch (error) {
       alert("Blockchain sync error.");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleAppPayout = async () => {
-    if (!payoutTarget || !currentUser?.uid) {
-      alert("Error: Receiver UID not found.");
-      return;
-    }
-    setIsSendingPayout(true);
-    try {
-      const res = await fetch('/api/send-pi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          toAddress: payoutTarget, 
-          amount: 0.01,
-          recipientUid: currentUser.uid // استخدام الـ UID الحقيقي للمستلم
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert("✅ Transaction Sent Successfully!");
-        setPayoutTarget('');
-      } else {
-        alert("❌ Error: " + (data.details?.message || data.error));
-      }
-    } catch (e) {
-      alert("❌ Connection Error");
-    } finally {
-      setIsSendingPayout(false);
     }
   };
 
@@ -220,46 +170,48 @@ function ReputaAppContent() {
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
             <WalletChecker onCheck={handleWalletCheck} />
-            
-            {/* قسم إرسال المعاملات للمطور (يظهر فقط لك) */}
-            {currentUser?.uid && currentUser.uid !== "demo" && (
-              <div className="mt-8 p-6 bg-orange-50/50 rounded-3xl border border-dashed border-orange-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                  <h3 className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Mainnet Payout Tool (Admin)</h3>
-                </div>
-                <input 
-                  value={payoutTarget}
-                  onChange={(e) => setPayoutTarget(e.target.value)}
-                  placeholder="Recipient Address (G...)"
-                  className="w-full p-4 text-[11px] bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-orange-400 mb-3"
-                />
-                <button 
-                  onClick={handleAppPayout}
-                  disabled={isSendingPayout}
-                  className="w-full py-3 bg-orange-500 text-white text-[9px] font-black uppercase rounded-xl shadow-md active:scale-95 disabled:opacity-50 transition-all"
-                >
-                  {isSendingPayout ? "Processing..." : "Send 0.01 Pi from App Wallet"}
-                </button>
-              </div>
-            )}
-
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <WalletAnalysis 
-                walletData={walletData} 
-                isProUser={isVip} 
-                onReset={() => setWalletData(null)} 
-                onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
-             />
+             {/* منطق القفل: إذا لم يكن VIP ولم يكمل عمليتي دفع، يظهر قفل */}
+             {(!isVip && paymentCount < 2 && walletData.username !== "Demo_Pioneer") ? (
+               <div className="max-w-2xl mx-auto p-12 bg-gray-50 rounded-[40px] border-2 border-dashed border-gray-200 text-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm mb-6">
+                    <Lock className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <h2 className="text-xl font-black text-gray-800 uppercase mb-2">Report Locked</h2>
+                  <p className="text-gray-500 text-xs mb-8 max-w-xs mx-auto font-medium">
+                    To unlock your deep analysis, complete at least <span className="text-purple-600 font-bold">2 mainnet transactions</span> to verify your wallet.
+                  </p>
+                  <div className="flex justify-center gap-2 mb-8">
+                    {[1, 2].map((i) => (
+                      <div key={i} className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 ${paymentCount >= i ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-white'}`}>
+                        {paymentCount >= i ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <span className="text-gray-300 font-bold text-xs">{i}</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => setIsUpgradeModalOpen(true)}
+                    className="px-8 py-4 bg-purple-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-all"
+                  >
+                    Unlock Report Now
+                  </button>
+               </div>
+             ) : (
+               <WalletAnalysis 
+                  walletData={walletData} 
+                  isProUser={isVip} 
+                  onReset={() => setWalletData(null)} 
+                  onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
+               />
+             )}
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}
       </main>
 
-      <footer className="p-6 text-center border-t flex flex-col items-center gap-4">
+      <footer className="p-6 text-center border-t">
         <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
@@ -273,7 +225,6 @@ function ReputaAppContent() {
           alert("✅ VIP Access Granted!");
         }} 
       />
-
       <Analytics />
     </div>
   );
