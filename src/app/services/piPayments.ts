@@ -1,73 +1,51 @@
-export async function createVIPPayment(
-  uid: string,
-  onSuccess: () => void
-) {
+export async function createVIPPayment(uid: string, onSuccess: () => void) {
   if (!window.Pi) {
     alert("❌ Please open this app in Pi Browser");
     return;
   }
 
   try {
-    // 1️⃣ نطلب من السيرفر معلومات الدفع
-    const res = await fetch('/api/pi/create-payment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid }),
-    });
-
-    // إذا فشل السيرفر في الرد، سنعرف السبب هنا
-    if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(`Server Error: ${res.status} - ${JSON.stringify(errorData)}`);
-    }
-
-    const payment = await res.json();
-
-    // 2️⃣ إنشاء الدفع داخل Pi Browser
-    await window.Pi.createPayment(
-      {
-        amount: payment.amount, 
-        memo: "Reputa Score VIP Access",
-        metadata: {
-          uid,
-          plan: "vip",
-        },
+    // 1️⃣ إنشاء الدفع مباشرة عبر الـ SDK (باي لا تحتاج لخطوة 'create' من السيرفر مسبقاً في أغلب الإعدادات البسيطة)
+    // ملاحظة: إذا كان السيرفر يتوقع خطوة إنشاء أولية، يجب تعديل السيرفر، لكن كود السيرفر الحالي يبدأ من approve
+    
+    await window.Pi.createPayment({
+      amount: 1, 
+      memo: "Reputa Score VIP Access",
+      metadata: { uid, plan: "vip" },
+    }, {
+      onReadyForServerApproval: async (paymentId: string) => {
+        // نرسل الطلب إلى ملفك الموحد pi-payment مع action: approve
+        await fetch('/api/pi-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId, action: 'approve', uid }),
+        });
       },
-      {
-        onReadyForServerApproval: async (paymentId: string) => {
-          await fetch('/api/pi/approve-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId }),
-          });
-        },
 
-        onReadyForServerCompletion: async (
-          paymentId: string,
-          txid: string
-        ) => {
-          await fetch('/api/pi/complete-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid, uid }),
-          });
+      onReadyForServerCompletion: async (paymentId: string, txid: string) => {
+        // نرسل الطلب إلى ملفك الموحد مع action: complete
+        const res = await fetch('/api/pi-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentId, txid, action: 'complete', uid }),
+        });
+
+        if (res.ok) {
           onSuccess();
-        },
+        } else {
+          alert("❌ Final step failed. Please contact support.");
+        }
+      },
 
-        onCancel: () => {
-          alert("❌ Payment cancelled");
-        },
+      onCancel: () => {
+        alert("❌ Payment cancelled");
+      },
 
-        onError: (error: any) => {
-          console.error("Pi Payment Error:", error);
-          // تعديل: إظهار تفاصيل خطأ الـ SDK
-          alert("❌ SDK Error: " + JSON.stringify(error));
-        },
-      }
-    );
+      onError: (error: any) => {
+        alert("❌ Pi SDK Error: " + JSON.stringify(error));
+      },
+    });
   } catch (err: any) {
-    console.error(err);
-    // تعديل: إظهار الخطأ الحقيقي بدلاً من رسالة ثابتة
-    alert("❌ Error Detail: " + err.message);
+    alert("❌ Connection Error: " + err.message);
   }
 }
