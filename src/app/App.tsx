@@ -101,7 +101,7 @@ function ReputaAppContent() {
       }
       try {
         await initializePiSDK();
-        const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
+        const user = await authenticateUser(['username', 'wallet_address', 'payments']);.catch(() => null);
         if (user) {
           setCurrentUser(user);
           savePioneerToDatabase(user);
