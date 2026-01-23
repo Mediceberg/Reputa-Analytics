@@ -9,7 +9,6 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection: يرسل إلى save-feedback.ts ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -27,17 +26,13 @@ function FeedbackSection({ username }: { username: string }) {
           timestamp: new Date().toISOString() 
         }),
       });
-      if (res.ok) { 
-        setFeedback(''); 
-        setStatus('✅ THANK YOU!'); 
-        setTimeout(() => setStatus(''), 3000); 
-      }
+      if (res.ok) { setFeedback(''); setStatus('✅ THANK YOU!'); setTimeout(() => setStatus(''), 3000); }
     } catch (e) { setStatus('❌ ERROR'); setTimeout(() => setStatus(''), 2000); }
   };
 
   return (
-    <div className="max-w-md mx-auto mt-12 p-6 rounded-3xl border border-dashed border-purple-200 bg-purple-50/30">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="max-w-md mx-auto mt-12 p-6 rounded-3xl border border-dashed border-purple-200 bg-purple-50/30 text-center">
+      <div className="flex items-center justify-center gap-2 mb-4">
         <MessageSquare className="w-4 h-4 text-purple-600" />
         <h3 className="text-[10px] font-black text-purple-700 uppercase tracking-widest">Pioneer Feedback</h3>
       </div>
@@ -47,7 +42,7 @@ function FeedbackSection({ username }: { username: string }) {
         placeholder="Help us improve Reputa Score..."
         className="w-full p-4 text-[11px] bg-white rounded-2xl border-none shadow-inner focus:ring-2 focus:ring-purple-400 min-h-[100px] transition-all"
       />
-      <button onClick={submitFeedback} className="mt-3 w-full py-3 bg-white border border-purple-100 text-purple-600 text-[9px] font-black uppercase rounded-xl active:scale-95 transition-all shadow-sm">
+      <button onClick={submitFeedback} className="mt-3 w-full py-3 bg-white border border-purple-100 text-purple-600 text-[9px] font-black uppercase rounded-xl active:scale-95 transition-all shadow-sm hover:bg-purple-600 hover:text-white">
         {status || 'Send Suggestion'}
       </button>
     </div>
@@ -66,14 +61,27 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // --- تتبع المستخدم لضمان ظهوره في صفحة view.ts ---
+  // دالة الإرسال لـ Redis (مطابقة لهيكل لوحة التحكم)
+  const syncToAdmin = async (uname: string, waddress: string) => {
+    try {
+      await fetch('/api/save-pioneer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: uname, 
+          wallet: waddress, 
+          timestamp: new Date().toISOString() 
+        })
+      });
+    } catch (e) { console.error("Sync Error"); }
+  };
+
   useEffect(() => {
     const initApp = async () => {
-      let userObj = { username: "Anonymous", wallet: "" };
-      
       if (!piBrowser) {
-        setCurrentUser({ username: "Anonymous", uid: "demo" });
-        saveToRedis("Anonymous", ""); // تسجيل دخول متصفح خارجي
+        const guestName = "🌐 External_" + Math.floor(Math.random() * 1000);
+        setCurrentUser({ username: guestName, uid: "demo" });
+        syncToAdmin(guestName, "External Browser");
         setIsInitializing(false);
         return;
       }
@@ -82,28 +90,16 @@ function ReputaAppContent() {
         const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          userObj = { username: user.username, wallet: user.wallet_address || "" };
-          saveToRedis(userObj.username, userObj.wallet); // تسجيل دخول بيونير
+          syncToAdmin(user.username, user.wallet_address || "Pending...");
           
           const res = await fetch(`/api/checkVip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
         }
-      } catch (e) { console.warn("Pi SDK error"); } finally { setIsInitializing(false); }
+      } catch (e) { console.warn("Pi SDK failed"); } finally { setIsInitializing(false); }
     };
     initApp();
   }, [piBrowser]);
-
-  // الدالة التي ترسل البيانات إلى save-pioneer.ts ليقرأها view.ts
-  const saveToRedis = async (username: string, wallet: string) => {
-    try {
-      await fetch('/api/save-pioneer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, wallet, timestamp: new Date().toISOString() })
-      });
-    } catch (e) { console.error("Redis Save Error"); }
-  };
 
   const handleWalletCheck = async (address: string) => {
     setIsLoading(true);
@@ -119,11 +115,11 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
-        // تحديث البيانات في Redis لتظهر المحفظة المفحوصة في صفحة view
-        saveToRedis(currentUser?.username || 'Guest', address);
+        // تحديث لوحة التحكم عند كل فحص محفظة
+        syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
-    } catch (error) { alert("Sync error."); } finally { setIsLoading(false); }
+    } catch (error) { alert("Blockchain sync error."); } finally { setIsLoading(false); }
   };
 
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
@@ -132,7 +128,7 @@ function ReputaAppContent() {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">
         <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-purple-600 font-black animate-pulse uppercase tracking-widest text-xs">Syncing Reputa...</p>
+        <p className="text-purple-600 font-black animate-pulse uppercase tracking-widest text-xs">Initialising Reputa...</p>
       </div>
     );
   }
@@ -144,17 +140,23 @@ function ReputaAppContent() {
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
-            <p className="text-[10px] text-gray-400 font-black uppercase">Welcome, {currentUser?.username || 'Guest'}</p>
+            <p className="text-[10px] text-gray-400 font-black uppercase">
+                Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
+            </p>
           </div>
         </div>
-        <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" className="p-2 text-[#229ED9] bg-blue-50 rounded-full"><Send className="w-4 h-4" /></a>
+        <div className="flex items-center gap-3">
+          <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 text-[#229ED9] bg-blue-50 rounded-full">
+            <Send className="w-4 h-4" />
+          </a>
+        </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 flex-1">
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 uppercase tracking-widest">Loading...</p>
+            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Checking Blockchain...</p>
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
@@ -163,28 +165,59 @@ function ReputaAppContent() {
           </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-             <div className="relative overflow-hidden rounded-[40px] border border-gray-50">
-                <WalletAnalysis walletData={walletData} isProUser={isUnlocked} onReset={() => setWalletData(null)} onUpgradePrompt={() => setIsUpgradeModalOpen(true)} />
+             <div className="relative overflow-hidden rounded-[40px] border border-gray-100 shadow-sm">
+                <WalletAnalysis 
+                  walletData={walletData} 
+                  isProUser={isUnlocked} 
+                  onReset={() => setWalletData(null)} 
+                  onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
+                />
+
+                {/* طبقة القفل الاحترافية بنسبة 35% */}
                 {!isUnlocked && (
-                  <div className="absolute inset-x-0 bottom-0 h-[42%] z-20 flex flex-col items-center justify-end">
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
+                  <div className="absolute inset-x-0 bottom-0 h-[35%] z-20 flex flex-col items-center justify-end">
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/98 to-transparent backdrop-blur-[5px]" />
                     <div className="relative pb-8 px-6 text-center w-full">
-                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-md border border-purple-50 mb-3"><Lock className="w-4 h-4 text-purple-600" /></div>
+                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-md border border-purple-50 mb-3 animate-bounce">
+                        <Lock className="w-4 h-4 text-purple-600" />
+                      </div>
                       <h3 className="text-[9px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
-                      <button onClick={() => setIsUpgradeModalOpen(true)} className="w-full max-w-[180px] py-3 bg-purple-600 text-white text-[8px] font-black uppercase rounded-xl shadow-lg active:scale-95 transition-all">Unlock Now</button>
+                      <button 
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="w-full max-w-[180px] py-3 bg-purple-600 text-white text-[8px] font-black uppercase rounded-xl shadow-lg active:scale-95 transition-all hover:bg-purple-700"
+                      >
+                        Unlock Full Report
+                      </button>
                     </div>
                   </div>
                 )}
              </div>
+
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         )}
       </main>
-      <footer className="p-6 text-center border-t border-gray-50"><div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div></footer>
-      <AccessUpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} currentUser={currentUser} onUpgrade={() => { setIsVip(true); setPaymentCount(1); setIsUpgradeModalOpen(false); }} />
+
+      <footer className="p-6 text-center border-t border-gray-50">
+        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
+      </footer>
+
+      <AccessUpgradeModal 
+        isOpen={isUpgradeModalOpen} 
+        onClose={() => setIsUpgradeModalOpen(false)} 
+        currentUser={currentUser}
+        onUpgrade={() => { 
+          setIsVip(true); 
+          setPaymentCount(1); 
+          setIsUpgradeModalOpen(false); 
+          syncToAdmin(currentUser?.username, "VIP_UPGRADE_SUCCESS");
+        }} 
+      />
       <Analytics />
     </div>
   );
 }
 
-export default function App() { return (<TrustProvider><ReputaAppContent /></TrustProvider>); }
+export default function App() { 
+  return (<TrustProvider><ReputaAppContent /></TrustProvider>); 
+}
