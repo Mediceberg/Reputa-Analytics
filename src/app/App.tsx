@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';  
+import { useState, useEffect } from 'react';   
 import { Analytics } from '@vercel/analytics/react';
 import { Send, MessageSquare } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
-// تأكد أن الملف يسمى AccessUpgradeModal.tsx في مجلد components
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
@@ -72,7 +71,6 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // حفظ بيانات الرائد في قاعدة البيانات
   const savePioneerToDatabase = async (user: any, manualAddress?: string) => {
     try {
       if (!user || user.uid === "demo") return;
@@ -91,7 +89,6 @@ function ReputaAppContent() {
     }
   };
 
-  // تهيئة التطبيق والتأكد من هوية المستخدم
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
@@ -101,16 +98,16 @@ function ReputaAppContent() {
       }
       try {
         await initializePiSDK();
-        const user = await authenticateUser(['username', 'wallet_address', 'payments']);.catch(() => null);
+        // تم إصلاح الخطأ هنا: حذف النقطة الزائدة قبل .catch
+        const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
           savePioneerToDatabase(user);
-          // التحقق من حالة الـ VIP عند الدخول
           const vipRes = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false}));
           if (vipRes.isVip) setIsVip(true);
         }
       } catch (e) { 
-        console.warn("Pi SDK initialization failed, entering fallback mode."); 
+        console.warn("Pi SDK initialization failed"); 
       } finally { 
         setIsInitializing(false); 
       }
@@ -147,7 +144,7 @@ function ReputaAppContent() {
         refreshWallet(address).catch(() => null);
       }
     } catch (error) {
-      alert("Blockchain sync error. Please check the address.");
+      alert("Blockchain sync error.");
     } finally {
       setIsLoading(false);
     }
@@ -209,7 +206,6 @@ function ReputaAppContent() {
         <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
-      {/* مودال الترقية المحسن */}
       <AccessUpgradeModal 
         isOpen={isUpgradeModalOpen} 
         onClose={() => setIsUpgradeModalOpen(false)} 
@@ -217,7 +213,7 @@ function ReputaAppContent() {
         onUpgrade={() => {
           setIsVip(true); 
           setIsUpgradeModalOpen(false);
-          alert("✅ VIP Access Granted! You now have full AI analysis.");
+          alert("✅ VIP Access Granted!");
         }} 
       />
 
