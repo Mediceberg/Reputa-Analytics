@@ -2,7 +2,7 @@ export async function createVIPPayment(uid: string, onSuccess: () => void) {
   if (!window.Pi) {
     alert("❌ Please open this app in Pi Browser");
     return;
-  }
+  } 
 
   try {
     // 1️⃣ إنشاء الدفع مباشرة عبر الـ SDK (باي لا تحتاج لخطوة 'create' من السيرفر مسبقاً في أغلب الإعدادات البسيطة)
