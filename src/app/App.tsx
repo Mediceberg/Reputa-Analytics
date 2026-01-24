@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';   
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, LogOut } from 'lucide-react';
+import { Send, MessageSquare, Lock } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection مرتبط بـ save-feedback.ts ---
+// --- مكون FeedbackSection (مرتبط بـ save-feedback.ts) ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -23,11 +23,7 @@ function FeedbackSection({ username }: { username: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, text: feedback, timestamp: new Date().toISOString() }),
       });
-      if (res.ok) { 
-        setFeedback(''); 
-        setStatus('✅ THANK YOU!'); 
-        setTimeout(() => setStatus(''), 3000); 
-      }
+      if (res.ok) { setFeedback(''); setStatus('✅ THANK YOU!'); setTimeout(() => setStatus(''), 3000); }
     } catch (e) { setStatus('❌ ERROR'); setTimeout(() => setStatus(''), 2000); }
   };
 
@@ -62,40 +58,34 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // --- دالة المزامنة المركزية مع save-pioneer لخدمة عرض view.ts ---
+  // --- دالة المزامنة مع view.ts عبر save-pioneer.ts ---
   const syncToAdmin = async (uname: string, waddr: string) => {
     try {
       await fetch('/api/save-pioneer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username: uname, 
-          wallet: waddr, 
-          timestamp: new Date().toISOString() 
-        })
+        body: JSON.stringify({ username: uname, wallet: waddr, timestamp: new Date().toISOString() }),
       });
-    } catch (e) { console.error("Admin Sync Error"); }
+    } catch (e) { console.warn("Admin sync failed"); }
   };
 
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        const guest = { username: "Guest_Explorer", uid: "demo" };
-        setCurrentUser(guest);
-        syncToAdmin(guest.username, "External Browser");
+        setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
         setIsInitializing(false);
         return;
       }
       try {
         await initializePiSDK();
-        const user = await authenticateUser(['username', 'wallet_address']).catch(() => null);
+        const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          // 1. إرسال بيانات الدخول فوراً لـ save-pioneer
+          // ربط مع save-pioneer.ts عند الدخول
           syncToAdmin(user.username, user.wallet_address || "Pending...");
           
-          // 2. التحقق من حالة الـ VIP من checkVip.ts
-          const res = await fetch(`/api/checkVip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+          // ربط مع checkVip.ts للتأكد من الحالة القديمة
+          const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
         }
@@ -126,7 +116,7 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
-        // 3. تحديث المحفظة المفحوصة في لوحة تحكم الإدارة
+        // تحديث البيانات في لوحة التحكم (save-pioneer.ts) عند فحص محفظة جديدة
         syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
@@ -161,10 +151,6 @@ function ReputaAppContent() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* زر تسجيل الخروج لفك تعليق الحساب */}
-          <button onClick={() => { setWalletData(null); setIsVip(false); setPaymentCount(0); }} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-            <LogOut className="w-4 h-4" />
-          </button>
           <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 text-[#229ED9] bg-blue-50 rounded-full">
             <Send className="w-4 h-4" />
           </a>
@@ -192,7 +178,6 @@ function ReputaAppContent() {
                   onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
                 />
 
-                {/* طبقة القفل الذكية - مغطاة في الوسط بنسبة 41% */}
                 {!isUnlocked && (
                   <div className="absolute inset-x-0 bottom-0 h-[41%] z-20 flex flex-col items-center justify-end">
                     <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
@@ -229,7 +214,7 @@ function ReputaAppContent() {
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
-          // مزامنة حالة الدفع مع الإدارة
+          // مزامنة حالة الترقية مع الإدارة
           syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
         }} 
       />
