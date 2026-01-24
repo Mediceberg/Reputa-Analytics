@@ -58,7 +58,6 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // --- دالة المزامنة مع view.ts عبر save-pioneer.ts ---
   const syncToAdmin = async (uname: string, waddr: string) => {
     try {
       await fetch('/api/save-pioneer', {
@@ -81,10 +80,7 @@ function ReputaAppContent() {
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          // ربط مع save-pioneer.ts عند الدخول
           syncToAdmin(user.username, user.wallet_address || "Pending...");
-          
-          // ربط مع checkVip.ts للتأكد من الحالة القديمة
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
@@ -105,7 +101,9 @@ function ReputaAppContent() {
           username: "Demo_Pioneer",
           reputaScore: 632,
           trustLevel: "Elite",
-          transactions: []
+          recentActivity: [
+             { id: "tx_8212", type: "Pi DEX Swap", subType: "Ecosystem Exchange", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today", to: "GDU2...DEMO" }
+          ]
         });
         setIsLoading(false);
       }, 400); 
@@ -116,7 +114,6 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
-        // تحديث البيانات في لوحة التحكم (save-pioneer.ts) عند فحص محفظة جديدة
         syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
@@ -171,6 +168,7 @@ function ReputaAppContent() {
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
              <div className="relative overflow-hidden rounded-[40px]">
+                {/* تم تمرير البيانات المحدثة للمكون المسؤول عن العرض */}
                 <WalletAnalysis 
                   walletData={walletData} 
                   isProUser={isUnlocked} 
@@ -202,7 +200,16 @@ function ReputaAppContent() {
         )}
       </main>
 
-      <footer className="p-6 text-center border-t border-gray-50">
+      <footer className="p-6 text-center border-t border-gray-50 flex flex-col items-center gap-4">
+        <a 
+          href="https://t.me/+zxYP2x_4IWljOGM0" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#229ED9] rounded-full transition-transform active:scale-95"
+        >
+          <Send className="w-3 h-3" />
+          <span className="text-[9px] font-black uppercase tracking-widest">Join Telegram Community</span>
+        </a>
         <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
@@ -214,7 +221,6 @@ function ReputaAppContent() {
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
-          // مزامنة حالة الترقية مع الإدارة
           syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
         }} 
       />
