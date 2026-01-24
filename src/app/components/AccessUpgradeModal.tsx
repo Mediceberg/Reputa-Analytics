@@ -1,3 +1,4 @@
+import React from 'react';
 import { X, Sparkles, Lock, Check } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -7,20 +8,54 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+// استيراد خدمة الدفع
+import { createVIPPayment } from '../services/piPayments';
 
 interface AccessUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpgrade: () => void;
+  currentUser?: any; // إضافة المستخدم للتعرف على الـ UID الخاص به
 }
 
-export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgradeModalProps) {
+export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: AccessUpgradeModalProps) {
+  
+  // --- وظيفة التعامل مع الدفع الفعلية ---
+  const handlePaymentClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!currentUser) {
+      alert("Please wait for user authentication...");
+      return;
+    }
+
+    // وضع الديمو للمعاينة
+    if (currentUser.uid === "demo") {
+      onUpgrade();
+      onClose();
+      alert("✅ VIP Unlocked (Demo Mode)");
+      return;
+    }
+
+    try {
+      // استدعاء دالة الدفع الرسمية من ملف piPayments
+      await createVIPPayment(currentUser.uid, () => {
+        // يتم استدعاء هذا الكود فقط بعد نجاح عملية الدفع على البلوكشين
+        onUpgrade();
+        onClose();
+      });
+    } catch (err) {
+      console.error("Payment Initiation Failed:", err);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      {/* تم تصغير العرض max-w-md وتحديد ارتفاع أقصى مع تفعيل التمرير overflow-y-auto */}
+      {/* التنسيق المصغر مع خاصية التمرير */}
       <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto p-0 border-none bg-white rounded-3xl">
         
-        {/* رأس النافذة مع تصغير الحشو */}
+        {/* رأس النافذة */}
         <DialogHeader className="p-5 pb-2">
           <DialogTitle className="text-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
             Unlock Advanced Insights
@@ -31,7 +66,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
         </DialogHeader>
 
         <div className="space-y-4 px-5 py-2 mb-4">
-          {/* Current vs Advanced - تم تحويلها لعمود واحد في الشاشات الصغيرة وتصغير الحشو */}
+          {/* المقارنة - عمود واحد للموبايل */}
           <div className="grid grid-cols-1 gap-3">
             {/* Explorer View */}
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
@@ -48,10 +83,6 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
                 <li className="flex items-start gap-2">
                   <Check className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
                   <span>Basic Trust Score</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                  <span>Last 10 Transactions</span>
                 </li>
                 <li className="flex items-start gap-2 opacity-40">
                   <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
@@ -80,30 +111,26 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
                   <Check className="w-3.5 h-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
                   <span>Behavioral AI Analysis</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <Check className="w-3.5 h-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
-                  <span>Full Audit Reports</span>
-                </li>
               </ul>
             </div>
           </div>
 
-          {/* What You Get - تصغير المسافات */}
+          {/* المميزات الإضافية */}
           <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
-            <h3 className="text-sm font-semibold mb-2 text-gray-800">What Your Wallet Says About You</h3>
+            <h3 className="text-sm font-semibold mb-2 text-gray-800">Premium Analysis</h3>
             <div className="grid grid-cols-1 gap-2 text-[11px]">
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2 text-gray-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0"></div>
-                <p className="text-gray-700">Consistency Score & Stability Index</p>
+                <span>Consistency Score & Stability Index</span>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2 text-gray-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 flex-shrink-0"></div>
-                <p className="text-gray-700">Network Trust Mapping</p>
+                <span>Network Trust Mapping</span>
               </div>
             </div>
           </div>
 
-          {/* Pricing Section - الجزء الأكثر أهمية للظهور */}
+          {/* قسم الدفع والسعر */}
           <div className="text-center p-5 bg-white rounded-xl border-2 border-gray-100 shadow-sm">
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">One-time Access</p>
             <div className="flex items-center justify-center gap-1.5 mb-3">
@@ -112,7 +139,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
             </div>
             
             <Button 
-              onClick={onUpgrade}
+              onClick={handlePaymentClick}
               className="w-full h-11 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 rounded-xl font-bold text-xs gap-2 shadow-lg shadow-blue-200"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -120,7 +147,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade }: AccessUpgrade
             </Button>
           </div>
 
-          {/* Security Note */}
+          {/* ملاحظة الأمان */}
           <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 pb-2">
             <Lock className="w-3 h-3" />
             <span>Secure payment via Pi Network</span>
