@@ -24,23 +24,27 @@ export default async function handler(req: any, res: any) {
       try {
         const p = typeof item === 'string' ? JSON.parse(item) : item;
         
-        // التحقق مما إذا كان الدخول من متصفح خارجي (بدون بيانات Pi)
         const isExternal = !p.username || p.username === 'Anonymous';
         const username = isExternal ? '🌐 External User / Browser' : p.username;
         
+        // التحقق مما إذا كان السجل يمثل عملية دفع أو ترقية
+        const isVipSignal = p.wallet === "UPGRADED_TO_VIP" || p.wallet === "VIP_PAYMENT_CONFIRMED";
+
         if (!pioneerMap.has(username)) {
           pioneerMap.set(username, { 
             username, 
-            wallets: new Set(p.wallet ? [p.wallet] : []), 
+            wallets: new Set(p.wallet && !isVipSignal ? [p.wallet] : []), 
             timestamps: [p.timestamp], 
             count: 1,
-            isExternal: isExternal
+            isExternal: isExternal,
+            isVip: isVipSignal // تحديد الحالة لأول مرة
           });
         } else {
           const existing = pioneerMap.get(username);
           existing.count += 1;
           existing.timestamps.push(p.timestamp);
-          if (p.wallet) existing.wallets.add(p.wallet);
+          if (isVipSignal) existing.isVip = true; // ترقية المستخدم إذا وجد سجل دفع
+          if (p.wallet && !isVipSignal) existing.wallets.add(p.wallet);
           existing.timestamps.sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
         }
       } catch (e) {}
@@ -48,27 +52,34 @@ export default async function handler(req: any, res: any) {
 
     const allPioneers = Array.from(pioneerMap.values()).sort((a: any, b: any) => new Date(b.timestamps[0]).getTime() - new Date(a.timestamps[0]).getTime());
     const totalItems = allPioneers.length;
+    const totalVip = allPioneers.filter(u => u.isVip).length; // حساب إجمالي المشتركين
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
     const paginatedPioneers = allPioneers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     const rows = paginatedPioneers.map((u: any) => {
       const walletArray = Array.from(u.wallets);
-      const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || (u.isExternal ? '⚠️ Data missing (External Browser)' : 'N/A');
+      const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || (u.isExternal ? '⚠️ External Link' : 'N/A');
       
       const walletsJson = JSON.stringify(walletArray);
       const timesJson = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString()));
 
+      // تمييز صفوف الـ VIP بلون ذهبي خفيف
+      const rowStyle = u.isVip ? 'background-color: #fffbeb; border-left: 4px solid #f59e0b;' : u.isExternal ? 'background-color: #fff8f8;' : '';
+
       return `
-      <tr style="${u.isExternal ? 'background-color: #fff8f8;' : ''}">
+      <tr style="${rowStyle}">
         <td class="user-cell">
             <div class="user-info">
-              <span class="name" style="${u.isExternal ? 'color: #ef4444;' : ''}">${u.username}</span>
+              <span class="name" style="${u.isExternal ? 'color: #ef4444;' : ''}">
+                ${u.username}
+                ${u.isVip ? '<span class="vip-tag">⭐ VIP</span>' : ''}
+              </span>
               <span class="visit-badge" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>${u.count}x Visits</span>
             </div>
         </td>
         <td class="wallet-cell">
           <span class="status-dot ${primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
-          <code style="${u.isExternal ? 'color: #94a3b8; border-color: #fee2e2;' : ''}">${primaryWallet}</code>
+          <code>${primaryWallet}</code>
           ${walletArray.length > 1 ? `<span class="multi-tag" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>+${walletArray.length - 1} More</span>` : ''}
         </td>
         <td class="date-cell">
@@ -84,42 +95,42 @@ export default async function handler(req: any, res: any) {
         <meta charset="UTF-8">
         <title>Pioneer Admin Console</title>
         <style>
-          :root { --bg: #f8fafc; --primary: #0f172a; --accent: #38bdf8; --border: #e2e8f0; }
+          :root { --bg: #f8fafc; --primary: #0f172a; --accent: #38bdf8; --border: #e2e8f0; --gold: #f59e0b; }
           body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
           .container { max-width: 1240px; margin: 0 auto; }
-          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--primary); padding: 20px; border-radius: 12px; color: white; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--primary); padding: 25px; border-radius: 16px; color: white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+          .stats-group { display: flex; gap: 30px; }
           .grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
-          .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+          .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
           table { width: 100%; border-collapse: collapse; }
-          th { background: #f1f5f9; padding: 14px 20px; text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; }
-          td { padding: 14px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
-          .user-info .name { font-weight: 700; color: var(--primary); display: block; }
-          .visit-badge { font-size: 10px; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 800; }
-          .multi-tag { font-size: 10px; color: #ef4444; background: #fee2e2; padding: 2px 6px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 800; }
+          th { background: #f1f5f9; padding: 14px 20px; text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+          td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+          .vip-tag { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 900; margin-left: 8px; border: 1px solid #fde68a; }
+          .user-info .name { font-weight: 700; color: var(--primary); display: flex; align-items: center; }
+          .visit-badge { font-size: 10px; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 6px; cursor: pointer; font-weight: 800; margin-top: 4px; display: inline-block; }
           .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; }
-          .active { background: #10b981; } .inactive { background: #ef4444; }
-          code { background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 12px; }
-          
-          #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
-          .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 16px; padding: 25px; max-height: 80vh; overflow-y: auto; position: relative; }
-          .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; }
-          .close-btn { cursor: pointer; font-size: 24px; color: #94a3b8; }
-          .wallet-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-          .copy-btn { background: var(--accent); color: var(--primary); border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
-          .time-item { font-size: 11px; color: #64748b; padding: 5px 0; border-bottom: 1px dashed #eee; }
-          
-          .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; }
-          .pagination { margin-top: 20px; text-align: center; }
-          .pg-btn { padding: 10px 20px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; }
+          .active { background: #10b981; } .inactive { background: #cbd5e1; }
+          code { background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
+          .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; align-self: start; }
+          .pagination { margin-top: 25px; text-align: center; }
+          .pg-btn { padding: 10px 18px; background: white; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 12px; font-weight: 600; }
+          #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.8); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+          .modal-content { background: white; width: 90%; max-width: 500px; border-radius: 20px; padding: 30px; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
         </style>
       </head>
       <body>
         <div class="container">
           <header class="header">
-            <h1 style="margin:0; font-size: 20px;">🛡️ Pioneer Intelligence Console</h1>
-            <div style="text-align:right">
-                <div style="font-size:10px; opacity:0.7">TOTAL REGISTERED</div>
-                <div style="font-size:18px; font-weight:800">${totalItems}</div>
+            <h1 style="margin:0; font-size: 22px; letter-spacing: -0.02em;">🛡️ Pioneer <span style="color:var(--accent)">Intelligence</span></h1>
+            <div class="stats-group">
+                <div style="text-align:right">
+                    <div style="font-size:10px; opacity:0.6; font-weight:800; text-transform:uppercase">Registered</div>
+                    <div style="font-size:22px; font-weight:900">${totalItems}</div>
+                </div>
+                <div style="text-align:right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
+                    <div style="font-size:10px; color:var(--gold); font-weight:800; text-transform:uppercase">VIP Members</div>
+                    <div style="font-size:22px; font-weight:900; color:var(--gold);">${totalVip}</div>
+                </div>
             </div>
           </header>
 
@@ -127,22 +138,25 @@ export default async function handler(req: any, res: any) {
             <div class="main-content">
               <div class="table-wrapper">
                 <table>
-                  <thead><tr><th>Pioneer / Browser Source</th><th>Wallet Identity</th><th>Activity</th></tr></thead>
+                  <thead><tr><th>Pioneer Identity</th><th>Wallet Source</th><th>Activity Timeline</th></tr></thead>
                   <tbody>${rows}</tbody>
                 </table>
               </div>
               <div class="pagination">
-                 ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">Previous</a>` : ''}
-                 <span class="pg-btn" style="background:var(--primary); color:white;">Page ${currentPage}</span>
-                 ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next</a>` : ''}
+                 ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" class="pg-btn">← Previous</a>` : ''}
+                 <span class="pg-btn" style="background:var(--primary); color:white; border:none;">Page ${currentPage} of ${totalPages}</span>
+                 ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" class="pg-btn">Next →</a>` : ''}
               </div>
             </div>
 
             <div class="feedback-panel">
-              <h3 style="margin-top:0; font-size: 14px; color: #64748b; border-bottom: 2px solid var(--accent); padding-bottom: 10px;">LATEST FEEDBACK</h3>
-              ${rawFeedbacks.slice(0, 10).map((f: any) => {
+              <h3 style="margin-top:0; font-size: 13px; color: #64748b; border-bottom: 2px solid var(--accent); padding-bottom: 12px; letter-spacing: 0.05em;">LATEST FEEDBACK</h3>
+              ${rawFeedbacks.reverse().slice(0, 15).map((f: any) => {
                 const data = typeof f === 'string' ? JSON.parse(f) : f;
-                return `<div style="font-size:12px; padding:10px 0; border-bottom:1px solid #f1f5f9;"><b>@${data.username}:</b> ${data.text}</div>`;
+                return `<div style="font-size:12px; padding:12px 0; border-bottom:1px solid #f1f5f9;">
+                          <b style="color:var(--primary)">@${data.username}:</b> 
+                          <span style="color:#475569">${data.text}</span>
+                        </div>`;
               }).join('')}
             </div>
           </div>
@@ -150,9 +164,9 @@ export default async function handler(req: any, res: any) {
 
         <div id="modal">
           <div class="modal-content">
-            <div class="modal-header">
-              <h3 id="modalTitle" style="margin:0; font-size:16px;">Details</h3>
-              <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 id="modalTitle" style="margin:0;"></h3>
+                <span style="cursor:pointer; font-size:20px;" onclick="closeModal()">✕</span>
             </div>
             <div id="modalBody"></div>
           </div>
@@ -164,36 +178,26 @@ export default async function handler(req: any, res: any) {
             const body = document.getElementById('modalBody');
             document.getElementById('modalTitle').innerText = username;
             
-            let html = '';
-            if (username.includes('External')) {
-                html += '<div style="background:#fff4f4; border:1px solid #ffcccc; padding:10px; border-radius:8px; color:#cc0000; font-size:12px; margin-bottom:15px;">⚠️ This user is accessing via a standard browser. Wallet data cannot be retrieved unless they use Pi Browser.</div>';
-            }
-
-            html += '<h4 style="font-size:12px; color:#64748b;">RECOGNIZED WALLETS</h4>';
-            if (wallets.length === 0) html += '<p style="font-size:12px; color:#94a3b8;">No wallets found.</p>';
+            let html = '<h4 style="font-size:11px; color:#64748b; text-transform:uppercase;">Wallets Linked</h4>';
             wallets.forEach(w => {
-              html += \`
-                <div class="wallet-item">
-                  <code style="font-size:11px; word-break:break-all;">\${w}</code>
-                  <button class="copy-btn" onclick="copyText('\${w}')">COPY</button>
-                </div>\`;
+              html += \`<div style="background:#f1f5f9; padding:10px; border-radius:8px; font-family:monospace; font-size:11px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                          <span style="word-break:break-all; padding-right:10px;">\${w}</span>
+                          <button onclick="navigator.clipboard.writeText('\${w}'); alert('Copied!')" style="background:white; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-size:9px; cursor:pointer;">COPY</button>
+                        </div>\`;
             });
 
-            html += '<h4 style="font-size:12px; color:#64748b; margin-top:20px;">VISIT TIMELINE</h4>';
-            times.forEach(t => {
-              html += \`<div class="time-item">Visited on: \${t}</div>\`;
-            });
+            html += '<h4 style="font-size:11px; color:#64748b; text-transform:uppercase; margin-top:20px;">Log History</h4>';
+            times.forEach(t => { html += \`<div style="font-size:11px; color:#64748b; padding:8px 0; border-bottom:1px solid #f1f5f9;">• \${t}</div>\`; });
 
             body.innerHTML = html;
             modal.style.display = 'flex';
           }
           function closeModal() { document.getElementById('modal').style.display = 'none'; }
-          function copyText(text) { navigator.clipboard.writeText(text); alert('Copied!'); }
         </script>
       </body>
       </html>
     `);
   } catch (error: any) {
-    return res.status(500).send("Error: " + error.message);
+    return res.status(500).send("Admin Sync Error: " + error.message);
   }
 }
