@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- FeedbackSection Component ---
+// --- FeedbackSection ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -50,7 +50,7 @@ function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>({ username: "Guest", uid: "guest_id" });
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [paymentCount, setPaymentCount] = useState(0);
@@ -69,16 +69,20 @@ function ReputaAppContent() {
   };
 
   useEffect(() => {
-    const initApp = async () => {
-      // إصلاح: إذا لم يكن متصفح Pi، ننهي التحميل فوراً ونضع بيانات افتراضية
+    const startApp = async () => {
+      // إذا لم يكن متصفح Pi، نفتح التطبيق فوراً كضيف
       if (!piBrowser) {
-        setCurrentUser({ username: "Explorer_Guest", uid: "guest" });
         setIsInitializing(false);
         return;
       }
 
+      // إذا كان متصفح Pi، نحاول الاتصال بالـ SDK ولكن مع وقت محدد (Timeout)
       try {
-        await initializePiSDK();
+        const initPromise = initializePiSDK();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
+        
+        await Promise.race([initPromise, timeoutPromise]);
+        
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
@@ -88,21 +92,20 @@ function ReputaAppContent() {
           setPaymentCount(res.count || 0);
         }
       } catch (e) {
-        console.warn("Pi SDK Fail");
-        setCurrentUser({ username: "Pioneer_Guest", uid: "guest" });
+        console.warn("Pi Auth Bypass - Entering as Guest");
       } finally {
         setIsInitializing(false);
       }
     };
-    initApp();
-  }, []); // تشغيل مرة واحدة عند التحميل
+
+    startApp();
+  }, [piBrowser]);
 
   const handleWalletCheck = async (address: string) => {
     const isDemo = address.toLowerCase().trim() === 'demo';
     setIsLoading(true);
 
     if (isDemo) {
-      // إصلاح الـ Demo: بيانات فورية مع توقيت دقيق كما طلبت
       setWalletData({
         address: "GDU22WEH7M3O...DEMO",
         username: "Demo_Pioneer",
@@ -130,7 +133,7 @@ function ReputaAppContent() {
     }
   };
 
-  // إصلاح: شاشة التحميل تظهر فقط في متصفح Pi وبشرط أن يكون النظام لا يزال في طور التهيئة
+  // الحالة الوحيدة التي يظهر فيها اللودينج هي عند البداية فقط في متصفح Pi
   if (isInitializing && piBrowser) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center">
