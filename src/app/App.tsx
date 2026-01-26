@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck, Beaker } from 'lucide-react'; // أضفت أيقونة Beaker للتست نت
+import { Send, MessageSquare, Lock, ShieldCheck, Beaker } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -119,7 +119,6 @@ function ReputaAppContent() {
 
   const handleWalletCheck = (address: string) => {
     if (!isVip && paymentCount < 1) {
-      // إشعار بسيط يوضح أن العملية هي Testnet ومطلوبة للمتابعة
       const confirmMsg = "Unlock detailed Audit Report via Pi Testnet transaction? \n\n(This is a secure Testnet process to verify your identity)";
       if (window.confirm(confirmMsg)) {
         setPendingAddress(address);
@@ -146,8 +145,9 @@ function ReputaAppContent() {
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
-            <p className="text-[10px] text-gray-400 font-black uppercase flex items-center gap-1">
-                <Beaker className="w-2 h-2" /> Testnet Mode
+            {/* العودة إلى صيغة الترحيب الأصلية تماماً */}
+            <p className="text-[10px] text-gray-400 font-black uppercase">
+                Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
             </p>
           </div>
         </div>
