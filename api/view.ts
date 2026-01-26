@@ -7,7 +7,7 @@ const redis = new Redis({
 
 export default async function handler(req: any, res: any) {
   const ADMIN_PASSWORD = "med2026";
-  const { password, page = "1" } = req.query; 
+  const { password, page = "1", filter = "all" } = req.query; 
   const ITEMS_PER_PAGE = 40;
   const currentPage = parseInt(page);
 
@@ -16,7 +16,6 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // جلب البيانات مع تحديد سقف لضمان عدم انهيار الذاكرة
     const rawPioneers = await redis.lrange('pioneers', 0, 1000); 
     const rawFeedbacks = await redis.lrange('feedbacks', 0, 50);
 
@@ -25,15 +24,11 @@ export default async function handler(req: any, res: any) {
     rawPioneers.forEach((item: any) => {
       try {
         const p = typeof item === 'string' ? JSON.parse(item) : item;
-        
-        // التحقق من صحة البيانات الأساسية
         if (!p) return;
 
         const isExternal = !p.username || p.username === 'Anonymous';
         const username = isExternal ? '🌐 External User / Browser' : p.username;
         const isVipSignal = p.wallet === "UPGRADED_TO_VIP" || p.wallet === "VIP_PAYMENT_CONFIRMED";
-        
-        // تنظيف المحفظة لضمان عمل الفحص السريع
         const cleanWallet = p.wallet ? p.wallet.trim() : null;
 
         if (!pioneerMap.has(username)) {
@@ -51,38 +46,36 @@ export default async function handler(req: any, res: any) {
           existing.timestamps.push(p.timestamp || new Date().toISOString());
           if (isVipSignal) existing.isVip = true;
           if (cleanWallet && !isVipSignal) existing.wallets.add(cleanWallet);
-          // ترتيب الأوقات داخل سجل المستخدم الواحد
           existing.timestamps.sort((a: any, b: any) => new Date(b).getTime() - new Date(a).getTime());
         }
-      } catch (e) {
-        // في حال وجود سجل تالف، نتجاوزه ولا نوقف الكود
-        console.error("Skipping corrupted record");
-      }
+      } catch (e) { console.error("Skipping corrupted record"); }
     });
 
-    // الترتيب النهائي: إظهار من دخل التطبيق "الآن" في أول القائمة
-    const allPioneers = Array.from(pioneerMap.values()).sort((a: any, b: any) => {
+    let allPioneers = Array.from(pioneerMap.values()).sort((a: any, b: any) => {
       return new Date(b.timestamps[0]).getTime() - new Date(a.timestamps[0]).getTime();
     });
 
+    // --- ميزة التصفية الذهبية ---
+    if (filter === "vip") {
+        allPioneers = allPioneers.filter(u => u.isVip);
+    }
+
     const totalItems = allPioneers.length;
-    const totalVip = allPioneers.filter(u => u.isVip).length;
+    const totalVip = Array.from(pioneerMap.values()).filter((u:any) => u.isVip).length; // إجمالي الـ VIP الفعلي
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
     const paginatedPioneers = allPioneers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     const rows = paginatedPioneers.map((u: any) => {
       const walletArray = Array.from(u.wallets);
       const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || (u.isExternal ? '⚠️ External Link' : 'N/A');
-      
       const walletsJson = JSON.stringify(walletArray).replace(/'/g, "\\'");
       const timesJson = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString())).replace(/'/g, "\\'");
+      const fastCheckUrl = primaryWallet.startsWith('G') ? `https://pinetwork-explorer.com/account/${primaryWallet.trim()}?v=${Date.now()}` : '#';
 
-      // إضافة بصمة زمنية متغيرة لرابط الفحص لمنع مشكلة الـ Reload
-      const fastCheckUrl = primaryWallet.startsWith('G') 
-        ? `https://pinetwork-explorer.com/account/${primaryWallet.trim()}?v=${Date.now()}`
-        : '#';
-
-      const rowStyle = u.isVip ? 'background-color: #fffbeb; border-left: 4px solid #f59e0b;' : u.isExternal ? 'background-color: #fff8f8;' : '';
+      // تصميم الصف الذهبي للـ VIP
+      const rowStyle = u.isVip 
+        ? 'background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%); border-left: 4px solid #f59e0b;' 
+        : u.isExternal ? 'background-color: #fff8f8;' : '';
 
       return `
       <tr style="${rowStyle}">
@@ -123,6 +116,9 @@ export default async function handler(req: any, res: any) {
           .container { max-width: 1240px; margin: 0 auto; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--primary); padding: 25px; border-radius: 16px; color: white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
           .stats-group { display: flex; gap: 30px; }
+          .vip-card { cursor: pointer; transition: transform 0.2s; position: relative; }
+          .vip-card:hover { transform: translateY(-2px); }
+          .vip-card.active-filter { border: 2px solid var(--gold); border-radius: 12px; padding: 5px; background: rgba(245, 158, 11, 0.1); }
           .grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
           @media (max-width: 900px) { .grid-layout { grid-template-columns: 1fr; } }
           .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -145,15 +141,20 @@ export default async function handler(req: any, res: any) {
       <body>
         <div class="container">
           <header class="header">
-            <h1 style="margin:0; font-size: 22px; letter-spacing: -0.02em;">🛡️ Pioneer <span style="color:var(--accent)">Intelligence</span></h1>
+            <div style="cursor:pointer" onclick="window.location.href='?password=${password}'">
+                <h1 style="margin:0; font-size: 22px; letter-spacing: -0.02em;">🛡️ Pioneer <span style="color:var(--accent)">Intelligence</span></h1>
+            </div>
             <div class="stats-group">
                 <div style="text-align:right">
                     <div style="font-size:10px; opacity:0.6; font-weight:800; text-transform:uppercase">Registered</div>
                     <div style="font-size:22px; font-weight:900">${totalItems}</div>
                 </div>
-                <div style="text-align:right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
-                    <div style="font-size:10px; color:var(--gold); font-weight:800; text-transform:uppercase">VIP Members</div>
-                    <div style="font-size:22px; font-weight:900; color:var(--gold);">${totalVip}</div>
+                <div class="vip-card ${filter === 'vip' ? 'active-filter' : ''}" onclick="window.location.href='?password=${password}&filter=${filter === 'vip' ? 'all' : 'vip'}'" style="text-align:right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
+                    <div style="font-size:10px; color:var(--gold); font-weight:800; text-transform:uppercase">👑 GOLDEN VIP</div>
+                    <div style="font-size:22px; font-weight:900; color:var(--gold); display:flex; align-items:center; justify-content:flex-end; gap:5px;">
+                        ${totalVip}
+                        <span style="font-size:12px; background:var(--gold); color:white; padding:2px 5px; border-radius:4px;">FILTER</span>
+                    </div>
                 </div>
             </div>
           </header>
@@ -167,9 +168,9 @@ export default async function handler(req: any, res: any) {
                 </table>
               </div>
               <div style="margin-top:20px; text-align:center;">
-                  ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}" style="padding:10px; background:white; border-radius:8px; text-decoration:none; color:black; border:1px solid #ddd;">← Prev</a>` : ''}
+                  ${currentPage > 1 ? `<a href="?password=${password}&page=${currentPage - 1}&filter=${filter}" style="padding:10px; background:white; border-radius:8px; text-decoration:none; color:black; border:1px solid #ddd;">← Prev</a>` : ''}
                   <span style="margin: 0 15px; font-weight:bold;">Page ${currentPage} of ${totalPages}</span>
-                  ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}" style="padding:10px; background:white; border-radius:8px; text-decoration:none; color:black; border:1px solid #ddd;">Next →</a>` : ''}
+                  ${currentPage < totalPages ? `<a href="?password=${password}&page=${currentPage + 1}&filter=${filter}" style="padding:10px; background:white; border-radius:8px; text-decoration:none; color:black; border:1px solid #ddd;">Next →</a>` : ''}
               </div>
             </div>
 
