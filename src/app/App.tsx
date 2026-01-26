@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck, Beaker } from 'lucide-react';
+import { Send, MessageSquare, Lock, ShieldCheck } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -9,7 +9,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
 
-// --- مكون FeedbackSection ---
+// --- مكون FeedbackSection (مرتبط بـ save-feedback.ts) ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -48,7 +48,6 @@ function FeedbackSection({ username }: { username: string }) {
 
 function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);
-  const [pendingAddress, setPendingAddress] = useState<string | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -59,18 +58,12 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  // تحسين الربط مع Admin Console لضمان تسجيل كل حركة (دخول أو دفع)
-  const syncToAdmin = async (uname: string, statusType: string) => {
+  const syncToAdmin = async (uname: string, waddr: string) => {
     try {
       await fetch('/api/save-pioneer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          username: uname, 
-          status: statusType, // إرسال الحالة (Active / Paid)
-          uid: currentUser?.uid,
-          timestamp: new Date().toISOString() 
-        }),
+        body: JSON.stringify({ username: uname, wallet: waddr, timestamp: new Date().toISOString() }),
       });
     } catch (e) { console.warn("Admin sync failed"); }
   };
@@ -87,9 +80,7 @@ function ReputaAppContent() {
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          // مزامنة الدخول الأولي
-          syncToAdmin(user.username, "APP_OPENED");
-          
+          syncToAdmin(user.username, user.wallet_address || "Pending...");
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
@@ -99,19 +90,23 @@ function ReputaAppContent() {
     initApp();
   }, [piBrowser]);
 
-  const executeCheck = async (address: string) => {
+  const handleWalletCheck = async (address: string) => {
     const isDemo = address.toLowerCase().trim() === 'demo';
     setIsLoading(true);
 
     if (isDemo) {
-      setWalletData({
-        address: "GDU22WEH7M3O...DEMO",
-        username: "Demo_Pioneer",
-        reputaScore: 632,
-        trustLevel: "Elite",
-        recentActivity: [{ id: "tx_8", type: "Testnet Swap", subType: "Ecosystem", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today" }]
-      });
-      setIsLoading(false);
+      setTimeout(() => {
+        setWalletData({
+          address: "GDU22WEH7M3O...DEMO",
+          username: "Demo_Pioneer",
+          reputaScore: 632,
+          trustLevel: "Elite",
+          recentActivity: [
+             { id: "tx_8212", type: "Pi DEX Swap", subType: "Ecosystem Exchange", amount: "3.14", status: "Success", exactTime: "02:45 PM", dateLabel: "Today", to: "GDU2...DEMO" }
+          ]
+        });
+        setIsLoading(false);
+      }, 400); 
       return;
     }
 
@@ -119,23 +114,14 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
-        // مزامنة عند كل عملية فحص ناجحة لزيادة عداد النشاط في Admin
-        syncToAdmin(currentUser?.username || 'Guest', `CHECK_WALLET: ${address.substring(0,6)}`);
+        syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
-    } catch (error) { alert("Blockchain sync error."); } finally { setIsLoading(false); }
-  };
-
-  const handleWalletCheck = (address: string) => {
-    if (!isVip && paymentCount < 1) {
-      const confirmMsg = "Unlock detailed Audit Report via Pi Testnet transaction? \n\n(This is a secure Testnet process to verify your identity)";
-      if (window.confirm(confirmMsg)) {
-        setPendingAddress(address);
-        setIsUpgradeModalOpen(true);
-      }
-      return;
+    } catch (error) { 
+      alert("Blockchain sync error."); 
+    } finally { 
+      setIsLoading(false); 
     }
-    executeCheck(address);
   };
 
   if (isInitializing && piBrowser) {
@@ -146,6 +132,8 @@ function ReputaAppContent() {
       </div>
     );
   }
+
+  const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans">
@@ -170,26 +158,20 @@ function ReputaAppContent() {
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Checking Testnet Ledger...</p>
+            <p className="text-[10px] mt-6 font-black text-purple-600 tracking-[0.3em] uppercase">Syncing Protocol...</p>
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
+            {/* الإضافة المطلوبة هنا */}
             <div className="mb-8 text-center">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full mb-3">
                     <ShieldCheck className="w-3 h-3" />
-                    <span className="text-[9px] font-black uppercase tracking-tighter">Testnet Protocol v4.2 Secured</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Reputation Protocol Testnet</span>
                 </div>
-                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Scan Any Wallet<br/><span className="text-purple-600">On Testnet</span></h2>
-            </div>
-            
-            <WalletChecker onCheck={handleWalletCheck} />
-            
-            <div className="mt-8 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-               <p className="text-[9px] text-gray-400 font-bold uppercase text-center leading-relaxed">
-                 * All audits require 1 Pi Testnet verification to unlock the full reputation data.
-               </p>
+                <h2 className="text-2xl font-black text-gray-900 leading-tight uppercase tracking-tighter">Scan Any Wallet<br/>On Testnet</h2>
             </div>
 
+            <WalletChecker onCheck={handleWalletCheck} />
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
         ) : (
@@ -197,10 +179,29 @@ function ReputaAppContent() {
              <div className="relative overflow-hidden rounded-[40px]">
                 <WalletAnalysis 
                   walletData={walletData} 
-                  isProUser={true} 
+                  isProUser={isUnlocked} 
                   onReset={() => setWalletData(null)} 
                   onUpgradePrompt={() => setIsUpgradeModalOpen(true)} 
                 />
+
+                {!isUnlocked && (
+                  <div className="absolute inset-x-0 bottom-0 h-[41%] z-20 flex flex-col items-center justify-end">
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-[6px]" />
+                    <div className="relative pb-10 px-6 text-center w-full">
+                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-lg border border-purple-100 mb-3 animate-bounce">
+                        <Lock className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <h3 className="text-[10px] font-black text-gray-900 uppercase tracking-widest mb-1">Detailed Audit Locked</h3>
+                      <p className="text-[8px] text-gray-400 font-bold uppercase mb-4 opacity-80">Requires 1 Testnet Transaction</p>
+                      <button 
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="w-full max-w-[200px] py-3.5 bg-purple-600 text-white text-[9px] font-black uppercase rounded-xl shadow-xl shadow-purple-200 active:scale-95 transition-all hover:bg-purple-700"
+                      >
+                        Unlock Full Report
+                      </button>
+                    </div>
+                  </div>
+                )}
              </div>
              <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>
@@ -208,30 +209,27 @@ function ReputaAppContent() {
       </main>
 
       <footer className="p-6 text-center border-t border-gray-50 flex flex-col items-center gap-4">
-        <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#229ED9] rounded-full transition-all active:scale-95">
+        <a 
+          href="https://t.me/+zxYP2x_4IWljOGM0" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#229ED9] rounded-full transition-transform active:scale-95"
+        >
           <Send className="w-3 h-3" />
           <span className="text-[9px] font-black uppercase tracking-widest">Join Telegram Community</span>
         </a>
-        <div className="text-[8px] text-gray-300 font-black uppercase tracking-[0.3em]">Pi Network Testnet Audit Tool</div>
+        <div className="text-[9px] text-gray-300 font-black tracking-[0.4em] uppercase">Reputa Score v4.2 Stable</div>
       </footer>
 
       <AccessUpgradeModal 
         isOpen={isUpgradeModalOpen} 
         onClose={() => setIsUpgradeModalOpen(false)} 
         currentUser={currentUser}
-        onUpgrade={async () => { 
-          // تم إضافة async/await هنا لضمان مزامنة البيانات قبل تغيير الواجهة
+        onUpgrade={() => { 
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
-          
-          // إرسال إشارة الدفع لـ Admin Console لزيادة العداد
-          await syncToAdmin(currentUser?.username, "PAID_TESTNET_VIP");
-          
-          if (pendingAddress) {
-            executeCheck(pendingAddress);
-            setPendingAddress(null);
-          }
+          syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
         }} 
       />
       <Analytics />
