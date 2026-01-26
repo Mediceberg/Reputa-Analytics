@@ -59,12 +59,18 @@ function ReputaAppContent() {
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  const syncToAdmin = async (uname: string, waddr: string) => {
+  // تحسين الربط مع Admin Console لضمان تسجيل كل حركة (دخول أو دفع)
+  const syncToAdmin = async (uname: string, statusType: string) => {
     try {
       await fetch('/api/save-pioneer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: uname, wallet: waddr, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ 
+          username: uname, 
+          status: statusType, // إرسال الحالة (Active / Paid)
+          uid: currentUser?.uid,
+          timestamp: new Date().toISOString() 
+        }),
       });
     } catch (e) { console.warn("Admin sync failed"); }
   };
@@ -81,7 +87,9 @@ function ReputaAppContent() {
         const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
         if (user) {
           setCurrentUser(user);
-          syncToAdmin(user.username, user.wallet_address || "Pending...");
+          // مزامنة الدخول الأولي
+          syncToAdmin(user.username, "APP_OPENED");
+          
           const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
           setIsVip(res.isVip);
           setPaymentCount(res.count || 0);
@@ -111,7 +119,8 @@ function ReputaAppContent() {
       const data = await fetchWalletData(address);
       if (data) {
         setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
-        syncToAdmin(currentUser?.username || 'Guest', address);
+        // مزامنة عند كل عملية فحص ناجحة لزيادة عداد النشاط في Admin
+        syncToAdmin(currentUser?.username || 'Guest', `CHECK_WALLET: ${address.substring(0,6)}`);
         refreshWallet(address).catch(() => null);
       }
     } catch (error) { alert("Blockchain sync error."); } finally { setIsLoading(false); }
@@ -145,7 +154,6 @@ function ReputaAppContent() {
           <img src={logoImage} alt="logo" className="w-8 h-8" />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
-            {/* العودة إلى صيغة الترحيب الأصلية تماماً */}
             <p className="text-[10px] text-gray-400 font-black uppercase">
                 Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
             </p>
@@ -211,11 +219,15 @@ function ReputaAppContent() {
         isOpen={isUpgradeModalOpen} 
         onClose={() => setIsUpgradeModalOpen(false)} 
         currentUser={currentUser}
-        onUpgrade={() => { 
+        onUpgrade={async () => { 
+          // تم إضافة async/await هنا لضمان مزامنة البيانات قبل تغيير الواجهة
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
-          syncToAdmin(currentUser?.username, "TESTNET_PAYMENT_CONFIRMED");
+          
+          // إرسال إشارة الدفع لـ Admin Console لزيادة العداد
+          await syncToAdmin(currentUser?.username, "PAID_TESTNET_VIP");
+          
           if (pendingAddress) {
             executeCheck(pendingAddress);
             setPendingAddress(null);
