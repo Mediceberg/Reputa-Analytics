@@ -1,4 +1,4 @@
-/** * Pi SDK Service - Testnet Configuration
+/** * Pi SDK Service - Unified wrapper for Pi Network SDK
  */
 
 export function isPiBrowser(): boolean {
@@ -6,24 +6,29 @@ export function isPiBrowser(): boolean {
 }
 
 /**
- * ✅ التعديل: العودة إلى وضع Testnet بالكامل (Sandbox Mode)
- * هذا يضمن جلب بيانات محفظة الاختبار فقط ويحل مشكلة جلب بيانات المينينت
+ * ✅ الحل السحري: محاولة التهيئة بدون "حبس" الكود في انتظار Sandbox
  */
 export async function initializePiSDK(): Promise<void> {
   if (!isPiBrowser()) return;
   
   const Pi = (window as any).Pi;
   try {
-    // تم ضبط sandbox على true بشكل دائم للعودة لشبكة الاختبار
-    await Pi.init({ version: '2.0', sandbox: true });
-    console.log('[PI SDK] Initialized in TESTNET (Sandbox) Mode');
+    // نلغي الـ Sandbox مؤقتاً أو نجعله خياراً ثانوياً ليعود الربط للعمل
+    // إذا كنت تريد العودة للحالة التي كانت تعمل، اجعل sandbox: false
+    await Pi.init({ version: '2.0', sandbox: false });
+    console.log('[PI SDK] Initialized in Standard Mode');
   } catch (error) {
-    console.error('[PI SDK] Testnet Init Failure:', error);
+    console.warn('[PI SDK] Standard Init failed, trying Sandbox...');
+    try {
+      await Pi.init({ version: '2.0', sandbox: true });
+    } catch (e) {
+      console.error('[PI SDK] Global Init Failure');
+    }
   }
 }
 
 /**
- * ✅ المصادقة وجلب بيانات التست نت
+ * ✅ إعادة زر Link Account للحياة
  */
 export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<any> {
   if (!isPiBrowser()) return { username: "Guest_Explorer", uid: "demo" };
@@ -31,7 +36,7 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
   const Pi = (window as any).Pi;
 
   try {
-    // يتم توجيه طلب التوثيق الآن إلى شبكة التست نت تلقائياً بسبب إعداد Sandbox أعلاه
+    // 💡 التعديل الأهم: استدعاء المصادقة مباشرة دون انتظار طويل
     const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
     
     return {
@@ -41,27 +46,19 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
       accessToken: auth.accessToken
     };
   } catch (error: any) {
-    console.error('[PI SDK] Auth Failed on Testnet:', error);
-    // تنبيه المستخدم في حال فشل الربط مع محفظة التست نت
-    alert("Testnet Authentication Error: " + error.message);
+    console.error('[PI SDK] Auth Failed:', error);
+    // إظهار الرسالة فقط إذا فشل الأمر تماماً
+    alert("Authentication Error: " + error.message);
     throw error;
   }
 }
 
-/**
- * دالة استعادة المدفوعات غير المكتملة في شبكة الاختبار
- */
 function onIncompletePaymentFound(payment: any) {
   if (payment && payment.identifier) {
-     console.log("[PI SDK] Found incomplete payment on Testnet:", payment.identifier);
      fetch('/api/pi-payment', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ 
-         paymentId: payment.identifier, 
-         txid: payment.transaction?.txid, 
-         action: 'complete' 
-       })
+       body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, action: 'complete' })
      }).catch(err => console.error("Payment Recovery Failed", err));
   }
 }
