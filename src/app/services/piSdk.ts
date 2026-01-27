@@ -15,7 +15,7 @@ export async function initializePiSDK(): Promise<void> {
   const Pi = (window as any).Pi;
   try {
     // تم ضبط sandbox على true بشكل دائم للعودة لشبكة الاختبار
-    await Pi.init({ version: '2.0', sandbox: true });
+    await Pi.init({ version: '2.0', sandbox: false });
     console.log('[PI SDK] Initialized in TESTNET (Sandbox) Mode');
   } catch (error) {
     console.error('[PI SDK] Testnet Init Failure:', error);
