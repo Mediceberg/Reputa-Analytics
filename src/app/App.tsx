@@ -8,6 +8,12 @@ import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
+import { executeExternalPayout } from './OutboundDistributor';
+
+// مثال لاستخدامه داخل دالة أو عند الضغط على زر
+const handleReward = () => {
+  executeExternalPayout("عنوان_محفظة_المستلم", 0.01, "Reward for High Reputa Score");
+};
 
 // --- مكون FeedbackSection (مرتبط بـ save-feedback.ts) ---
 function FeedbackSection({ username }: { username: string }) {
