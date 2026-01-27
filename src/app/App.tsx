@@ -8,14 +8,9 @@ import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
-import { executeExternalPayout } from './OutboundDistributor';
+// استيراد الملف المنعزل من المسار الصحيح الذي حددناه
+import { executeExternalPayout } from './services/OutboundDistributor';
 
-// مثال لاستخدامه داخل دالة أو عند الضغط على زر
-const handleReward = () => {
-  executeExternalPayout("عنوان_محفظة_المستلم", 0.01, "Reward for High Reputa Score");
-};
-
-// --- مكون FeedbackSection (مرتبط بـ save-feedback.ts) ---
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
   const [status, setStatus] = useState('');
@@ -60,9 +55,20 @@ function ReputaAppContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [paymentCount, setPaymentCount] = useState(0);
+  
+  // عداد مخفي لتفعيل زر الدفع (App-to-User)
+  const [logoClickCount, setLogoClickCount] = useState(0);
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
+
+  const handleReward = () => {
+    if (currentUser?.wallet_address) {
+      executeExternalPayout(currentUser.wallet_address, 0.01, "Reward for High Reputa Score");
+    } else {
+      alert("Wallet address not found.");
+    }
+  };
 
   const syncToAdmin = async (uname: string, waddr: string) => {
     try {
@@ -77,7 +83,7 @@ function ReputaAppContent() {
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        setCurrentUser({ username: "Guest_Explorer", uid: "demo" });
+        setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
         setIsInitializing(false);
         return;
       }
@@ -145,7 +151,13 @@ function ReputaAppContent() {
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
-          <img src={logoImage} alt="logo" className="w-8 h-8" />
+          {/* الضغط على الشعار 5 مرات يظهر زر الـ App-to-User المخفي */}
+          <img 
+            src={logoImage} 
+            alt="logo" 
+            className="w-8 h-8 cursor-pointer" 
+            onClick={() => setLogoClickCount(prev => prev + 1)}
+          />
           <div className="leading-tight">
             <h1 className="font-black text-purple-700 text-lg tracking-tighter uppercase">Reputa Score</h1>
             <p className="text-[10px] text-gray-400 font-black uppercase">
@@ -154,6 +166,15 @@ function ReputaAppContent() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* زر مخفي يظهر للمطور فقط لإرسال العملات واستيفاء شرط الـ 10 معاملات */}
+          {logoClickCount >= 5 && (
+            <button 
+              onClick={handleReward}
+              className="px-3 py-1 bg-red-500 text-white text-[8px] font-bold rounded-full animate-pulse"
+            >
+              PAY OUT (DEV)
+            </button>
+          )}
           <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 text-[#229ED9] bg-blue-50 rounded-full">
             <Send className="w-4 h-4" />
           </a>
@@ -168,7 +189,6 @@ function ReputaAppContent() {
           </div>
         ) : !walletData ? (
           <div className="max-w-md mx-auto py-6">
-            {/* الإضافة المطلوبة هنا */}
             <div className="mb-8 text-center">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full mb-3">
                     <ShieldCheck className="w-3 h-3" />
