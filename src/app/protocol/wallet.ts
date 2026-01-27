@@ -7,11 +7,11 @@ export async function fetchWalletData(walletAddress: string): Promise<WalletData
     const accountData = await accountRes.json();
 
     // جلب 20 معاملة لضمان وجود بيانات كافية للحسابات الإحصائية (تجنب NaN)
-    const paymentsRes = await fetch(`https://api.mainnet.minepi.com/accounts/${walletAddress}/payments?limit=50&order=desc`);
+    const paymentsRes = await fetch(`https://api.testnet.minepi.com/accounts/${walletAddress}/payments?limit=50&order=desc`);
     const paymentsData = await paymentsRes.json();
     const records = paymentsData._embedded?.records || [];
 
-    const firstTxRes = await fetch(`https://api.mainnet.minepi.com/accounts/${walletAddress}/transactions?limit=1&order=asc`);
+    const firstTxRes = await fetch(`https://api.testnet.minepi.com/accounts/${walletAddress}/transactions?limit=1&order=asc`);
     const firstTxData = await firstTxRes.json();
     const firstTxDate = firstTxData._embedded?.records[0] ? new Date(firstTxData._embedded?.records[0].created_at) : new Date();
 
