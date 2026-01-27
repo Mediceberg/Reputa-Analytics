@@ -1,62 +1,34 @@
-/** * Pi SDK Service - Fix for "Initialising" stuck issue
- */
-
-export function isPiBrowser(): boolean {
-  return typeof window !== 'undefined' && 'Pi' in window;
-}
-
-/**
- * ✅ حل مشكلة التعليق: إضافة مهلة زمنية للتهيئة
- */
 export async function initializePiSDK(): Promise<void> {
-  if (!isPiBrowser()) return;
+  if (typeof window === 'undefined' || !('Pi' in window)) return;
   
   const Pi = (window as any).Pi;
   
-  // إنشاء وعد (Promise) ينتهي بالفشل إذا تأخرت التهيئة عن 5 ثوانٍ
-  const timeout = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error("Init Timeout")), 5000)
-  );
-
   try {
-    // محاولة التهيئة في وضع Sandbox (Testnet)
+    // محاولة التهيئة مع مهلة زمنية قصيرة جداً لتجنب التعليق
     await Promise.race([
       Pi.init({ version: '2.0', sandbox: true }),
-      timeout
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
     ]);
-    console.log('[PI SDK] Initialized in Testnet Mode');
+    console.log('[PI SDK] Testnet Mode Active');
   } catch (error) {
-    // إذا فشل أو تأخر، نستمر على أي حال لفتح التطبيق
-    console.warn('[PI SDK] Init issues, bypassing to open app:', error);
+    // في حال التعليق، نقوم بتخطي المرحلة لفتح التطبيق
+    console.warn('[PI SDK] Init bypassed to fix hang issue');
   }
 }
 
-/**
- * ✅ جلب بيانات المستخدم من التست نت
- */
 export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<any> {
-  if (!isPiBrowser()) return { username: "Guest_Explorer", uid: "demo" };
-
-  const Pi = (window as any).Pi;
+  if (typeof window === 'undefined' || !('Pi' in window)) {
+    return { username: "Guest_Explorer", uid: "demo" };
+  }
 
   try {
-    // طلب التوثيق مباشرة - هذا ما سيفتح نافذة المحفظة في التست نت
-    const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
-    
-    return {
-      uid: auth.user.uid,
-      username: auth.user.username,
-      wallet_address: auth.user.wallet_address,
-      accessToken: auth.accessToken
-    };
+    // طلب التوثيق مباشرة هو ما سيُفعل وضع Testnet عند ظهور نافذة المحفظة
+    const auth = await (window as any).Pi.authenticate(scopes, (payment: any) => {
+       console.log("Incomplete payment found on Testnet", payment);
+    });
+    return auth.user;
   } catch (error: any) {
     console.error('[PI SDK] Auth Failed:', error);
-    // إذا كان الخطأ بسبب المينينت، سيخبرك المتصفح هنا
     throw error;
   }
-}
-
-function onIncompletePaymentFound(payment: any) {
-  // منطق استعادة المدفوعات يبقى كما هو
-  console.log("Incomplete payment check on Testnet");
 }
