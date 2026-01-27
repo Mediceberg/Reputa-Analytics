@@ -6,11 +6,9 @@ const redis = new Redis({
 });
 
 const PI_API_KEY = process.env.PI_API_KEY;
-// التأكد من الرابط الصحيح للتست نت بدون تكرار https
 const PI_API_BASE = 'https://api.testnet.minepi.com/v2';
 
 export default async function handler(req: any, res: any) {
-  // إعدادات CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -26,17 +24,16 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Missing paymentId or action" });
     }
 
-    // بناء رابط الطلب
+    // بناء الرابط بناءً على الإجراء المطلوب (approve أو complete)
     const url = `${PI_API_BASE}/payments/${paymentId}/${action}`;
-    console.log(`[PI-API] Calling: ${action} for payment: ${paymentId}`);
-
+    
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Key ${PI_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      // في خطوة complete يجب إرسال txid في جسم الطلب (body)
+      // إرسال txid فقط في حالة الـ complete
       body: action === 'complete' ? JSON.stringify({ txid }) : undefined,
     });
 
@@ -47,9 +44,8 @@ export default async function handler(req: any, res: any) {
       return res.status(response.status).json({ error: data });
     }
 
-    // إذا اكتملت الدفعة، سجلها في Redis لزيادة العداد
+    // إذا اكتملت الدفعة بنجاح
     if (action === 'complete') {
-      console.log(`[PI-API] Payment ${paymentId} completed successfully!`);
       if (uid) {
         await redis.set(`vip_status:${uid}`, 'active');
         await redis.incr('total_successful_payments');
