@@ -56,6 +56,10 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Created dedicated NetworkInfoPage with detailed metrics and supply distribution charts
+- January 28, 2026: Created dedicated TopWalletsPage with search, filters, sorting, and professional table view
+- January 28, 2026: Created dedicated ReputationPage with score breakdown, trust benefits, and wallet analyzer
+- January 28, 2026: Added navigation icons in Pi Network Explorer for each dedicated page
 - January 28, 2026: Added Pi Network Explorer section with 3 real-time data widgets
 - January 28, 2026: Created NetworkInfoWidget showing circulating supply, locked/unlocked mining, max supply
 - January 28, 2026: Created TopWalletsWidget displaying top 100 wallets by balance and activity

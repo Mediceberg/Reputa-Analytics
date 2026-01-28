@@ -11,6 +11,9 @@ import { TrustGauge } from '../components/TrustGauge';
 import { TransactionList } from '../components/TransactionList';
 import { AuditReport } from '../components/AuditReport';
 import { NetworkInfoWidget, TopWalletsWidget, ReputationWidget } from '../components/widgets';
+import { NetworkInfoPage } from './NetworkInfoPage';
+import { TopWalletsPage } from './TopWalletsPage';
+import { ReputationPage } from './ReputationPage';
 import { 
   processTransactionTimeline, 
   processScoreBreakdown, 
@@ -37,6 +40,7 @@ interface UnifiedDashboardProps {
 }
 
 type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'network' | 'profile' | 'settings' | 'feedback' | 'help' | 'privacy' | 'terms';
+type NetworkSubPage = null | 'network-info' | 'top-wallets' | 'reputation';
 
 export function UnifiedDashboard({ 
   walletData,
@@ -49,6 +53,7 @@ export function UnifiedDashboard({
   const [mode, setMode] = useState<AppMode>({ mode: 'demo', connected: false });
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
   
   const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });
   const [breakdownData, setBreakdownData] = useState<ChartDataPoint[]>([]);
@@ -535,37 +540,132 @@ export function UnifiedDashboard({
         )}
 
         {activeSection === 'network' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Network Info Header */}
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-cyan-500/30">
-                  <Globe className="w-6 h-6 text-cyan-400" />
+          <>
+            {networkSubPage === 'network-info' ? (
+              <NetworkInfoPage onBack={() => setNetworkSubPage(null)} />
+            ) : networkSubPage === 'top-wallets' ? (
+              <TopWalletsPage onBack={() => setNetworkSubPage(null)} />
+            ) : networkSubPage === 'reputation' ? (
+              <ReputationPage onBack={() => setNetworkSubPage(null)} walletAddress={walletData.address} />
+            ) : (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Network Info Header */}
+                <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-cyan-500/30">
+                      <Globe className="w-6 h-6 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black uppercase tracking-wide text-white">Pi Network Explorer</h2>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                        Real-time blockchain data from {mode.mode === 'testnet' ? 'Testnet' : 'Mainnet'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-black uppercase tracking-wide text-white">Pi Network Explorer</h2>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                    Real-time blockchain data from {mode.mode === 'testnet' ? 'Testnet' : 'Mainnet'}
-                  </p>
+
+                {/* Navigation Icons */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <button
+                    onClick={() => setNetworkSubPage('network-info')}
+                    aria-label="View detailed network metrics"
+                    className="group p-8 rounded-2xl text-center transition-all hover:scale-[1.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(30, 33, 40, 0.6) 0%, rgba(20, 22, 28, 0.8) 100%)',
+                      border: '1px solid rgba(0, 217, 255, 0.2)',
+                      boxShadow: '0 4px 20px rgba(0, 217, 255, 0.1)',
+                    }}
+                  >
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)',
+                        border: '1px solid rgba(0, 217, 255, 0.3)',
+                        boxShadow: '0 0 30px rgba(0, 217, 255, 0.2)',
+                      }}
+                    >
+                      <Globe className="w-10 h-10 text-cyan-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Network Metrics</h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Circulating supply, mining rewards, active wallets
+                    </p>
+                    <span className="inline-flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
+                      View Details
+                      <TrendingUp className="w-4 h-4" />
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setNetworkSubPage('top-wallets')}
+                    aria-label="View top 100 wallets list"
+                    className="group p-8 rounded-2xl text-center transition-all hover:scale-[1.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(30, 33, 40, 0.6) 0%, rgba(20, 22, 28, 0.8) 100%)',
+                      border: '1px solid rgba(139, 92, 246, 0.2)',
+                      boxShadow: '0 4px 20px rgba(139, 92, 246, 0.1)',
+                    }}
+                  >
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(236, 72, 153, 0.2) 100%)',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        boxShadow: '0 0 30px rgba(139, 92, 246, 0.2)',
+                      }}
+                    >
+                      <Wallet className="w-10 h-10 text-purple-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Top 100 Wallets</h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Highest balance wallets, activity scores, rankings
+                    </p>
+                    <span className="inline-flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
+                      Explore List
+                      <TrendingUp className="w-4 h-4" />
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setNetworkSubPage('reputation')}
+                    aria-label="Check wallet reputation score"
+                    className="group p-8 rounded-2xl text-center transition-all hover:scale-[1.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(30, 33, 40, 0.6) 0%, rgba(20, 22, 28, 0.8) 100%)',
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      boxShadow: '0 4px 20px rgba(16, 185, 129, 0.1)',
+                    }}
+                  >
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(0, 217, 255, 0.2) 100%)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        boxShadow: '0 0 30px rgba(16, 185, 129, 0.2)',
+                      }}
+                    >
+                      <Shield className="w-10 h-10 text-emerald-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">Reputation Score</h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Trust analysis, on-chain verification, score breakdown
+                    </p>
+                    <span className="inline-flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                      Check Score
+                      <TrendingUp className="w-4 h-4" />
+                    </span>
+                  </button>
+                </div>
+
+                {/* Quick Preview Widgets */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <NetworkInfoWidget isMainnet={mode.mode !== 'testnet'} />
+                  <ReputationWidget 
+                    walletAddress={walletData.address} 
+                    isMainnet={mode.mode !== 'testnet'} 
+                  />
+                  <TopWalletsWidget isMainnet={mode.mode !== 'testnet'} />
                 </div>
               </div>
-            </div>
-
-            {/* Widgets Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Network Metrics */}
-              <NetworkInfoWidget isMainnet={mode.mode !== 'testnet'} />
-              
-              {/* Reputation Score */}
-              <ReputationWidget 
-                walletAddress={walletData.address} 
-                isMainnet={mode.mode !== 'testnet'} 
-              />
-              
-              {/* Top Wallets */}
-              <TopWalletsWidget isMainnet={mode.mode !== 'testnet'} />
-            </div>
-          </div>
+            )}
+          </>
         )}
 
         {activeSection === 'profile' && (
