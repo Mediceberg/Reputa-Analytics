@@ -113,23 +113,37 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4"
+          className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 tracking-tight"
           style={{ 
             color: 'rgba(255, 255, 255, 0.98)',
             fontFamily: 'var(--font-display)',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
+            letterSpacing: '-0.02em',
+            lineHeight: 1.15,
           }}
         >
-          Scan Any Wallet
+          Scan Your Wallet
         </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
+          className="text-base md:text-lg font-medium mb-4"
+          style={{ 
+            color: 'rgba(160, 164, 184, 0.85)',
+            fontFamily: 'var(--font-sans)',
+            letterSpacing: '0.01em',
+          }}
+        >
+          to get started with us
+        </motion.p>
 
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-lg md:text-xl lg:text-2xl font-medium mb-6 animated-gradient-text"
-          style={{ fontFamily: 'var(--font-display)' }}
+          className="text-lg md:text-xl lg:text-2xl font-semibold mb-6 animated-gradient-text"
+          style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.01em' }}
         >
           Decode Wallet Behavior
         </motion.h2>
