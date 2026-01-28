@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck, Coins } from 'lucide-react'; // أضفنا Coins للجمالية
+import { Send, MessageSquare, Lock, ShieldCheck, Coins } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -8,7 +8,6 @@ import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
-import { executeExternalPayout } from './services/OutboundDistributor';
 
 function FeedbackSection({ username }: { username: string }) {
   const [feedback, setFeedback] = useState('');
@@ -64,6 +63,7 @@ function ReputaAppContent() {
   const { refreshWallet } = useTrust();
 
   // الوظيفة المسؤولة عن تحويل المال من التطبيق للمحفظة (App-to-User)
+  // تم تعديلها لإرسال الـ UID الحقيقي وحل مشكلة user_not_found
   const handleRewardPayout = async () => {
     const targetAddress = manualWallet.trim();
     
@@ -72,14 +72,36 @@ function ReputaAppContent() {
       return;
     }
 
+    if (!currentUser?.uid || currentUser.uid === "demo") {
+      alert("Error: Genuine Pi UID not found. Please log in via Pi Browser.");
+      return;
+    }
+
     setIsPayoutLoading(true);
     try {
-      // استدعاء الموزع الخارجي الذي يتحدث مع السيرفر
-      await executeExternalPayout(targetAddress, 0.01, "Reward for High Reputa Score");
-      alert("Payout request sent to server! Check logs.");
-      setManualWallet('');
+      const response = await fetch('/api/pi-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'payout',
+          address: targetAddress,
+          amount: 0.01,
+          uid: currentUser.uid, // هذا هو المفتاح لحل خطأ user_not_found
+          memo: "Reward for High Reputa Score"
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert("✅ Payout Successful! Check your wallet.");
+        setManualWallet('');
+      } else {
+        const errorDetail = result.error?.error_message || result.error || "Check App Wallet balance";
+        alert(`❌ Payout Failed: ${errorDetail}`);
+      }
     } catch (e) {
-      alert("Payout failed. Check your App Wallet balance.");
+      alert("Network error. Please ensure your App Wallet is funded in the Developer Portal.");
     } finally {
       setIsPayoutLoading(false);
     }
@@ -181,7 +203,6 @@ function ReputaAppContent() {
         </div>
         
         <div className="flex items-center gap-3">
-          {/* لوحة التحكم المخفية تظهر للمطور عند الضغط 5 مرات على اللوجو */}
           {logoClickCount >= 5 && (
             <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100 animate-in zoom-in duration-300">
               <input 
