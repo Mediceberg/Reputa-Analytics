@@ -1,0 +1,279 @@
+import { Language } from '@/types';
+
+export const translations: Record<Language, Record<string, string>> = {
+  en: {
+    // App
+    'app.title': 'Reputa Score',
+    'app.subtitle': 'Blockchain Reputation System',
+    'app.mode.demo': 'Demo Mode',
+    'app.mode.testnet': 'Testnet Mode',
+    
+    // Auth
+    'auth.connect': 'Connect Pi Network',
+    'auth.disconnect': 'Disconnect',
+    'auth.connecting': 'Connecting...',
+    'auth.connected': 'Connected',
+    
+    // Dashboard
+    'dashboard.title': 'Dashboard Analytics',
+    'dashboard.welcome': 'Welcome',
+    'dashboard.balance': 'Wallet Balance',
+    'dashboard.pi': 'π',
+    
+    // Score
+    'score.trust': 'Trust Score',
+    'score.level.low': 'Low',
+    'score.level.medium': 'Medium',
+    'score.level.high': 'High',
+    'score.level.excellent': 'Excellent',
+    'score.breakdown': 'Score Breakdown',
+    'score.accountAge': 'Account Age',
+    'score.transactions': 'Transaction Count',
+    'score.volume': 'Transaction Volume',
+    'score.staking': 'Staking Bonus',
+    'score.mining': 'Mining Days Bonus',
+    'score.activity': 'Activity Score',
+    'score.spam': 'Spam Penalty',
+    'score.risk': 'Risk Level',
+    
+    // Charts
+    'charts.title': 'Analytics Charts',
+    'charts.timeline': 'Transaction Timeline',
+    'charts.breakdown': 'Points Breakdown',
+    'charts.risk': 'Risk vs Activity',
+    'charts.portfolio': 'Token Portfolio',
+    'charts.filter.day': 'Daily',
+    'charts.filter.week': 'Weekly',
+    'charts.filter.month': 'Monthly',
+    'charts.transactions.internal': 'Internal',
+    'charts.transactions.external': 'External',
+    
+    // Recommendations
+    'recommendations.title': 'Recommendations',
+    'recommendations.increase_transactions': 'Increase transaction frequency',
+    'recommendations.avoid_spam': 'Avoid suspicious transactions',
+    'recommendations.stake_more': 'Consider staking more Pi',
+    'recommendations.maintain_activity': 'Maintain regular activity',
+    'recommendations.excellent': 'Excellent! Keep up the good work',
+    
+    // Pi DEX
+    'dex.title': 'Pi DEX Portfolio',
+    'dex.tokens': 'Tokens',
+    'dex.value': 'Total Value',
+    'dex.no_tokens': 'No tokens found',
+    
+    // Language
+    'language.ar': 'العربية',
+    'language.fr': 'Français',
+    'language.zh': '中文',
+    'language.en': 'English',
+  },
+  
+  ar: {
+    // App
+    'app.title': 'نقاط السمعة',
+    'app.subtitle': 'نظام السمعة على البلوكشين',
+    'app.mode.demo': 'وضع التجربة',
+    'app.mode.testnet': 'وضع الشبكة التجريبية',
+    
+    // Auth
+    'auth.connect': 'ربط شبكة Pi',
+    'auth.disconnect': 'قطع الاتصال',
+    'auth.connecting': 'جاري الاتصال...',
+    'auth.connected': 'متصل',
+    
+    // Dashboard
+    'dashboard.title': 'لوحة التحليلات',
+    'dashboard.welcome': 'مرحباً',
+    'dashboard.balance': 'رصيد المحفظة',
+    'dashboard.pi': 'π',
+    
+    // Score
+    'score.trust': 'نقاط الثقة',
+    'score.level.low': 'منخفض',
+    'score.level.medium': 'متوسط',
+    'score.level.high': 'عالي',
+    'score.level.excellent': 'ممتاز',
+    'score.breakdown': 'تفاصيل النقاط',
+    'score.accountAge': 'عمر الحساب',
+    'score.transactions': 'عدد المعاملات',
+    'score.volume': 'حجم المعاملات',
+    'score.staking': 'مكافأة التخزين',
+    'score.mining': 'مكافأة أيام التعدين',
+    'score.activity': 'نقاط النشاط',
+    'score.spam': 'عقوبة البريد المزعج',
+    'score.risk': 'مستوى المخاطر',
+    
+    // Charts
+    'charts.title': 'الرسوم البيانية التحليلية',
+    'charts.timeline': 'الجدول الزمني للمعاملات',
+    'charts.breakdown': 'توزيع النقاط',
+    'charts.risk': 'المخاطر مقابل النشاط',
+    'charts.portfolio': 'محفظة التوكنات',
+    'charts.filter.day': 'يومي',
+    'charts.filter.week': 'أسبوعي',
+    'charts.filter.month': 'شهري',
+    'charts.transactions.internal': 'داخلي',
+    'charts.transactions.external': 'خارجي',
+    
+    // Recommendations
+    'recommendations.title': 'التوصيات',
+    'recommendations.increase_transactions': 'زيادة تكرار المعاملات',
+    'recommendations.avoid_spam': 'تجنب المعاملات المشبوهة',
+    'recommendations.stake_more': 'فكر في تخزين المزيد من Pi',
+    'recommendations.maintain_activity': 'حافظ على النشاط المنتظم',
+    'recommendations.excellent': 'ممتاز! استمر في العمل الجيد',
+    
+    // Pi DEX
+    'dex.title': 'محفظة Pi DEX',
+    'dex.tokens': 'التوكنات',
+    'dex.value': 'القيمة الإجمالية',
+    'dex.no_tokens': 'لم يتم العثور على توكنات',
+    
+    // Language
+    'language.ar': 'العربية',
+    'language.fr': 'Français',
+    'language.zh': '中文',
+    'language.en': 'English',
+  },
+  
+  fr: {
+    // App
+    'app.title': 'Score de Réputation',
+    'app.subtitle': 'Système de Réputation Blockchain',
+    'app.mode.demo': 'Mode Démo',
+    'app.mode.testnet': 'Mode Testnet',
+    
+    // Auth
+    'auth.connect': 'Connecter Pi Network',
+    'auth.disconnect': 'Déconnecter',
+    'auth.connecting': 'Connexion...',
+    'auth.connected': 'Connecté',
+    
+    // Dashboard
+    'dashboard.title': 'Tableau de Bord Analytique',
+    'dashboard.welcome': 'Bienvenue',
+    'dashboard.balance': 'Solde du Portefeuille',
+    'dashboard.pi': 'π',
+    
+    // Score
+    'score.trust': 'Score de Confiance',
+    'score.level.low': 'Faible',
+    'score.level.medium': 'Moyen',
+    'score.level.high': 'Élevé',
+    'score.level.excellent': 'Excellent',
+    'score.breakdown': 'Répartition des Points',
+    'score.accountAge': 'Âge du Compte',
+    'score.transactions': 'Nombre de Transactions',
+    'score.volume': 'Volume de Transactions',
+    'score.staking': 'Bonus de Staking',
+    'score.mining': 'Bonus Jours de Minage',
+    'score.activity': 'Score d\'Activité',
+    'score.spam': 'Pénalité Spam',
+    'score.risk': 'Niveau de Risque',
+    
+    // Charts
+    'charts.title': 'Graphiques Analytiques',
+    'charts.timeline': 'Chronologie des Transactions',
+    'charts.breakdown': 'Répartition des Points',
+    'charts.risk': 'Risque vs Activité',
+    'charts.portfolio': 'Portefeuille de Jetons',
+    'charts.filter.day': 'Quotidien',
+    'charts.filter.week': 'Hebdomadaire',
+    'charts.filter.month': 'Mensuel',
+    'charts.transactions.internal': 'Interne',
+    'charts.transactions.external': 'Externe',
+    
+    // Recommendations
+    'recommendations.title': 'Recommandations',
+    'recommendations.increase_transactions': 'Augmenter la fréquence des transactions',
+    'recommendations.avoid_spam': 'Éviter les transactions suspectes',
+    'recommendations.stake_more': 'Envisager de staker plus de Pi',
+    'recommendations.maintain_activity': 'Maintenir une activité régulière',
+    'recommendations.excellent': 'Excellent! Continuez comme ça',
+    
+    // Pi DEX
+    'dex.title': 'Portefeuille Pi DEX',
+    'dex.tokens': 'Jetons',
+    'dex.value': 'Valeur Totale',
+    'dex.no_tokens': 'Aucun jeton trouvé',
+    
+    // Language
+    'language.ar': 'العربية',
+    'language.fr': 'Français',
+    'language.zh': '中文',
+    'language.en': 'English',
+  },
+  
+  zh: {
+    // App
+    'app.title': '声誉分数',
+    'app.subtitle': '区块链声誉系统',
+    'app.mode.demo': '演示模式',
+    'app.mode.testnet': '测试网模式',
+    
+    // Auth
+    'auth.connect': '连接 Pi 网络',
+    'auth.disconnect': '断开连接',
+    'auth.connecting': '连接中...',
+    'auth.connected': '已连接',
+    
+    // Dashboard
+    'dashboard.title': '仪表板分析',
+    'dashboard.welcome': '欢迎',
+    'dashboard.balance': '钱包余额',
+    'dashboard.pi': 'π',
+    
+    // Score
+    'score.trust': '信任分数',
+    'score.level.low': '低',
+    'score.level.medium': '中',
+    'score.level.high': '高',
+    'score.level.excellent': '优秀',
+    'score.breakdown': '分数明细',
+    'score.accountAge': '账户年龄',
+    'score.transactions': '交易数量',
+    'score.volume': '交易量',
+    'score.staking': '质押奖励',
+    'score.mining': '挖矿天数奖励',
+    'score.activity': '活动分数',
+    'score.spam': '垃圾邮件惩罚',
+    'score.risk': '风险等级',
+    
+    // Charts
+    'charts.title': '分析图表',
+    'charts.timeline': '交易时间线',
+    'charts.breakdown': '积分分布',
+    'charts.risk': '风险与活动',
+    'charts.portfolio': '代币投资组合',
+    'charts.filter.day': '每日',
+    'charts.filter.week': '每周',
+    'charts.filter.month': '每月',
+    'charts.transactions.internal': '内部',
+    'charts.transactions.external': '外部',
+    
+    // Recommendations
+    'recommendations.title': '建议',
+    'recommendations.increase_transactions': '增加交易频率',
+    'recommendations.avoid_spam': '避免可疑交易',
+    'recommendations.stake_more': '考虑质押更多 Pi',
+    'recommendations.maintain_activity': '保持定期活动',
+    'recommendations.excellent': '优秀！继续保持',
+    
+    // Pi DEX
+    'dex.title': 'Pi DEX 投资组合',
+    'dex.tokens': '代币',
+    'dex.value': '总价值',
+    'dex.no_tokens': '未找到代币',
+    
+    // Language
+    'language.ar': 'العربية',
+    'language.fr': 'Français',
+    'language.zh': '中文',
+    'language.en': 'English',
+  },
+};
+
+export function getTranslation(lang: Language, key: string): string {
+  return translations[lang]?.[key] || translations.en[key] || key;
+}

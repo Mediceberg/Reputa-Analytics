@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck, Coins } from 'lucide-react'; 
+import { Send, MessageSquare, Lock, BarChart3 } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
+import { AnalyticsDashboard } from './pages/AnalyticsDashboard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
@@ -72,6 +73,7 @@ function ReputaAppContent() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [paymentCount, setPaymentCount] = useState(0);
+  const [showAnalyticsDashboard, setShowAnalyticsDashboard] = useState(false);
   
   // --- منطق المطور لعمليات App-to-User ---
   const [logoClickCount, setLogoClickCount] = useState(0);
@@ -244,6 +246,16 @@ function ReputaAppContent() {
 
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
 
+  if (showAnalyticsDashboard) {
+    return (
+      <AnalyticsDashboard 
+        onBack={() => setShowAnalyticsDashboard(false)}
+        walletBalance={walletData?.balance || 0}
+        username={currentUser?.username}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen futuristic-bg flex flex-col font-sans relative">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
@@ -281,6 +293,21 @@ function ReputaAppContent() {
         </div>
         
         <div className="flex items-center gap-3">
+          {walletData && (
+            <button
+              onClick={() => setShowAnalyticsDashboard(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.2) 100%)',
+                border: '1px solid rgba(139, 92, 246, 0.4)',
+              }}
+            >
+              <BarChart3 className="w-4 h-4" style={{ color: '#8B5CF6' }} />
+              <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>
+                Analytics
+              </span>
+            </button>
+          )}
           {logoClickCount >= 5 && (
             <div 
               className="flex items-center gap-2 p-2 rounded-xl animate-in zoom-in duration-300"
