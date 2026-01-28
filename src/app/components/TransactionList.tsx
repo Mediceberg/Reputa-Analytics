@@ -1,7 +1,7 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ExternalLink } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import type { Transaction } from '../App';
+import type { Transaction } from '../protocol/types';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -10,13 +10,11 @@ interface TransactionListProps {
 
 export function TransactionList({ transactions, walletAddress }: TransactionListProps) {
   
-  // 1. إصلاح دالة تنسيق العنوان
   const formatAddress = (address: string) => {
     if (!address) return "Unknown";
     return `${address.slice(0, 6)}...${address.slice(-6)}`;
   };
 
-  // 2. إصلاح دالة تنسيق الوقت (دمج منطق الدقة الذي طلبته سابقاً)
   const formatDate = (date: Date) => {
     const dateObj = date instanceof Date ? date : new Date(date);
     const now = new Date();
@@ -43,52 +41,58 @@ export function TransactionList({ transactions, walletAddress }: TransactionList
   };
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 bg-gradient-to-br from-white to-slate-50/50 border-slate-200/50 shadow-xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="font-bold text-xl">Recent Transactions</h2>
+          <h2 className="font-bold text-xl text-gray-900">Recent Transactions</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Last {transactions.length} verified transactions (zero-value excluded)
+            Last {transactions.length} verified transactions
           </p>
         </div>
-        <Badge variant="secondary" className="px-3 py-1">
+        <Badge className="px-4 py-2 bg-gradient-to-r from-purple-500/10 to-cyan-500/10 text-purple-700 border-purple-200/50 font-bold">
           {transactions.length} Transactions
         </Badge>
       </div>
 
       <div className="space-y-3">
         {transactions.length === 0 ? (
-          <p className="text-center py-10 text-gray-400">No recent transactions found.</p>
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ExternalLink className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-400 font-medium">No recent transactions found.</p>
+          </div>
         ) : (
-          transactions.map((tx) => {
+          transactions.map((tx, index) => {
             const isReceived = tx.type === 'received';
             
             return (
               <div
                 key={tx.id}
-                className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-4 p-4 bg-gradient-to-r from-white to-gray-50/50 rounded-2xl border border-gray-100 hover:border-purple-200 hover:shadow-md transition-all duration-200 group"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                {/* Icon */}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  isReceived ? 'bg-green-100' : 'bg-orange-100'
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
+                  isReceived 
+                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-600' 
+                    : 'bg-gradient-to-br from-orange-500 to-orange-600'
                 }`}>
                   {isReceived ? (
-                    <ArrowLeft className="w-5 h-5 text-green-600" />
+                    <ArrowDownLeft className="w-6 h-6 text-white" />
                   ) : (
-                    <ArrowRight className="w-5 h-5 text-orange-600" />
+                    <ArrowUpRight className="w-6 h-6 text-white" />
                   )}
                 </div>
 
-                {/* Details */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`font-semibold ${
-                      isReceived ? 'text-green-600' : 'text-orange-600'
+                    <span className={`font-bold ${
+                      isReceived ? 'text-emerald-600' : 'text-orange-600'
                     }`}>
                       {isReceived ? 'Received' : 'Sent'}
                     </span>
                     {tx.memo && (
-                      <Badge variant="outline" className="text-xs max-w-[150px] truncate">
+                      <Badge variant="outline" className="text-xs max-w-[150px] truncate bg-white">
                         {tx.memo}
                       </Badge>
                     )}
@@ -96,19 +100,18 @@ export function TransactionList({ transactions, walletAddress }: TransactionList
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-600">
                     <span className="flex items-center gap-1">
                       {isReceived ? 'From:' : 'To:'}
-                      <code className="font-mono text-xs bg-white px-2 py-0.5 rounded border border-gray-100">
+                      <code className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-lg border border-slate-200">
                         {formatAddress(isReceived ? tx.from : tx.to)}
                       </code>
                     </span>
-                    <span className="text-gray-400 hidden sm:inline">•</span>
-                    <span className="text-gray-500">{formatDate(tx.timestamp)}</span>
+                    <span className="text-gray-300 hidden sm:inline">•</span>
+                    <span className="text-gray-400 text-xs">{formatDate(tx.timestamp)}</span>
                   </div>
                 </div>
 
-                {/* Amount */}
                 <div className="text-right flex-shrink-0">
-                  <p className={`font-bold ${
-                    isReceived ? 'text-green-600' : 'text-gray-900'
+                  <p className={`font-black text-lg ${
+                    isReceived ? 'text-emerald-600' : 'text-gray-900'
                   }`}>
                     {isReceived ? '+' : '-'}{tx.amount.toFixed(2)} π
                   </p>
@@ -119,10 +122,9 @@ export function TransactionList({ transactions, walletAddress }: TransactionList
         )}
       </div>
 
-      {/* Footer note */}
-      <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
-        <p className="text-[11px] text-blue-800 leading-relaxed">
-          <span className="font-semibold uppercase mr-1">Note:</span> 
+      <div className="mt-6 p-4 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-2xl border border-cyan-200/50">
+        <p className="text-[11px] text-cyan-800 leading-relaxed">
+          <span className="font-bold uppercase mr-1">Note:</span> 
           Only non-zero transactions are displayed. Zero-value transactions are automatically filtered for accurate reputation analysis on the Mainnet.
         </p>
       </div>

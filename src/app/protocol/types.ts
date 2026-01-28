@@ -9,7 +9,7 @@ export interface Transaction {
   amount: number;
   from: string;
   to: string;
-  type: 'internal' | 'external';
+  type: 'internal' | 'external' | 'sent' | 'received';
   memo?: string;
   score?: TransactionScore;
 }
@@ -31,7 +31,14 @@ export interface WalletData {
   createdAt: Date;
   transactions: Transaction[];
   totalTransactions: number;
+  reputaScore?: number;
+  trustScore?: number;
+  trustLevel?: TrustLevel;
+  consistencyScore?: number;
+  networkTrust?: number;
 }
+
+export type TrustLevel = 'Elite' | 'High' | 'Medium' | 'Low';
 
 export interface StakingData {
   amount: number;

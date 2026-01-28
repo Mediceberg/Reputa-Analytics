@@ -2,8 +2,8 @@ import { Sparkles, Lock, TrendingUp, Activity, Clock, Shield } from 'lucide-reac
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
-import type { WalletData } from '../App';
-import logoImage from '../../assets/logo.svg';
+import type { WalletData } from '../protocol/types';
+import logoImage from '../../assets/logo.png';
 
 interface AuditReportProps {
   walletData: WalletData;
@@ -12,8 +12,12 @@ interface AuditReportProps {
 }
 
 export function AuditReport({ walletData, isProUser, onUpgradePrompt }: AuditReportProps) {
+  const trustScore = walletData.trustScore ?? walletData.reputaScore ?? 50;
+  
   // Calculate metrics
-  const avgTransactionValue = walletData.transactions.reduce((sum, tx) => sum + tx.amount, 0) / walletData.transactions.length;
+  const avgTransactionValue = walletData.transactions.length > 0 
+    ? walletData.transactions.reduce((sum, tx) => sum + tx.amount, 0) / walletData.transactions.length 
+    : 0;
   const receivedCount = walletData.transactions.filter(tx => tx.type === 'received').length;
   const sentCount = walletData.transactions.filter(tx => tx.type === 'sent').length;
   const activityRatio = (walletData.totalTransactions / walletData.accountAge) * 30; // transactions per month
@@ -190,18 +194,18 @@ export function AuditReport({ walletData, isProUser, onUpgradePrompt }: AuditRep
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                    walletData.trustScore >= 60 ? 'bg-green-500' : 
-                    walletData.trustScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+                    trustScore >= 60 ? 'bg-green-500' : 
+                    trustScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'
                   }`} />
                   <div>
                     <p className="font-semibold text-sm">Overall Risk Level: {
-                      walletData.trustScore >= 60 ? 'Low' : 
-                      walletData.trustScore >= 40 ? 'Moderate' : 'High'
+                      trustScore >= 60 ? 'Low' : 
+                      trustScore >= 40 ? 'Moderate' : 'High'
                     }</p>
                     <p className="text-sm text-gray-600">
-                      {walletData.trustScore >= 60 
+                      {trustScore >= 60 
                         ? 'This wallet demonstrates consistent, trustworthy behavior with strong fundamentals.'
-                        : walletData.trustScore >= 40
+                        : trustScore >= 40
                         ? 'This wallet shows moderate activity. Standard verification recommended for large transactions.'
                         : 'Exercise caution. Limited history or activity detected. Additional verification advised.'
                       }
@@ -260,11 +264,11 @@ export function AuditReport({ walletData, isProUser, onUpgradePrompt }: AuditRep
                 Reputa Recommendation
               </h3>
               <p className="text-sm text-gray-700">
-                {walletData.trustScore >= 80
+                {trustScore >= 80
                   ? 'This wallet is highly recommended for transactions. Strong reputation indicators across all metrics.'
-                  : walletData.trustScore >= 60
+                  : trustScore >= 60
                   ? 'This wallet is suitable for standard transactions. Good reputation with consistent activity.'
-                  : walletData.trustScore >= 40
+                  : trustScore >= 40
                   ? 'Use standard verification protocols. The wallet shows moderate signals. Recommended for small to medium transactions.'
                   : 'Enhanced verification recommended. Limited positive signals detected. Consider additional due diligence for significant transactions.'
                 }
@@ -305,22 +309,22 @@ export function AuditReport({ walletData, isProUser, onUpgradePrompt }: AuditRep
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg border border-cyan-200/50">
                     <p className="text-xs text-gray-500 mb-1">Consistency Score</p>
-                    <p className="font-bold text-cyan-600">{Math.round(85 + (walletData.trustScore - 50) * 0.3)}%</p>
+                    <p className="font-bold text-cyan-600">{Math.round(85 + (trustScore - 50) * 0.3)}%</p>
                     <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full"
-                        style={{ width: `${Math.round(85 + (walletData.trustScore - 50) * 0.3)}%` }}
+                        style={{ width: `${Math.round(85 + (trustScore - 50) * 0.3)}%` }}
                       ></div>
                     </div>
                   </div>
 
                   <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg border border-blue-200/50">
                     <p className="text-xs text-gray-500 mb-1">Network Trust</p>
-                    <p className="font-bold text-blue-600">{Math.round(walletData.trustScore * 0.9)}%</p>
+                    <p className="font-bold text-blue-600">{Math.round(trustScore * 0.9)}%</p>
                     <div className="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full"
-                        style={{ width: `${Math.round(walletData.trustScore * 0.9)}%` }}
+                        style={{ width: `${Math.round(trustScore * 0.9)}%` }}
                       ></div>
                     </div>
                   </div>
@@ -359,11 +363,11 @@ export function AuditReport({ walletData, isProUser, onUpgradePrompt }: AuditRep
                     <div className="flex-1">
                       <p className="font-semibold text-sm mb-1 text-gray-800">AI-Powered Insight</p>
                       <p className="text-xs text-gray-600 leading-relaxed">
-                        {walletData.trustScore >= 70 
-                          ? `This wallet exhibits exceptional behavioral patterns. The consistency score of ${Math.round(85 + (walletData.trustScore - 50) * 0.3)}% combined with a ${Math.round(ageHealth * 0.8 + balanceHealth * 0.2)}% stability index indicates a reliable and trustworthy user profile. Network trust metrics confirm strong community reputation.`
-                          : walletData.trustScore >= 50
-                          ? `Moderate trust indicators detected. The wallet maintains ${Math.round(70 + activityRatio * 2)}% predictability in transaction patterns. Network trust at ${Math.round(walletData.trustScore * 0.9)}% suggests standard verification is adequate for most transactions.`
-                          : `Lower trust signals observed. Consistency and stability metrics indicate limited historical data. Enhanced due diligence recommended. Network trust currently at ${Math.round(walletData.trustScore * 0.9)}%.`
+                        {trustScore >= 70 
+                          ? `This wallet exhibits exceptional behavioral patterns. The consistency score of ${Math.round(85 + (trustScore - 50) * 0.3)}% combined with a ${Math.round(ageHealth * 0.8 + balanceHealth * 0.2)}% stability index indicates a reliable and trustworthy user profile. Network trust metrics confirm strong community reputation.`
+                          : trustScore >= 50
+                          ? `Moderate trust indicators detected. The wallet maintains ${Math.round(70 + activityRatio * 2)}% predictability in transaction patterns. Network trust at ${Math.round(trustScore * 0.9)}% suggests standard verification is adequate for most transactions.`
+                          : `Lower trust signals observed. Consistency and stability metrics indicate limited historical data. Enhanced due diligence recommended. Network trust currently at ${Math.round(trustScore * 0.9)}%.`
                         }
                       </p>
                     </div>

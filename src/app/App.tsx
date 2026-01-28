@@ -185,7 +185,7 @@ function ReputaAppContent() {
     try {
       const data = await fetchWalletData(address);
       if (data) {
-        setWalletData({ ...data, trustLevel: data.reputaScore >= 600 ? 'Elite' : 'Verified' });
+        setWalletData({ ...data, trustLevel: (data.reputaScore ?? 0) >= 600 ? 'Elite' : 'Verified' });
         syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
       }
