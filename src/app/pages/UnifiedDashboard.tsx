@@ -82,9 +82,9 @@ export function UnifiedDashboard({
         const streakPts = parsed.streakBonusPoints || 0;
         return {
           total: (walletData.reputaScore || 0) + checkInPts + adPts + streakPts,
-          checkIn: checkInPts + adPts,
+          checkIn: checkInPts,
           transactions: 0,
-          activity: 0,
+          activity: adPts,
           streak: streakPts,
         };
       } catch {
@@ -111,7 +111,8 @@ export function UnifiedDashboard({
       const newState = {
         ...prev,
         total: prev.total + points,
-        checkIn: prev.checkIn + points,
+        checkIn: type === 'checkin' ? prev.checkIn + points : prev.checkIn,
+        activity: type === 'ad' ? prev.activity + points : prev.activity,
       };
       if (mode.mode !== 'demo') {
         localStorage.setItem('userPointsState', JSON.stringify(newState));
@@ -735,174 +736,15 @@ export function UnifiedDashboard({
 
         {activeSection === 'profile' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Profile Header */}
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                {/* Avatar */}
-                <div className="relative">
-                  <div 
-                    className="w-24 h-24 rounded-2xl flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(0, 217, 255, 0.3) 100%)',
-                      border: '2px solid rgba(139, 92, 246, 0.5)',
-                      boxShadow: '0 0 30px rgba(139, 92, 246, 0.3)',
-                    }}
-                  >
-                    <User className="w-12 h-12 text-purple-400" />
-                  </div>
-                  <div 
-                    className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                      border: '2px solid rgba(10, 11, 15, 0.9)',
-                    }}
-                  >
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-
-                {/* User Info */}
-                <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-2xl font-black uppercase neon-text-purple mb-1">
-                    {username || 'Pioneer'}
-                  </h2>
-                  <p className="text-sm font-mono" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>
-                    {formatAddress(walletData.address)}
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3 justify-center md:justify-start">
-                    <span 
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${badgeInfo.color} ${badgeInfo.bgColor}`}
-                      style={{ border: `1px solid` }}
-                    >
-                      {badgeInfo.icon} {badgeInfo.label}
-                    </span>
-                    {isProUser && (
-                      <span 
-                        className="px-3 py-1 rounded-full text-[10px] font-bold uppercase text-amber-400 bg-amber-500/20"
-                        style={{ border: '1px solid rgba(245, 158, 11, 0.4)' }}
-                      >
-                        <Star className="w-3 h-3 inline mr-1" /> PRO Member
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Score Badge */}
-                <div 
-                  className="p-5 rounded-2xl text-center"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.15) 100%)',
-                    border: '1px solid rgba(139, 92, 246, 0.3)',
-                  }}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-1">Reputa Score</p>
-                  <p className="text-4xl font-black neon-text-purple">{walletData.reputaScore || 0}</p>
-                  <p className="text-[10px] font-bold text-gray-500">/ 1000</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Profile Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="glass-card p-4" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <Wallet className="w-5 h-5 text-cyan-400" />
-                  <span className="text-[10px] font-bold uppercase text-cyan-400">{t('dashboard.balance')}</span>
-                </div>
-                <p className="text-xl font-black text-white">{walletData.balance.toFixed(2)} <span className="text-cyan-400">π</span></p>
-              </div>
-
-              <div className="glass-card p-4" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <Activity className="w-5 h-5 text-purple-400" />
-                  <span className="text-[10px] font-bold uppercase text-purple-400">{t('score.transactions')}</span>
-                </div>
-                <p className="text-xl font-black text-white">{walletData.transactions.length}</p>
-              </div>
-
-              <div className="glass-card p-4" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <Calendar className="w-5 h-5 text-emerald-400" />
-                  <span className="text-[10px] font-bold uppercase text-emerald-400">{t('score.accountAge')}</span>
-                </div>
-                <p className="text-xl font-black text-white">{walletData.accountAge} days</p>
-              </div>
-
-              <div className="glass-card p-4" style={{ border: '1px solid rgba(236, 72, 153, 0.2)' }}>
-                <div className="flex items-center gap-3 mb-2">
-                  <Award className="w-5 h-5 text-pink-400" />
-                  <span className="text-[10px] font-bold uppercase text-pink-400">Trust Level</span>
-                </div>
-                <p className="text-xl font-black text-white">{walletData.trustLevel || 'Medium'}</p>
-              </div>
-            </div>
-
-            {/* Activity Summary */}
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-              <h3 className="text-sm font-black uppercase tracking-wide mb-4" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
-                Activity Summary
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                  <p className="text-[10px] font-bold uppercase text-emerald-400 mb-2">Received</p>
-                  <p className="text-lg font-black text-emerald-400">
-                    {walletData?.transactions?.filter(tx => tx.type === 'received').length || 0} txns
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <p className="text-[10px] font-bold uppercase text-red-400 mb-2">Sent</p>
-                  <p className="text-lg font-black text-red-400">
-                    {walletData?.transactions?.filter(tx => tx.type === 'sent').length || 0} txns
-                  </p>
-                </div>
-                <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                  <p className="text-[10px] font-bold uppercase text-cyan-400 mb-2">Total Volume</p>
-                  <p className="text-lg font-black text-cyan-400">
-                    {(walletData?.transactions?.reduce((acc, tx) => acc + tx.amount, 0) || 0).toFixed(2)} π
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Daily Check-in Section */}
-            <DailyCheckIn 
+            <ProfileSection 
+              walletData={walletData}
+              username={username || 'Pioneer'}
+              isProUser={isProUser}
+              mode={mode}
+              userPoints={userPoints}
               onPointsEarned={handlePointsEarned}
-              isDemo={mode.mode === 'demo'}
             />
 
-            {/* Mining Days & Points Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <MiningDaysWidget 
-                miningDays={walletData.accountAge || 0}
-                isDemo={mode.mode === 'demo'}
-              />
-              <div className="glass-card p-4 flex items-center justify-between" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.2) 100%)',
-                      border: '1px solid rgba(139, 92, 246, 0.4)',
-                    }}
-                  >
-                    <Award className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Total Points</p>
-                    <p className="text-xl font-black text-white">{userPoints.total.toLocaleString()}</p>
-                  </div>
-                </div>
-                <PointsExplainer 
-                  currentPoints={userPoints.total}
-                  checkInPoints={userPoints.checkIn}
-                  transactionPoints={userPoints.transactions}
-                  activityPoints={userPoints.activity}
-                  streakBonus={userPoints.streak}
-                />
-              </div>
-            </div>
-
-            {/* Legal & Info Links */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <button 
                 onClick={() => setActiveSection('privacy')}
