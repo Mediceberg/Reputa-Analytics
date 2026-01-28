@@ -191,6 +191,13 @@ export function generateMockChartData(): {
     { symbol: 'PI', name: 'Pi Network', balance: 1250.5, value: 1250.5, logo: 'π' },
     { symbol: 'PISWAP', name: 'PiSwap Token', balance: 500, value: 125, logo: '🔄' },
     { symbol: 'PNFT', name: 'Pi NFT', balance: 10, value: 50, logo: '🎨' },
+    { symbol: 'PIT', name: 'Pi Transfer', balance: 1500, value: 300, logo: '📤' },
+    { symbol: 'PIG', name: 'Pi Game', balance: 250, value: 75, logo: '🎮' },
+    { symbol: 'PIM', name: 'Pi Mall', balance: 100, value: 200, logo: '🛍️' },
+    { symbol: 'PIB', name: 'Pi Bank', balance: 50, value: 500, logo: '🏦' },
+    { symbol: 'PIS', name: 'Pi Stake', balance: 2000, value: 2000, logo: '📈' },
+    { symbol: 'PIX', name: 'Pi Exchange', balance: 300, value: 150, logo: '💱' },
+    { symbol: 'PIC', name: 'Pi Chat', balance: 10, value: 5, logo: '💬' },
   ];
 
   return { transactions, score, tokens };
