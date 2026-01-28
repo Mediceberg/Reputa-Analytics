@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { User, Wallet, Activity, Calendar, Award, CheckCircle, Star, TrendingUp, Shield, Zap, Target, Flame } from 'lucide-react';
+import { User, Wallet, Activity, Calendar, Award, CheckCircle, Star, TrendingUp, Shield, Zap, Target } from 'lucide-react';
 import { WalletData, AppMode } from '../protocol/types';
 import { 
   calculateAtomicReputation, 
@@ -7,12 +7,9 @@ import {
   getLevelProgress,
   AtomicTrustLevel,
   TRUST_LEVEL_COLORS,
-  AtomicReputationResult,
-  getBackendScoreCap
+  AtomicReputationResult
 } from '../protocol/atomicScoring';
-import { DailyCheckIn } from './DailyCheckIn';
 import { MiningDaysWidget } from './MiningDaysWidget';
-import { PointsExplainer } from './PointsExplainer';
 import { useLanguage } from '../hooks/useLanguage';
 import { WalletActivityData } from '../services/piNetworkData';
 
@@ -21,14 +18,6 @@ interface ProfileSectionProps {
   username: string;
   isProUser: boolean;
   mode: AppMode;
-  userPoints: {
-    total: number;
-    checkIn: number;
-    transactions: number;
-    activity: number;
-    streak: number;
-  };
-  onPointsEarned: (points: number, type: 'checkin' | 'ad') => void;
   activityData?: WalletActivityData;
 }
 
@@ -62,13 +51,10 @@ export function ProfileSection({
   username, 
   isProUser, 
   mode,
-  userPoints,
-  onPointsEarned,
   activityData
 }: ProfileSectionProps) {
   const { t, language } = useLanguage();
   const isRTL = language === 'ar';
-  const scoreCap = getBackendScoreCap();
 
   const atomicResult = useMemo<AtomicReputationResult>(() => {
     if (activityData) {
@@ -77,15 +63,12 @@ export function ProfileSection({
     const demoData = generateDemoActivityData();
     demoData.accountAgeDays = walletData.accountAge || 180;
     demoData.internalTxCount = walletData.transactions?.length || 25;
-    demoData.dailyCheckins = 0;
-    demoData.adBonuses = 0;
     return calculateAtomicReputation(demoData);
   }, [activityData, walletData.accountAge, walletData.transactions?.length]);
 
   const levelProgress = useMemo(() => {
-    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
-    return getLevelProgress(atomicResult.adjustedScore + earnedPoints);
-  }, [atomicResult.adjustedScore, userPoints.checkIn, userPoints.activity, userPoints.streak]);
+    return getLevelProgress(atomicResult.adjustedScore);
+  }, [atomicResult.adjustedScore]);
 
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel];
   const levelName = LEVEL_NAMES[levelProgress.currentLevel];
@@ -194,23 +177,6 @@ export function ProfileSection({
               </p>
             </div>
 
-            <div 
-              className="p-4 rounded-xl text-center"
-              style={{
-                background: 'linear-gradient(145deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0.3) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
-              }}
-            >
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Flame className="w-4 h-4 text-purple-400" />
-                <span className="text-[10px] font-bold uppercase" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
-                  {isRTL ? 'إجمالي النقاط' : 'Total Points'}
-                </span>
-              </div>
-              <p className="text-2xl font-black text-purple-400">
-                {userPoints.total.toLocaleString()}
-              </p>
-            </div>
           </div>
 
           <div className="mb-2">
@@ -256,12 +222,6 @@ export function ProfileSection({
               </div>
             </div>
             
-            <p className="text-[9px] mt-2 text-center" style={{ color: 'rgba(160, 164, 184, 0.5)' }}>
-              {isRTL 
-                ? `الحد الأقصى للنظام: ${scoreCap.toLocaleString()} نقطة`
-                : `System cap: ${scoreCap.toLocaleString()} pts`
-              }
-            </p>
           </div>
         </div>
       </div>
@@ -350,50 +310,10 @@ export function ProfileSection({
         </div>
       </div>
 
-      <DailyCheckIn 
-        onPointsEarned={onPointsEarned}
+      <MiningDaysWidget 
+        miningDays={walletData.accountAge || 0}
         isDemo={mode.mode === 'demo'}
       />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <MiningDaysWidget 
-          miningDays={walletData.accountAge || 0}
-          isDemo={mode.mode === 'demo'}
-        />
-        <div 
-          className="rounded-xl p-4 flex items-center justify-between"
-          style={{ 
-            background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 24, 32, 0.85) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.4)',
-                boxShadow: '0 0 20px rgba(139, 92, 246, 0.2)',
-              }}
-            >
-              <Award className="w-6 h-6 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-0.5">
-                {isRTL ? 'نقاط المستخدم' : 'User Points'}
-              </p>
-              <p className="text-2xl font-black text-white">{userPoints.total.toLocaleString()}</p>
-            </div>
-          </div>
-          <PointsExplainer 
-            currentPoints={userPoints.total}
-            checkInPoints={userPoints.checkIn}
-            transactionPoints={userPoints.transactions}
-            activityPoints={userPoints.activity}
-            streakBonus={userPoints.streak}
-          />
-        </div>
-      </div>
     </div>
   );
 }

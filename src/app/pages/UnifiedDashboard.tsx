@@ -14,8 +14,6 @@ import { NetworkInfoWidget, TopWalletsWidget, ReputationWidget } from '../compon
 import { NetworkInfoPage } from './NetworkInfoPage';
 import { TopWalletsPage } from './TopWalletsPage';
 import { ReputationPage } from './ReputationPage';
-import { DailyCheckIn } from '../components/DailyCheckIn';
-import { PointsExplainer } from '../components/PointsExplainer';
 import { MiningDaysWidget } from '../components/MiningDaysWidget';
 import { ProfileSection } from '../components/ProfileSection';
 import { 
@@ -66,73 +64,6 @@ export function UnifiedDashboard({
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
-  const [userPoints, setUserPoints] = useState(() => {
-    const defaultPoints = {
-      total: walletData.reputaScore || 0,
-      checkIn: 0,
-      transactions: 0,
-      activity: 0,
-      streak: 0,
-    };
-    
-    const validatePoints = (pts: Record<string, unknown>) => ({
-      total: typeof pts.total === 'number' && !isNaN(pts.total) ? pts.total : defaultPoints.total,
-      checkIn: typeof pts.checkIn === 'number' && !isNaN(pts.checkIn) ? pts.checkIn : 0,
-      transactions: typeof pts.transactions === 'number' && !isNaN(pts.transactions) ? pts.transactions : 0,
-      activity: typeof pts.activity === 'number' && !isNaN(pts.activity) ? pts.activity : 0,
-      streak: typeof pts.streak === 'number' && !isNaN(pts.streak) ? pts.streak : 0,
-    });
-    
-    const savedPoints = localStorage.getItem('userPointsState');
-    if (savedPoints) {
-      try {
-        const parsed = JSON.parse(savedPoints);
-        return validatePoints(parsed);
-      } catch {
-        return defaultPoints;
-      }
-    }
-    const checkInData = localStorage.getItem('dailyCheckInState');
-    if (checkInData) {
-      try {
-        const parsed = JSON.parse(checkInData);
-        const checkInPts = Number(parsed.totalPointsFromCheckIn) || 0;
-        const adPts = Number(parsed.totalPointsFromAds) || 0;
-        const streakPts = Number(parsed.streakBonusPoints) || 0;
-        return {
-          total: (walletData.reputaScore || 0) + checkInPts + adPts + streakPts,
-          checkIn: checkInPts,
-          transactions: 0,
-          activity: adPts,
-          streak: streakPts,
-        };
-      } catch {
-        return defaultPoints;
-      }
-    }
-    return {
-      total: walletData.reputaScore || 0,
-      checkIn: 0,
-      transactions: 0,
-      activity: 0,
-      streak: 0,
-    };
-  });
-
-  const handlePointsEarned = (points: number, type: 'checkin' | 'ad') => {
-    setUserPoints((prev: typeof userPoints) => {
-      const newState = {
-        ...prev,
-        total: prev.total + points,
-        checkIn: type === 'checkin' ? prev.checkIn + points : prev.checkIn,
-        activity: type === 'ad' ? prev.activity + points : prev.activity,
-      };
-      if (mode.mode !== 'demo') {
-        localStorage.setItem('userPointsState', JSON.stringify(newState));
-      }
-      return newState;
-    });
-  };
   
   const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });
   const [breakdownData, setBreakdownData] = useState<ChartDataPoint[]>([]);
@@ -162,9 +93,8 @@ export function UnifiedDashboard({
   }, [walletData.accountAge, walletData.transactions?.length]);
 
   const levelProgress = useMemo(() => {
-    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
-    return getLevelProgress(atomicResult.adjustedScore + earnedPoints);
-  }, [atomicResult.adjustedScore, userPoints.checkIn, userPoints.activity, userPoints.streak]);
+    return getLevelProgress(atomicResult.adjustedScore);
+  }, [atomicResult.adjustedScore]);
 
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
@@ -501,56 +431,6 @@ export function UnifiedDashboard({
               </div>
             </div>
 
-            {/* Daily Check-in & Points Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <DailyCheckIn 
-                onPointsEarned={handlePointsEarned}
-                isDemo={mode.mode === 'demo'}
-              />
-              
-              <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
-                      style={{
-                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
-                        border: '1px solid rgba(139, 92, 246, 0.4)',
-                      }}
-                    >
-                      <Award className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Total Points</p>
-                      <p className="text-2xl font-black text-white">{userPoints.total.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <PointsExplainer 
-                    currentPoints={userPoints.total}
-                    checkInPoints={userPoints.checkIn}
-                    transactionPoints={userPoints.transactions}
-                    activityPoints={userPoints.activity}
-                    streakBonus={userPoints.streak}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-3 gap-2 mt-4">
-                  <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                    <p className="text-[9px] font-bold uppercase text-cyan-400">Check-in</p>
-                    <p className="text-sm font-black text-cyan-400">{userPoints.checkIn}</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                    <p className="text-[9px] font-bold uppercase text-purple-400">Activity</p>
-                    <p className="text-sm font-black text-purple-400">{userPoints.activity}</p>
-                  </div>
-                  <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                    <p className="text-[9px] font-bold uppercase text-amber-400">Streak</p>
-                    <p className="text-sm font-black text-amber-400">{userPoints.streak}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Recent Transactions Preview */}
             <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
               <div className="flex items-center justify-between mb-4">
@@ -860,8 +740,6 @@ export function UnifiedDashboard({
               username={username || 'Pioneer'}
               isProUser={isProUser}
               mode={mode}
-              userPoints={userPoints}
-              onPointsEarned={handlePointsEarned}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
