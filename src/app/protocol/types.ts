@@ -147,3 +147,9 @@ export interface PaymentData {
   createdAt: Date;
   completedAt?: Date;
 }
+
+export interface PiUser {
+  uid: string;
+  username?: string;
+  accessToken?: string;
+}

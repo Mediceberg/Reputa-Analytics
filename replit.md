@@ -56,6 +56,14 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: GLOBAL FUTURISTIC DASHBOARD DESIGN - Applied across all screens and components
+- January 28, 2026: Updated WalletAnalysis with dark theme, neon accents, gradient borders
+- January 28, 2026: Redesigned TrustGauge with animated SVG gauge and neon glow effects
+- January 28, 2026: Applied glassmorphism to TransactionList with color-coded transactions
+- January 28, 2026: Updated AuditReport with futuristic dark theme and VIP analytics section
+- January 28, 2026: Redesigned ReputaDashboard modal with dark backdrop and neon styling
+- January 28, 2026: Updated VIPModal and AccessUpgradeModal with dark theme
+- January 28, 2026: Added PiUser type to protocol/types.ts
 - January 28, 2026: RADICAL UI RESTRUCTURE - Dark futuristic dashboard theme
 - January 28, 2026: Added glassmorphism cards and neon glow effects
 - January 28, 2026: Created futuristic.css with comprehensive dark theme styles

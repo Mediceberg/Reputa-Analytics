@@ -1,4 +1,4 @@
-import { Crown, Check, X } from 'lucide-react';
+import { Crown, Check, X, Sparkles, Shield, Zap } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 
@@ -22,7 +22,6 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
 
   const handlePurchase = async () => {
     try {
-      // 1. طلب الموافقة من السيرفر (Server-side Approval)
       const res = await fetch('/api/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,8 +35,6 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
       const approval = await res.json();
 
       if (approval.approved) {
-        // 2. الربط الحقيقي مع Pi SDK (يفتح محفظة Pi للمستخدم)
-        // ملاحظة: نفترض أن Pi SDK محمل عالمياً عبر Script Tag في index.html
         if (window.Pi) {
           const payment = await window.Pi.createPayment({
             amount: 1,
@@ -48,7 +45,6 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
               console.log("Payment ready for server approval:", paymentId);
             },
             onReadyForServerCompletion: (paymentId: string, txid: string) => {
-              // 3. إبلاغ السيرفر باكتمال الدفع لتفعيل العضوية
               fetch('/api/complete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -59,11 +55,10 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
             onError: (error: Error, paymentId?: string) => console.error(error, paymentId),
           });
         } else {
-          // Fallback في حالة عدم وجود الـ SDK (لأغراض الاختبار)
           console.warn("Pi SDK not found, using onPurchase callback");
         }
         
-        onPurchase(); // استدعاء دالة التحديث في الواجهة
+        onPurchase();
       }
     } catch (error) {
       console.error('VIP upgrade failed:', error);
@@ -73,107 +68,129 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-              <Crown className="w-5 h-5 text-white" />
-            </div>
-            Upgrade to VIP Access
-          </DialogTitle>
-          <DialogDescription>
-            Unlock professional audit reports and unlimited wallet analyses with lifetime VIP membership.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl bg-gradient-to-br from-slate-900/98 via-slate-800/98 to-slate-900/98 border-2 border-purple-500/30 shadow-2xl shadow-purple-500/20 backdrop-blur-xl">
+        {/* Background Effects */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-yellow-500/10 to-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-purple-500/10 to-pink-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+        </div>
 
-        <div className="space-y-6">
-          {/* Pricing Card - التزمنا بنفس التصميم تماماً */}
-          <div className="p-6 bg-gradient-to-br from-purple-50 to-yellow-50 rounded-lg border-2 border-purple-200">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-bold text-xl">VIP Membership</h3>
-                <p className="text-sm text-gray-600">Lifetime access</p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-purple-600">1 π</div>
-                <p className="text-xs text-gray-500">One-time payment</p>
-              </div>
-            </div>
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
+          backgroundImage: `linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px)`,
+          backgroundSize: '20px 20px'
+        }}></div>
 
-            <div className="grid md:grid-cols-2 gap-3">
-              {features.map((feature, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-green-600" />
-                  </div>
-                  <span className="text-sm">{feature}</span>
+        <div className="relative z-10">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-2xl">
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-500/30">
+                <Crown className="w-6 h-6 text-white" />
+              </div>
+              <span className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 bg-clip-text text-transparent font-bold">
+                Upgrade to VIP Access
+              </span>
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Unlock professional audit reports and unlimited wallet analyses with lifetime VIP membership.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 mt-6">
+            {/* Pricing Card */}
+            <div className="p-6 bg-gradient-to-br from-purple-500/20 via-yellow-500/10 to-amber-500/20 rounded-xl border-2 border-yellow-500/30 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-bold text-xl text-white flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-yellow-400" />
+                    VIP Membership
+                  </h3>
+                  <p className="text-sm text-gray-400">Lifetime access</p>
                 </div>
-              ))}
+                <div className="text-right">
+                  <div className="text-4xl font-black bg-gradient-to-r from-yellow-400 to-amber-400 bg-clip-text text-transparent">1 π</div>
+                  <p className="text-xs text-gray-500">One-time payment</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-3">
+                {features.map((feature, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-5 h-5 bg-emerald-500/20 rounded-full flex items-center justify-center flex-shrink-0 border border-emerald-500/40">
+                      <Check className="w-3 h-3 text-emerald-400" />
+                    </div>
+                    <span className="text-sm text-gray-300">{feature}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Benefits Section */}
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 bg-cyan-500/10 rounded-xl border border-cyan-500/30 backdrop-blur-sm">
+                <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-cyan-500/30">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm mb-1 text-white">Professional Reports</h4>
+                  <p className="text-xs text-gray-400">
+                    Get detailed audit reports with behavioral analysis, risk scoring, and actionable insights.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 bg-purple-500/10 rounded-xl border border-purple-500/30 backdrop-blur-sm">
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-purple-500/30">
+                  <Zap className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm mb-1 text-white">Unlimited Access</h4>
+                  <p className="text-xs text-gray-400">
+                    Analyze as many wallets as you need without any restrictions or additional fees.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/30 backdrop-blur-sm">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg shadow-emerald-500/30">
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm mb-1 text-white">Secure Payment</h4>
+                  <p className="text-xs text-gray-400">
+                    Payment is processed securely through the official Pi Network payment system.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-slate-700/50">
+              <Button 
+                variant="outline" 
+                onClick={onClose} 
+                className="flex-1 gap-2 border-slate-600 text-gray-400 hover:bg-slate-800 hover:text-white hover:border-slate-500"
+              >
+                <X className="w-4 h-4" />
+                Maybe Later
+              </Button>
+              <Button
+                onClick={handlePurchase}
+                className="flex-1 gap-2 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-slate-900 font-bold shadow-lg shadow-yellow-500/30 hover:shadow-yellow-500/50 hover:scale-105 transition-all"
+              >
+                <Crown className="w-4 h-4" />
+                Purchase VIP (1 π)
+              </Button>
+            </div>
+
+            <p className="text-xs text-center text-gray-500">
+              By purchasing, you agree to our terms of service. VIP access is non-refundable.
+            </p>
           </div>
-
-          {/* Benefits Section - الأيقونات والنصوص كما هي */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Professional Reports</h4>
-                <p className="text-xs text-gray-600">
-                  Get detailed audit reports with behavioral analysis, risk scoring, and actionable insights.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-lg">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Unlimited Access</h4>
-                <p className="text-xs text-gray-600">
-                  Analyze as many wallets as you need without any restrictions or additional fees.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm mb-1">Secure Payment</h4>
-                <p className="text-xs text-gray-600">
-                  Payment is processed securely through the official Pi Network payment system.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose} className="flex-1 gap-2">
-              <X className="w-4 h-4" />
-              Maybe Later
-            </Button>
-            <Button
-              onClick={handlePurchase}
-              className="flex-1 gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold"
-            >
-              <Crown className="w-4 h-4" />
-              Purchase VIP (1 π)
-            </Button>
-          </div>
-
-          <p className="text-xs text-center text-gray-500">
-            By purchasing, you agree to our terms of service. VIP access is non-refundable.
-          </p>
         </div>
       </DialogContent>
     </Dialog>
