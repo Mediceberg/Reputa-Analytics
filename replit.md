@@ -67,7 +67,27 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Level calculation**: atomicResult.adjustedScore + earnedPoints (no double-counting)
 - **Backend score cap**: 10,000 points for level thresholds (displayScore unlimited)
 
+## Atomic Scoring Protocol (Single Source of Truth)
+- **File**: `src/app/protocol/atomicScoring.ts` - THE ONLY scoring engine
+- **Deprecated**: `scoring.ts` is DEPRECATED - do NOT import
+- **Trust Levels**: 7 atomic levels map to 4 gauge levels
+  - Very Low Trust, Low Trust → Low
+  - Medium, Active → Medium  
+  - Trusted, Pioneer+ → High
+  - Elite → Elite
+- **Key Exports**:
+  - `calculateAtomicReputation()` - Main scoring function
+  - `getLevelProgress()` - Level progression calculation
+  - `mapAtomicToTrustLevel()` - 7-to-4 level mapping
+  - `LEVEL_NAMES` - Array of all 7 level names
+  - `TRUST_LEVEL_COLORS` - Color palette for each level
+
 ## Recent Changes
+- January 28, 2026: Unified all scoring under atomicScoring.ts as single source of truth
+- January 28, 2026: Deprecated scoring.ts - all components now use atomic scoring
+- January 28, 2026: Exported mapAtomicToTrustLevel() and LEVEL_NAMES from atomicScoring.ts
+- January 28, 2026: Updated report.ts to use atomic scoring exclusively
+- January 28, 2026: Added TypeScript declarations for .png/.svg/.jpg imports
 - January 28, 2026: Updated NetworkInfoWidget with real Pi Block Explorer mainnet data
 - January 28, 2026: Added all 6 metrics: Total Migrated Mining, Locked Mining, Unlocked Mining, Circulating Supply, Effective Total Supply, Max Supply
 - January 28, 2026: Implemented auto-refresh (30 seconds) with caching and live data indicator
