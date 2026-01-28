@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare } from 'lucide-react'; 
+import { Send, MessageSquare, LogIn } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { UnifiedDashboard } from './pages/UnifiedDashboard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
-import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
+import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
 import logoImage from '../assets/logo-new.png';
 
 function FeedbackSection({ username }: { username: string }) {
@@ -68,7 +68,7 @@ function ReputaAppContent() {
   const [walletData, setWalletData] = useState<any | null>(null);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<PiUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isVip, setIsVip] = useState(false);
   const [paymentCount, setPaymentCount] = useState(0);
@@ -77,9 +77,36 @@ function ReputaAppContent() {
   const [logoClickCount, setLogoClickCount] = useState(0);
   const [manualWallet, setManualWallet] = useState('');
   const [isPayoutLoading, setIsPayoutLoading] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
+
+  const handlePiLogin = async () => {
+    if (!piBrowser) {
+      alert("Please open this app in Pi Browser to login with your Pi account.");
+      return;
+    }
+    
+    setIsLoggingIn(true);
+    try {
+      const user = await loginWithPi();
+      if (user && user.uid !== "demo") {
+        setCurrentUser(user);
+        syncToAdmin(user.username, user.wallet_address || "Pending...");
+        const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+        setIsVip(res.isVip);
+        setPaymentCount(res.count || 0);
+      }
+    } catch (error) {
+      console.error('Login failed:', error);
+      alert("Login failed. Please try again in Pi Browser.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const isGuest = !currentUser || currentUser.uid === "demo";
 
   // الوظيفة المسؤولة عن تحويل المال من التطبيق للمحفظة (App-to-User)
   const handleRewardPayout = async () => {
@@ -262,7 +289,7 @@ function ReputaAppContent() {
             setIsVip(true); 
             setPaymentCount(1); 
             setIsUpgradeModalOpen(false); 
-            syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
+            syncToAdmin(currentUser?.username || 'Guest', "UPGRADED_TO_VIP");
           }} 
         />
         <Analytics />
@@ -346,6 +373,22 @@ function ReputaAppContent() {
               </button>
             </div>
           )}
+          {isGuest && (
+            <button
+              onClick={handlePiLogin}
+              disabled={isLoggingIn}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 186, 0, 0.2) 0%, rgba(255, 140, 0, 0.2) 100%)',
+                border: '1px solid rgba(255, 186, 0, 0.4)',
+              }}
+            >
+              <LogIn className="w-4 h-4" style={{ color: '#FFBA00' }} />
+              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#FFBA00' }}>
+                {isLoggingIn ? 'Connecting...' : 'Pi Login'}
+              </span>
+            </button>
+          )}
           <a 
             href="https://t.me/+zxYP2x_4IWljOGM0" 
             target="_blank" 
@@ -425,7 +468,7 @@ function ReputaAppContent() {
           setIsVip(true); 
           setPaymentCount(1); 
           setIsUpgradeModalOpen(false); 
-          syncToAdmin(currentUser?.username, "UPGRADED_TO_VIP");
+          syncToAdmin(currentUser?.username || 'Guest', "UPGRADED_TO_VIP");
         }} 
       />
       <Analytics />

@@ -1,71 +1,130 @@
-/** * Pi SDK Service - Unified wrapper for Pi Network SDK
- */
+/**
+ * Pi SDK Service - Unified wrapper for Pi Network SDK
+ * Implements Pi Network authentication with scopes for username, payments, and wallet_address
+ */
+
+export interface PiUser {
+  uid: string;
+  username: string;
+  wallet_address?: string;
+  accessToken?: string;
+}
 
 export function isPiBrowser(): boolean {
   if (typeof window === 'undefined') return false;
   
-  // Use a combination of checks to ensure we are truly in the Pi Browser environment
   const isPiUA = /PiBrowser/i.test(navigator.userAgent);
   const hasPi = 'Pi' in window;
   
-  // If we have the script but not the UA, we're likely in a standard browser
   return hasPi && isPiUA;
 }
 
-/**
- * ✅ الحل السحري: محاولة التهيئة بدون "حبس" الكود في انتظار Sandbox
- */
-export async function initializePiSDK(): Promise<void> {
-  if (!isPiBrowser()) return;
-  
-  const Pi = (window as any).Pi;
-  try {
-    // نلغي الـ Sandbox مؤقتاً أو نجعله خياراً ثانوياً ليعود الربط للعمل
-    // إذا كنت تريد العودة للحالة التي كانت تعمل، اجعل sandbox: false
-    await Pi.init({ version: '2.0', sandbox:  false });
-    console.log('[PI SDK] Initialized in Standard Mode');
-  } catch (error) {
-    console.warn('[PI SDK] Standard Init failed, trying Sandbox...');
-    try {
-      await Pi.init({ version: '2.0', sandbox: false });
-    } catch (e) {
-      console.error('[PI SDK] Global Init Failure');
-    }
-  }
+export function isPiSDKAvailable(): boolean {
+  return typeof window !== 'undefined' && 'Pi' in window;
 }
 
-/**
- * ✅ إعادة زر Link Account للحياة
- */
-export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<any> {
-  if (!isPiBrowser()) return { username: "Guest_Explorer", uid: "demo" };
+export async function initializePiSDK(): Promise<boolean> {
+  if (!isPiSDKAvailable()) {
+    console.warn('[PI SDK] SDK not available');
+    return false;
+  }
+  
+  const Pi = (window as any).Pi;
+  try {
+    await Pi.init({ version: '2.0', sandbox: false });
+    console.log('[PI SDK] Initialized in Standard Mode');
+    return true;
+  } catch (error) {
+    console.warn('[PI SDK] Standard Init failed, trying Sandbox...');
+    try {
+      await Pi.init({ version: '2.0', sandbox: true });
+      console.log('[PI SDK] Initialized in Sandbox Mode');
+      return true;
+    } catch (e) {
+      console.error('[PI SDK] Global Init Failure');
+      return false;
+    }
+  }
+}
 
-  const Pi = (window as any).Pi;
+export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<PiUser> {
+  if (!isPiBrowser()) {
+    return { username: "Guest_Explorer", uid: "demo" };
+  }
 
-  try {
-    // 💡 التعديل الأهم: استدعاء المصادقة مباشرة دون انتظار طويل
-    const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
-    
-    return {
-      uid: auth.user.uid,
-      username: auth.user.username,
-      wallet_address: auth.user.wallet_address,
-      accessToken: auth.accessToken
-    };
-  } catch (error: any) {
-    console.error('[PI SDK] Auth Failed:', error);
-    // إظهار الرسالة فقط إذا فشل الأمر تماماً
-    alert("Authentication Error: " + error.message);
-    throw error;
-  }
+  const Pi = (window as any).Pi;
+
+  try {
+    const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+    
+    const user: PiUser = {
+      uid: auth.user.uid,
+      username: auth.user.username,
+      wallet_address: auth.user.wallet_address,
+      accessToken: auth.accessToken
+    };
+    
+    console.log('[PI SDK] Authentication successful:', user.username);
+    return user;
+  } catch (error: any) {
+    console.error('[PI SDK] Auth Failed:', error);
+    throw error;
+  }
+}
+
+export async function loginWithPi(): Promise<PiUser | null> {
+  if (!isPiSDKAvailable()) {
+    console.warn('[PI SDK] Please open this app in Pi Browser to login');
+    return null;
+  }
+
+  try {
+    const initialized = await initializePiSDK();
+    if (!initialized) {
+      throw new Error('Failed to initialize Pi SDK');
+    }
+    
+    const user = await authenticateUser(['username', 'payments', 'wallet_address']);
+    return user;
+  } catch (error: any) {
+    console.error('[PI SDK] Login failed:', error);
+    return null;
+  }
+}
+
+export async function verifyUserOnServer(accessToken: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/verify-pi-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.verified === true;
+    }
+    return false;
+  } catch (error) {
+    console.warn('[PI SDK] Server verification failed:', error);
+    return false;
+  }
+}
+
+export function logout(): void {
+  console.log('[PI SDK] User logged out');
 }
 
 function onIncompletePaymentFound(payment: any) {
-  if (payment && payment.identifier) {
-     fetch('/api/pi-payment', {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ paymentId: payment.identifier, txid: payment.transaction?.txid, action: 'complete' })
-     }).catch(err => console.error("Payment Recovery Failed", err));
-  }
-} 
+  if (payment && payment.identifier) {
+    fetch('/api/pi-payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        paymentId: payment.identifier, 
+        txid: payment.transaction?.txid, 
+        action: 'complete' 
+      })
+    }).catch(err => console.error("Payment Recovery Failed", err));
+  }
+}

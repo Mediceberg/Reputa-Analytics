@@ -18,7 +18,7 @@ import {
   User,
   Globe
 } from 'lucide-react';
-import logoImage from '../../assets/logo.png';
+import logoImage from '../../assets/logo-new.png';
 
 interface SidebarProps {
   mode: AppMode;

@@ -43,6 +43,10 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - The app detects Pi Browser via user agent
 - Falls back to Guest mode in regular browsers
 - SDK initialization has 5-second timeout fallback
+- **Pi Login Button**: Gold-themed login button appears for guest users
+- **Authentication Flow**: Uses Pi SDK v2.0 with scopes for username, payments, wallet_address
+- **piSdk.ts Service**: Provides loginWithPi(), authenticateUser(), verifyUserOnServer() functions
+- **TypeScript Types**: PiUser interface for type-safe user handling
 
 ## Design System
 - **Theme**: Dark futuristic dashboard with glassmorphism
@@ -121,3 +125,7 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - January 28, 2026: Updated header with glowing logo and neon text effects
 - January 28, 2026: Fixed browser compatibility (Guest mode for non-Pi browsers)
 - January 28, 2026: Configured for Replit environment (port 5000, host 0.0.0.0, allowed all hosts)
+- January 28, 2026: Enhanced Pi Network SDK authentication with dedicated login button
+- January 28, 2026: Added loginWithPi() function for manual user authentication
+- January 28, 2026: Added verifyUserOnServer() for backend token verification
+- January 28, 2026: Improved TypeScript types with PiUser interface for currentUser state
