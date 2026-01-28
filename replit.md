@@ -68,6 +68,12 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Backend score cap**: 10,000 points for level thresholds (displayScore unlimited)
 
 ## Recent Changes
+- January 28, 2026: Unified dashboard scoring - TrustGauge and badgeInfo now use atomic scoring system
+- January 28, 2026: Added mapAtomicToTrustLevel() helper to convert 7-level AtomicTrustLevel to 4-level TrustLevel for TrustGauge
+- January 28, 2026: Updated badgeInfo thresholds to match atomic scoring (8000+ Elite, 5000+ Pioneer, 3000+ Trusted, 1500+ Active, 500+ Moderate)
+- January 28, 2026: Restored Age and Status tiles in Pioneer Profile Card alongside Reputa Score, Points, Balance, Level
+- January 28, 2026: Added defensive validation for userPoints from localStorage to prevent NaN values
+- January 28, 2026: Added trustColors fallback when levelProgress.currentLevel is not in TRUST_LEVEL_COLORS
 - January 28, 2026: Redesigned ProfileSection with improved readability and consistent design
 - January 28, 2026: Fixed point type flow: DailyCheckIn -> ProfileSection -> handlePointsEarned correctly passes checkin vs ad type
 - January 28, 2026: Fixed handlePointsEarned to update correct field (checkIn vs activity) based on type
