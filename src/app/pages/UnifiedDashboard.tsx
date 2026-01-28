@@ -14,6 +14,9 @@ import { NetworkInfoWidget, TopWalletsWidget, ReputationWidget } from '../compon
 import { NetworkInfoPage } from './NetworkInfoPage';
 import { TopWalletsPage } from './TopWalletsPage';
 import { ReputationPage } from './ReputationPage';
+import { DailyCheckIn } from '../components/DailyCheckIn';
+import { PointsExplainer } from '../components/PointsExplainer';
+import { MiningDaysWidget } from '../components/MiningDaysWidget';
 import { 
   processTransactionTimeline, 
   processScoreBreakdown, 
@@ -54,6 +57,67 @@ export function UnifiedDashboard({
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
+  const [userPoints, setUserPoints] = useState(() => {
+    const savedPoints = localStorage.getItem('userPointsState');
+    if (savedPoints) {
+      try {
+        return JSON.parse(savedPoints);
+      } catch {
+        return {
+          total: walletData.reputaScore || 0,
+          checkIn: 0,
+          transactions: 0,
+          activity: 0,
+          streak: 0,
+        };
+      }
+    }
+    const checkInData = localStorage.getItem('dailyCheckInState');
+    if (checkInData) {
+      try {
+        const parsed = JSON.parse(checkInData);
+        const checkInPts = parsed.totalPointsFromCheckIn || 0;
+        const adPts = parsed.totalPointsFromAds || 0;
+        const streakPts = parsed.streakBonusPoints || 0;
+        return {
+          total: (walletData.reputaScore || 0) + checkInPts + adPts + streakPts,
+          checkIn: checkInPts + adPts,
+          transactions: 0,
+          activity: 0,
+          streak: streakPts,
+        };
+      } catch {
+        return {
+          total: walletData.reputaScore || 0,
+          checkIn: 0,
+          transactions: 0,
+          activity: 0,
+          streak: 0,
+        };
+      }
+    }
+    return {
+      total: walletData.reputaScore || 0,
+      checkIn: 0,
+      transactions: 0,
+      activity: 0,
+      streak: 0,
+    };
+  });
+
+  const handlePointsEarned = (points: number, type: 'checkin' | 'ad') => {
+    setUserPoints((prev: typeof userPoints) => {
+      const newState = {
+        ...prev,
+        total: prev.total + points,
+        checkIn: prev.checkIn + points,
+      };
+      if (mode.mode !== 'demo') {
+        localStorage.setItem('userPointsState', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
   
   const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });
   const [breakdownData, setBreakdownData] = useState<ChartDataPoint[]>([]);
@@ -773,7 +837,7 @@ export function UnifiedDashboard({
             </div>
 
             {/* Activity Summary */}
-            <div className="glass-card p-6 mb-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
               <h3 className="text-sm font-black uppercase tracking-wide mb-4" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
                 Activity Summary
               </h3>
@@ -796,6 +860,44 @@ export function UnifiedDashboard({
                     {(walletData?.transactions?.reduce((acc, tx) => acc + tx.amount, 0) || 0).toFixed(2)} π
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Daily Check-in Section */}
+            <DailyCheckIn 
+              onPointsEarned={handlePointsEarned}
+              isDemo={mode.mode === 'demo'}
+            />
+
+            {/* Mining Days & Points Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MiningDaysWidget 
+                miningDays={walletData.accountAge || 0}
+                isDemo={mode.mode === 'demo'}
+              />
+              <div className="glass-card p-4 flex items-center justify-between" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                <div className="flex items-center gap-3">
+                  <div 
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.2) 100%)',
+                      border: '1px solid rgba(139, 92, 246, 0.4)',
+                    }}
+                  >
+                    <Award className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Total Points</p>
+                    <p className="text-xl font-black text-white">{userPoints.total.toLocaleString()}</p>
+                  </div>
+                </div>
+                <PointsExplainer 
+                  currentPoints={userPoints.total}
+                  checkInPoints={userPoints.checkIn}
+                  transactionPoints={userPoints.transactions}
+                  activityPoints={userPoints.activity}
+                  streakBonus={userPoints.streak}
+                />
               </div>
             </div>
 

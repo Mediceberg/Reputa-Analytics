@@ -56,6 +56,10 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Added Daily Check-in System with 3 points reward and 24-hour countdown
+- January 28, 2026: Added Ad Watch bonus (+5 points) tied to daily check-in
+- January 28, 2026: Created PointsExplainer component with level progression and detailed breakdown
+- January 28, 2026: Added MiningDaysWidget showing mining activity with info modal
 - January 28, 2026: Created dedicated NetworkInfoPage with detailed metrics and supply distribution charts
 - January 28, 2026: Created dedicated TopWalletsPage with search, filters, sorting, and professional table view
 - January 28, 2026: Created dedicated ReputationPage with score breakdown, trust benefits, and wallet analyzer
