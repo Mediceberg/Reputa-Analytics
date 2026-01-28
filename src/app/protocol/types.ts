@@ -40,6 +40,15 @@ export interface WalletData {
 
 export type TrustLevel = 'Elite' | 'High' | 'Medium' | 'Low';
 
+export type AtomicTrustLevel = 
+  | 'Very Low Trust' 
+  | 'Low Trust' 
+  | 'Medium' 
+  | 'Active' 
+  | 'Trusted' 
+  | 'Pioneer+' 
+  | 'Elite';
+
 export interface StakingData {
   amount: number;
   duration: number;

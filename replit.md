@@ -56,6 +56,12 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Implemented Atomic Reputation Protocol with 7-level trust hierarchy
+- January 28, 2026: Created atomicScoring.ts engine with 7 scoring categories (wallet age, interaction, Pi Network, Pi Dex, staking, external penalties, suspicious behavior)
+- January 28, 2026: Added AtomicScoreBreakdown component with expandable category cards
+- January 28, 2026: Integrated atomic scoring with real wallet transaction data
+- January 28, 2026: Added time decay for older positive scores (recent activity weighted higher)
+- January 28, 2026: Trust levels: Very Low Trust → Low Trust → Medium → Active → Trusted → Pioneer+ → Elite
 - January 28, 2026: Fixed Daily Check-in System with proper persistence and demo mode isolation
 - January 28, 2026: Fixed Ad bonus gating with per-check-in tokens (prevents calendar-day exploits)
 - January 28, 2026: Added 7-day streak bonus (10 points) with proper award logic

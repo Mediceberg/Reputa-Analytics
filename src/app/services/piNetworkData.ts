@@ -35,7 +35,32 @@ export interface ReputationData {
   accountAge: number;
   networkActivity: number;
   onChainVerified: boolean;
-  isEstimated: boolean; // True when calculated from limited data
+  isEstimated: boolean;
+  activityData: WalletActivityData;
+}
+
+export interface WalletActivityData {
+  accountAgeDays: number;
+  lastActivityDate: Date;
+  dailyCheckins: number;
+  adBonuses: number;
+  reportViews: number;
+  toolUsage: number;
+  internalTxCount: number;
+  appInteractions: number;
+  sdkPayments: number;
+  normalTrades: number;
+  uniqueTokens: number;
+  regularActivityWeeks: number;
+  stakingDays: number;
+  smallExternalTransfers: number;
+  frequentExternalTransfers: number;
+  suddenExits: number;
+  continuousDrain: number;
+  spamCount: number;
+  farmingInstances: number;
+  suspiciousLinks: number;
+  txDates?: Date[];
 }
 
 /**
@@ -179,7 +204,6 @@ export async function fetchReputationData(
     const account = await accountResponse.json();
     const transactions = txResponse.ok ? await txResponse.json() : { _embedded: { records: [] } };
     
-    // Calculate reputation from real data
     const txCount = transactions._embedded?.records?.length || 0;
     const accountAge = calculateAccountAge(account.sequence);
     const activityLevel = calculateActivityLevel(transactions._embedded?.records || []);
@@ -191,6 +215,12 @@ export async function fetchReputationData(
       balance: parseFloat(account.balances?.find((b: any) => b.asset_type === 'native')?.balance || '0'),
     });
 
+    const activityData = deriveActivityDataFromTransactions(
+      transactions._embedded?.records || [],
+      accountAge,
+      txCount
+    );
+
     return {
       score,
       trustLevel: getTrustLevel(score),
@@ -199,10 +229,10 @@ export async function fetchReputationData(
       networkActivity: activityLevel,
       onChainVerified: true,
       isEstimated: false,
+      activityData,
     };
   } catch (error) {
     console.warn('[PI NETWORK] Failed to fetch reputation, using estimated data:', error);
-    // Return estimated data when wallet not found or API unavailable
     return {
       score: 350,
       trustLevel: 'Medium',
@@ -211,8 +241,80 @@ export async function fetchReputationData(
       networkActivity: 45,
       onChainVerified: false,
       isEstimated: true,
+      activityData: generateEstimatedActivityData(180, 25),
     };
   }
+}
+
+function deriveActivityDataFromTransactions(
+  txRecords: any[],
+  accountAgeDays: number,
+  txCount: number
+): WalletActivityData {
+  const txDates = txRecords.map((tx: any) => new Date(tx.created_at));
+  const lastActivityDate = txDates.length > 0 ? txDates[0] : new Date();
+  
+  const internalTx = txRecords.filter((tx: any) => 
+    tx.type === 'payment' && !tx.to?.includes('external')
+  ).length;
+  const externalTx = txRecords.filter((tx: any) => 
+    tx.type === 'payment' && tx.to?.includes('external')
+  ).length;
+  
+  const uniqueAssets = new Set(
+    txRecords.flatMap((tx: any) => tx.asset_code || 'native')
+  ).size;
+  
+  const weeklyActivity = Math.ceil(txCount / Math.max(1, accountAgeDays / 7));
+  
+  return {
+    accountAgeDays,
+    lastActivityDate,
+    dailyCheckins: 0,
+    adBonuses: 0,
+    reportViews: 0,
+    toolUsage: 0,
+    internalTxCount: internalTx || Math.floor(txCount * 0.7),
+    appInteractions: Math.floor(txCount * 0.1),
+    sdkPayments: Math.floor(txCount * 0.05),
+    normalTrades: Math.floor(txCount * 0.15),
+    uniqueTokens: uniqueAssets,
+    regularActivityWeeks: Math.min(weeklyActivity, 12),
+    stakingDays: 0,
+    smallExternalTransfers: Math.min(externalTx, 2),
+    frequentExternalTransfers: externalTx > 5 ? 1 : 0,
+    suddenExits: 0,
+    continuousDrain: 0,
+    spamCount: 0,
+    farmingInstances: 0,
+    suspiciousLinks: 0,
+    txDates,
+  };
+}
+
+function generateEstimatedActivityData(accountAgeDays: number, txCount: number): WalletActivityData {
+  return {
+    accountAgeDays,
+    lastActivityDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    dailyCheckins: Math.floor(accountAgeDays / 30) * 3,
+    adBonuses: Math.floor(accountAgeDays / 60) * 2,
+    reportViews: Math.floor(txCount * 0.3),
+    toolUsage: Math.floor(txCount * 0.1),
+    internalTxCount: Math.floor(txCount * 0.7),
+    appInteractions: Math.floor(txCount * 0.15),
+    sdkPayments: Math.floor(txCount * 0.05),
+    normalTrades: Math.floor(txCount * 0.2),
+    uniqueTokens: Math.min(4, Math.floor(txCount / 10)),
+    regularActivityWeeks: Math.min(8, Math.floor(accountAgeDays / 30)),
+    stakingDays: Math.floor(accountAgeDays * 0.2),
+    smallExternalTransfers: 1,
+    frequentExternalTransfers: 0,
+    suddenExits: 0,
+    continuousDrain: 0,
+    spamCount: 0,
+    farmingInstances: 0,
+    suspiciousLinks: 0,
+  };
 }
 
 // Helper Functions

@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Shield, Star, Activity, Clock, TrendingUp, CheckCircle, AlertCircle, Zap, Award, Target, BarChart3 } from 'lucide-react';
 import { fetchReputationData, ReputationData } from '../services/piNetworkData';
+import { 
+  calculateAtomicReputation, 
+  generateDemoActivityData,
+  AtomicReputationResult,
+  TRUST_LEVEL_COLORS 
+} from '../protocol/atomicScoring';
+import { AtomicScoreBreakdown } from '../components/AtomicScoreBreakdown';
 
 interface ReputationPageProps {
   onBack: () => void;
@@ -12,6 +19,14 @@ export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
   const [loading, setLoading] = useState(true);
   const [address, setAddress] = useState(walletAddress || '');
   const [isMainnet, setIsMainnet] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'atomic'>('overview');
+  
+  const atomicResult = useMemo<AtomicReputationResult>(() => {
+    if (reputation?.activityData) {
+      return calculateAtomicReputation(reputation.activityData);
+    }
+    return calculateAtomicReputation(generateDemoActivityData());
+  }, [reputation]);
 
   const loadReputation = async (addr: string) => {
     if (!addr) return;
@@ -120,7 +135,7 @@ export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
         </div>
 
         <div className="mb-8">
-          <div className="flex gap-4">
+          <div className="flex gap-4 mb-4">
             <input
               type="text"
               placeholder="Enter wallet address to analyze..."
@@ -137,6 +152,29 @@ export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
               Analyze
             </button>
           </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'overview' 
+                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' 
+                  : 'text-gray-500 hover:text-gray-400 hover:bg-white/5'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('atomic')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === 'atomic' 
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                  : 'text-gray-500 hover:text-gray-400 hover:bg-white/5'
+              }`}
+            >
+              Atomic Protocol
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -146,6 +184,8 @@ export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
               <span className="text-gray-400 text-sm">Analyzing wallet reputation...</span>
             </div>
           </div>
+        ) : activeTab === 'atomic' ? (
+          <AtomicScoreBreakdown result={atomicResult} language="en" />
         ) : reputation && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1">
