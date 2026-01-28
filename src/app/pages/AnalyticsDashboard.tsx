@@ -26,7 +26,7 @@ interface AnalyticsDashboardProps {
 export function AnalyticsDashboard({ onBack, walletBalance = 0, username }: AnalyticsDashboardProps) {
   const { t, language, changeLanguage } = useLanguage();
   const [mode, setMode] = useState<AppMode>({ mode: 'demo', connected: false });
-  const [activeItem, setActiveItem] = useState('Dashboard');
+  const [activeItem, setActiveItem] = useState('dashboard');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   
   const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });

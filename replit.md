@@ -56,6 +56,10 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Fixed sidebar navigation ID mismatch and added full i18n support for sidebar labels
+- January 28, 2026: Added Analytics Dashboard with Figma-designed charts (TransactionTimeline, PointsBreakdown, RiskActivity, TokenPortfolio)
+- January 28, 2026: Created multi-language support system (EN, AR, FR, ZH) with RTL support
+- January 28, 2026: Added ScoreBreakdownChart and PiDexSection components
 - January 28, 2026: GLOBAL FUTURISTIC DASHBOARD DESIGN - Applied across all screens and components
 - January 28, 2026: Updated WalletAnalysis with dark theme, neon accents, gradient borders
 - January 28, 2026: Redesigned TrustGauge with animated SVG gauge and neon glow effects

@@ -21,25 +21,25 @@ interface SidebarProps {
   onItemClick?: (item: string) => void;
 }
 
-export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard', onItemClick }: SidebarProps) {
+export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard', onItemClick }: SidebarProps) {
   const { t } = useLanguage();
 
   const mainItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', id: 'dashboard' },
-    { icon: Package, label: 'Products', id: 'products' },
-    { icon: ShoppingCart, label: 'Orders', id: 'orders' },
-    { icon: BarChart3, label: 'Reports', id: 'reports' },
+    { icon: LayoutDashboard, labelKey: 'sidebar.dashboard', id: 'dashboard' },
+    { icon: Package, labelKey: 'sidebar.products', id: 'products' },
+    { icon: ShoppingCart, labelKey: 'sidebar.orders', id: 'orders' },
+    { icon: BarChart3, labelKey: 'sidebar.reports', id: 'reports' },
   ];
 
   const transactionItems = [
-    { icon: CreditCard, label: 'Transactions', id: 'transactions' },
-    { icon: FileText, label: 'Invoice', id: 'invoice' },
+    { icon: CreditCard, labelKey: 'sidebar.transactions', id: 'transactions' },
+    { icon: FileText, labelKey: 'sidebar.invoice', id: 'invoice' },
   ];
 
   const toolsItems = [
-    { icon: Settings, label: 'Settings', id: 'settings' },
-    { icon: MessageSquare, label: 'Feedback', id: 'feedback' },
-    { icon: HelpCircle, label: 'Help', id: 'help' },
+    { icon: Settings, labelKey: 'sidebar.settings', id: 'settings' },
+    { icon: MessageSquare, labelKey: 'sidebar.feedback', id: 'feedback' },
+    { icon: HelpCircle, labelKey: 'sidebar.help', id: 'help' },
   ];
 
   const handleClick = (id: string) => {
@@ -85,7 +85,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard',
       <nav className="flex-1 space-y-8">
         <div>
           <p className="font-medium text-[#a5a5a5] text-[13px] mb-4 uppercase">
-            PAGES
+            {t('sidebar.section.pages')}
           </p>
           <div className="space-y-1">
             {mainItems.map((item) => (
@@ -93,14 +93,14 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard',
                 key={item.id}
                 onClick={() => handleClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeItem === item.label
+                  activeItem === item.id
                     ? 'bg-black shadow-lg border border-[#FAC515]/30'
                     : 'hover:bg-[#1a1a1a]'
                 }`}
               >
                 <item.icon className="w-5 h-5 text-white" />
                 <span className="text-[13px] text-white">
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
               </button>
             ))}
@@ -109,7 +109,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard',
 
         <div>
           <p className="font-medium text-[#adb8b8] text-[13px] mb-4 uppercase">
-            TRANSACTION
+            {t('sidebar.section.transaction')}
           </p>
           <div className="space-y-1">
             {transactionItems.map((item) => (
@@ -117,14 +117,14 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard',
                 key={item.id}
                 onClick={() => handleClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeItem === item.label
+                  activeItem === item.id
                     ? 'bg-black shadow-lg border border-[#FAC515]/30'
                     : 'hover:bg-[#1a1a1a]'
                 }`}
               >
                 <item.icon className="w-5 h-5 text-white" />
                 <span className="text-[13px] text-white">
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
               </button>
             ))}
@@ -133,7 +133,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard',
 
         <div>
           <p className="font-medium text-[#a5a5a5] text-[13px] mb-4 uppercase">
-            TOOLS
+            {t('sidebar.section.tools')}
           </p>
           <div className="space-y-1">
             {toolsItems.map((item) => (
@@ -141,14 +141,14 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'Dashboard',
                 key={item.id}
                 onClick={() => handleClick(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeItem === item.label
+                  activeItem === item.id
                     ? 'bg-black shadow-lg border border-[#FAC515]/30'
                     : 'hover:bg-[#1a1a1a]'
                 }`}
               >
                 <item.icon className="w-5 h-5 text-white" />
                 <span className="text-[13px] text-white">
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
               </button>
             ))}
