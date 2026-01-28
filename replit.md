@@ -56,6 +56,11 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
 ## Recent Changes
+- January 28, 2026: Fixed Daily Check-in System with proper persistence and demo mode isolation
+- January 28, 2026: Fixed Ad bonus gating with per-check-in tokens (prevents calendar-day exploits)
+- January 28, 2026: Added 7-day streak bonus (10 points) with proper award logic
+- January 28, 2026: Points now persist to localStorage and survive page refresh
+- January 28, 2026: Demo mode fully isolated - no localStorage reads/writes for demo users
 - January 28, 2026: Added Daily Check-in System with 3 points reward and 24-hour countdown
 - January 28, 2026: Added Ad Watch bonus (+5 points) tied to daily check-in
 - January 28, 2026: Created PointsExplainer component with level progression and detailed breakdown
