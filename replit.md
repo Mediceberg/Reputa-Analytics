@@ -59,7 +59,20 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
   - Text Secondary: rgba(160, 164, 184, 0.8)
 - **Effects**: Neon glow, glassmorphism blur, gradient borders, grid pattern background
 
+## Points System Architecture
+- **userPoints state**: { total, checkIn, transactions, activity, streak }
+- **Point types**: 'checkin' (3 pts) and 'ad' (5 pts bonus)
+- **Storage**: localStorage key 'userPointsState' for persistence
+- **Legacy migration**: Converts 'dailyCheckInState' to new format (checkIn/activity split)
+- **Level calculation**: atomicResult.adjustedScore + earnedPoints (no double-counting)
+- **Backend score cap**: 10,000 points for level thresholds (displayScore unlimited)
+
 ## Recent Changes
+- January 28, 2026: Redesigned ProfileSection with improved readability and consistent design
+- January 28, 2026: Fixed point type flow: DailyCheckIn -> ProfileSection -> handlePointsEarned correctly passes checkin vs ad type
+- January 28, 2026: Fixed handlePointsEarned to update correct field (checkIn vs activity) based on type
+- January 28, 2026: Fixed localStorage initialization to properly split checkIn and activity from legacy data
+- January 28, 2026: Fixed level calculation to avoid double-counting (atomicResult + earnedPoints only)
 - January 28, 2026: Implemented Atomic Reputation Protocol with 7-level trust hierarchy
 - January 28, 2026: Created atomicScoring.ts engine with 7 scoring categories (wallet age, interaction, Pi Network, Pi Dex, staking, external penalties, suspicious behavior)
 - January 28, 2026: Added AtomicScoreBreakdown component with expandable category cards
