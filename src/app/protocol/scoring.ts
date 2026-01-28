@@ -1,5 +1,13 @@
 /**
- * Scoring Module - Calculate comprehensive reputation score
+ * @deprecated This module is DEPRECATED as of January 2026.
+ * Use atomicScoring.ts instead for all reputation scoring.
+ * 
+ * The atomic scoring protocol is the SINGLE source of truth:
+ * - import { calculateAtomicReputation, getLevelProgress, mapAtomicToTrustLevel } from './atomicScoring';
+ * 
+ * This file is kept for reference only. Do NOT import or use these functions.
+ * 
+ * OLD: Scoring Module - Calculate comprehensive reputation score
  * تم تحسينه ليتناسب مع أوزان البلوكشين الحقيقية لعام 2026
  */
 
