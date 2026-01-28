@@ -1,14 +1,45 @@
 /**
  * Report Module - Generate reputation reports (VIP/Regular) 
- * Updated to reflect real Testnet data logic
+ * Updated to use unified Atomic Reputation Protocol
  */
 
 import type { ReputationReport, WalletData, StakingData, MiningData, Alert } from './types';
-import { calculateReputationScore, determineTrustLevel } from './scoring';
+import { calculateAtomicReputation, getLevelProgress, generateDemoActivityData, type AtomicReputationResult, type WalletActivityData } from './atomicScoring';
 
 /**
- * Generate comprehensive reputation report
- * يستخدم الآن البيانات الحقيقية الممررة من دالة fetchWalletData
+ * Convert WalletData to WalletActivityData for atomic scoring
+ */
+function walletToActivityData(walletData: WalletData, stakingData?: StakingData, miningData?: MiningData): WalletActivityData {
+  const txCount = walletData.transactions?.length || walletData.totalTransactions || 0;
+  const internalTx = walletData.transactions?.filter(tx => tx.type === 'internal').length || 0;
+  const externalTx = walletData.transactions?.filter(tx => tx.type === 'external').length || 0;
+  
+  return {
+    accountAgeDays: walletData.accountAge || 0,
+    lastActivityDate: new Date(),
+    dailyCheckins: 0,
+    adBonuses: 0,
+    reportViews: 0,
+    toolUsage: 0,
+    internalTxCount: internalTx,
+    appInteractions: Math.floor(txCount * 0.1),
+    sdkPayments: 0,
+    normalTrades: Math.floor(txCount * 0.2),
+    uniqueTokens: 1,
+    regularActivityWeeks: Math.min(8, Math.floor(walletData.accountAge / 30)),
+    stakingDays: stakingData?.duration || 0,
+    smallExternalTransfers: Math.min(externalTx, 3),
+    frequentExternalTransfers: externalTx > 5 ? 1 : 0,
+    suddenExits: 0,
+    continuousDrain: 0,
+    spamCount: 0,
+    farmingInstances: 0,
+    suspiciousLinks: 0,
+  };
+}
+
+/**
+ * Generate comprehensive reputation report using Atomic Scoring Protocol
  */
 export function generateReport(
   userId: string,
@@ -17,9 +48,28 @@ export function generateReport(
   miningData?: MiningData,
   isVIP: boolean = false
 ): ReputationReport {
-  // الحساب يعتمد الآن على الأرقام الحقيقية (الرصيد، عدد العمليات، عمر الحساب)
-  const scores = calculateReputationScore(walletData, stakingData, miningData);
-  const trustLevel = determineTrustLevel(scores.totalScore);
+  const activityData = walletToActivityData(walletData, stakingData, miningData);
+  const atomicResult = calculateAtomicReputation(activityData);
+  const levelProgress = getLevelProgress(atomicResult.adjustedScore);
+  const trustLevel = levelProgress.currentLevel as 'Low' | 'Medium' | 'High' | 'Elite';
+  
+  const totalPenalty = Math.abs(atomicResult.externalPenalty.totalPenalty) + Math.abs(atomicResult.suspiciousPenalty.totalPenalty);
+  
+  const scores = {
+    walletAgeScore: atomicResult.walletAge.totalPoints,
+    transactionScore: atomicResult.piNetwork.totalPoints,
+    stakingScore: atomicResult.staking.totalPoints,
+    miningScore: 0,
+    penalties: totalPenalty,
+    totalScore: atomicResult.adjustedScore,
+    breakdown: {
+      walletAge: { days: walletData.accountAge, maxScore: 20 as const, earnedScore: Math.min(20, atomicResult.walletAge.totalPoints), explanation: 'Atomic wallet age scoring' },
+      transactions: { total: walletData.totalTransactions, internal: 0, external: 0, suspicious: 0, maxScore: 40 as const, earnedScore: Math.min(40, atomicResult.piNetwork.totalPoints), details: [], explanation: 'Atomic transaction scoring' },
+      staking: { active: !!stakingData, amount: stakingData?.amount || 0, duration: stakingData?.duration || 0, maxScore: 30 as const, earnedScore: Math.min(30, atomicResult.staking.totalPoints), explanation: 'Atomic staking scoring' },
+      mining: { available: !!miningData, totalDays: miningData?.totalDays || 0, maxScore: 10 as const, earnedScore: 0, explanation: 'Mining bonus' },
+      penalties: { externalTransactions: Math.abs(atomicResult.externalPenalty.totalPenalty), suspiciousActivity: Math.abs(atomicResult.suspiciousPenalty.totalPenalty), totalPenalty, explanation: 'Atomic penalty system' },
+    },
+  };
   const alerts = generateAlerts(walletData, stakingData, miningData, scores);
   
   return {

@@ -5,14 +5,26 @@
  */
 
 // Core Functions - يتم تصدير الدوال التي تم ربطها بالبلوكشين والـ SDK
-export { fetchWalletData, fetchUsername } from './wallet';
+export { fetchWalletData } from './wallet';
 export { analyzeTransaction, analyzeAllTransactions, getTransactionExplanation, flagSuspiciousTransactions } from './transactions';
 export { analyzeStaking, estimateStaking } from './staking';
 export { processYearWithPiImage, calculateMiningConsistency } from './mining';
 export { verifyImage, createImageAlert } from './imageVerification';
-export { calculateReputationScore, determineTrustLevel } from './scoring';
 export { generateReport, formatVIPReport, formatRegularReport, exportReportJSON } from './report';
 export { initializePi, authenticate, createVIPPayment, checkVIPStatus, isPiAvailable } from './piPayment';
+
+// Unified Atomic Scoring Protocol (Single source of truth for reputation)
+export { 
+  calculateAtomicReputation, 
+  getLevelProgress, 
+  getBackendScoreCap,
+  mapAtomicToTrustLevel,
+  generateDemoActivityData,
+  LEVEL_NAMES,
+  type AtomicTrustLevel,
+  type AtomicReputationResult,
+  type WalletActivityData
+} from './atomicScoring';
 
 // Types - تصدير الأنواع لضمان توافق TypeScript في المشروع
 export type {

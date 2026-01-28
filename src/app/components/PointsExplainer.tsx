@@ -44,11 +44,13 @@ const POINTS_BREAKDOWN = [
 ];
 
 const LEVELS = [
-  { name: 'Pioneer', minPoints: 0, maxPoints: 99, color: '#6B7280' },
-  { name: 'Explorer', minPoints: 100, maxPoints: 499, color: '#10B981' },
-  { name: 'Trader', minPoints: 500, maxPoints: 999, color: '#00D9FF' },
-  { name: 'Whale', minPoints: 1000, maxPoints: 4999, color: '#8B5CF6' },
-  { name: 'Legend', minPoints: 5000, maxPoints: Infinity, color: '#F59E0B' },
+  { name: 'Very Low Trust', minPoints: 0, maxPoints: 999, color: '#EF4444' },
+  { name: 'Low Trust', minPoints: 1000, maxPoints: 2499, color: '#F97316' },
+  { name: 'Medium', minPoints: 2500, maxPoints: 4499, color: '#EAB308' },
+  { name: 'Active', minPoints: 4500, maxPoints: 6499, color: '#10B981' },
+  { name: 'Trusted', minPoints: 6500, maxPoints: 8499, color: '#00D9FF' },
+  { name: 'Pioneer+', minPoints: 8500, maxPoints: 9999, color: '#8B5CF6' },
+  { name: 'Elite', minPoints: 10000, maxPoints: Infinity, color: '#F59E0B' },
 ];
 
 export function PointsExplainer({ 

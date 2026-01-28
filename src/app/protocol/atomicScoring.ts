@@ -670,6 +670,31 @@ export function generateDemoActivityData(): WalletActivityData {
   };
 }
 
+export const LEVEL_NAMES: AtomicTrustLevel[] = [
+  'Very Low Trust',
+  'Low Trust',
+  'Medium',
+  'Active',
+  'Trusted',
+  'Pioneer+',
+  'Elite',
+];
+
+export type TrustLevel = 'Low' | 'Medium' | 'High' | 'Elite';
+
+export function mapAtomicToTrustLevel(atomicLevel: AtomicTrustLevel): TrustLevel {
+  switch (atomicLevel) {
+    case 'Elite': return 'Elite';
+    case 'Pioneer+':
+    case 'Trusted': return 'High';
+    case 'Active':
+    case 'Medium': return 'Medium';
+    case 'Low Trust':
+    case 'Very Low Trust': return 'Low';
+    default: return 'Medium';
+  }
+}
+
 export const TRUST_LEVEL_COLORS: Record<AtomicTrustLevel, { bg: string; text: string; border: string }> = {
   'Very Low Trust': { bg: 'rgba(239, 68, 68, 0.2)', text: '#EF4444', border: 'rgba(239, 68, 68, 0.5)' },
   'Low Trust': { bg: 'rgba(249, 115, 22, 0.2)', text: '#F97316', border: 'rgba(249, 115, 22, 0.5)' },

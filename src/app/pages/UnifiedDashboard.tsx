@@ -31,7 +31,8 @@ import {
   generateDemoActivityData, 
   getLevelProgress,
   TRUST_LEVEL_COLORS,
-  getBackendScoreCap
+  getBackendScoreCap,
+  mapAtomicToTrustLevel
 } from '../protocol/atomicScoring';
 import { 
   ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
@@ -210,19 +211,6 @@ export function UnifiedDashboard({
       return `${address.slice(0, 8)}...${address.slice(-8)}`;
     }
     return address;
-  };
-
-  const mapAtomicToTrustLevel = (atomicLevel: AtomicTrustLevel): TrustLevel => {
-    switch (atomicLevel) {
-      case 'Elite': return 'Elite';
-      case 'Pioneer+':
-      case 'Trusted': return 'High';
-      case 'Active':
-      case 'Medium': return 'Medium';
-      case 'Low Trust':
-      case 'Very Low Trust': return 'Low';
-      default: return 'Medium';
-    }
   };
 
   const gaugeLevel = mapAtomicToTrustLevel(levelProgress.currentLevel);
