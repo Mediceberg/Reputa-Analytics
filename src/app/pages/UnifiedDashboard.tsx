@@ -781,12 +781,18 @@ export function UnifiedDashboard({
                 <Lock className="w-6 h-6 text-purple-400" />
                 <h2 className="text-lg font-black uppercase tracking-wide text-white">Privacy Policy</h2>
               </div>
-              <div className="prose prose-invert max-w-none text-xs text-gray-400 space-y-4 font-sans leading-relaxed">
-                <p>Reputa Score respects your privacy. We only analyze public blockchain data from the Pi Network.</p>
-                <h4 className="text-white font-bold uppercase mt-6">Data Collection</h4>
-                <p>We do not collect private keys, passphrases, or personal identifying information. Only public wallet addresses are processed for analysis.</p>
-                <h4 className="text-white font-bold uppercase mt-6">Data Usage</h4>
-                <p>Wallet data is used exclusively to generate reputation scores and analytical reports within the application.</p>
+              <div className="prose prose-invert max-w-none text-[11px] text-gray-400 space-y-4 font-sans leading-relaxed">
+                <p className="font-bold text-white mb-2">Last Updated: January 26, 2026</p>
+                <p>Reputa Score Protocol ("the Protocol", "we", or "us") is committed to protecting the privacy and security of our users. This Privacy Policy outlines our practices regarding the collection, use, and safeguarding of data within the Pi Network ecosystem.</p>
+                
+                <h3 className="text-sm font-black uppercase text-purple-400 mt-6 mb-2">1. Data Collection and Scope</h3>
+                <p>We operate on the principle of data minimization. The Protocol analyzes publicly available blockchain data to provide reputation scoring. The data processed includes Public Wallet Addresses, User Identifiers (UID), and Technical Metadata.</p>
+
+                <h3 className="text-sm font-black uppercase text-purple-400 mt-6 mb-2">2. Data Protection and Security</h3>
+                <p>The Protocol employs industry-standard encryption and security measures. We maintain a non-custodial architecture, meaning we never request, store, or have access to your private keys or passphrases.</p>
+
+                <h3 className="text-sm font-black uppercase text-purple-400 mt-6 mb-2">3. Third-Party Disclosure</h3>
+                <p>Reputa Score Protocol maintains a strict no-sale policy. We do not sell, trade, or rent user data to third parties. Data remains within the secure infrastructure of the Protocol.</p>
               </div>
             </div>
           </div>
@@ -796,15 +802,21 @@ export function UnifiedDashboard({
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
               <div className="flex items-center gap-3 mb-6">
-                <FileText className="w-6 h-6 text-cyan-400" />
+                <FileTextIcon className="w-6 h-6 text-cyan-400" />
                 <h2 className="text-lg font-black uppercase tracking-wide text-white">Terms of Service</h2>
               </div>
-              <div className="prose prose-invert max-w-none text-xs text-gray-400 space-y-4 font-sans leading-relaxed">
-                <p>By using Reputa Score, you agree to the following terms:</p>
-                <h4 className="text-white font-bold uppercase mt-6">Acceptable Use</h4>
-                <p>Users must not attempt to manipulate scores or scrape data through automated means.</p>
-                <h4 className="text-white font-bold uppercase mt-6">Disclaimer</h4>
-                <p>Reputa Score provides information based on blockchain analysis. It is not financial advice. Scores are for informational purposes only.</p>
+              <div className="prose prose-invert max-w-none text-[11px] text-gray-400 space-y-4 font-sans leading-relaxed">
+                <p className="font-bold text-white mb-2">Last Updated: January 26, 2026</p>
+                <p>By accessing or using the Reputa Score Protocol ("the Protocol"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.</p>
+
+                <h3 className="text-sm font-black uppercase text-cyan-400 mt-6 mb-2">1. Nature of Service</h3>
+                <p>Reputa Score Protocol is an analytical tool designed to evaluate the reliability of digital wallets within the Pi Network based on publicly available blockchain data.</p>
+
+                <h3 className="text-sm font-black uppercase text-cyan-400 mt-6 mb-2">2. VIP Subscriptions</h3>
+                <p>Advanced features, such as detailed audit reports, may require payment via the Pi Network. Payments for digital upgrades are final and non-refundable.</p>
+
+                <h3 className="text-sm font-black uppercase text-cyan-400 mt-6 mb-2">3. Limitation of Liability</h3>
+                <p>Reputa Score Protocol assumes no responsibility for financial losses resulting from trading decisions or transactions made based on our scoring metrics.</p>
               </div>
             </div>
           </div>
