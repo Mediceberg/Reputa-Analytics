@@ -130,7 +130,6 @@ function ReputaAppContent() {
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
-        console.log("Not in Pi Browser, enabling Guest mode");
         setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
         setIsInitializing(false);
         return;
@@ -138,7 +137,6 @@ function ReputaAppContent() {
       
       const timeout = setTimeout(() => {
         if (isInitializing) {
-          console.warn("Pi SDK initialization timed out");
           setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
           setIsInitializing(false);
         }
@@ -155,7 +153,7 @@ function ReputaAppContent() {
           setPaymentCount(res.count || 0);
         }
       } catch (e) { 
-        console.warn("Pi SDK failed", e); 
+        console.warn("Pi SDK failed"); 
       } finally { 
         clearTimeout(timeout);
         setIsInitializing(false); 
