@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';    
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, Lock, ShieldCheck } from 'lucide-react';
+import { Send, MessageSquare, Lock, ShieldCheck, Coins } from 'lucide-react'; // أضفنا Coins للجمالية
 import { WalletChecker } from './components/WalletChecker';
 import { WalletAnalysis } from './components/WalletAnalysis';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -8,7 +8,6 @@ import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser } from './services/piSdk';
 import logoImage from '../assets/logo.png';
-// استيراد الملف المنعزل من المسار الصحيح الذي حددناه
 import { executeExternalPayout } from './services/OutboundDistributor';
 
 function FeedbackSection({ username }: { username: string }) {
@@ -56,22 +55,33 @@ function ReputaAppContent() {
   const [isVip, setIsVip] = useState(false);
   const [paymentCount, setPaymentCount] = useState(0);
   
-  // عداد مخفي لتفعيل زر الدفع (App-to-User)
+  // --- منطق المطور لعمليات App-to-User ---
   const [logoClickCount, setLogoClickCount] = useState(0);
-  // حالة جديدة لإدخال المحفظة يدوياً
   const [manualWallet, setManualWallet] = useState('');
+  const [isPayoutLoading, setIsPayoutLoading] = useState(false);
 
   const piBrowser = isPiBrowser();
   const { refreshWallet } = useTrust();
 
-  const handleReward = () => {
-    // استخدام المحفظة المدخلة يدوياً كأولوية، وإلا استخدام محفظة المستخدم الحالي
-    const targetAddress = manualWallet.trim() || currentUser?.wallet_address;
+  // الوظيفة المسؤولة عن تحويل المال من التطبيق للمحفظة (App-to-User)
+  const handleRewardPayout = async () => {
+    const targetAddress = manualWallet.trim();
     
-    if (targetAddress && targetAddress.length > 20) {
-      executeExternalPayout(targetAddress, 0.01, "Reward for High Reputa Score");
-    } else {
-      alert("Please enter a valid wallet address (G...)");
+    if (!targetAddress || targetAddress.length < 20 || !targetAddress.startsWith('G')) {
+      alert("Please enter a valid Pi Wallet address starting with G");
+      return;
+    }
+
+    setIsPayoutLoading(true);
+    try {
+      // استدعاء الموزع الخارجي الذي يتحدث مع السيرفر
+      await executeExternalPayout(targetAddress, 0.01, "Reward for High Reputa Score");
+      alert("Payout request sent to server! Check logs.");
+      setManualWallet('');
+    } catch (e) {
+      alert("Payout failed. Check your App Wallet balance.");
+    } finally {
+      setIsPayoutLoading(false);
     }
   };
 
@@ -156,11 +166,10 @@ function ReputaAppContent() {
     <div className="min-h-screen bg-white flex flex-col font-sans">
       <header className="border-b p-4 bg-white/95 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
-          {/* الضغط على الشعار 5 مرات يظهر لوحة التحكم المخفية */}
           <img 
             src={logoImage} 
             alt="logo" 
-            className="w-8 h-8 cursor-pointer" 
+            className="w-8 h-8 cursor-pointer active:scale-90 transition-transform" 
             onClick={() => setLogoClickCount(prev => prev + 1)}
           />
           <div className="leading-tight">
@@ -170,22 +179,24 @@ function ReputaAppContent() {
             </p>
           </div>
         </div>
+        
         <div className="flex items-center gap-3">
-          {/* لوحة إدخال العنوان يدوياً تظهر للمطور فقط */}
+          {/* لوحة التحكم المخفية تظهر للمطور عند الضغط 5 مرات على اللوجو */}
           {logoClickCount >= 5 && (
-            <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100">
+            <div className="flex items-center gap-2 bg-red-50 p-1.5 rounded-xl border border-red-100 animate-in zoom-in duration-300">
               <input 
                 type="text"
-                placeholder="Target G..."
+                placeholder="Target Wallet (G...)"
                 value={manualWallet}
                 onChange={(e) => setManualWallet(e.target.value)}
-                className="text-[8px] p-1.5 border rounded-lg w-24 outline-none focus:ring-1 focus:ring-red-400"
+                className="text-[8px] p-2 border rounded-lg w-28 outline-none focus:ring-1 focus:ring-red-400 bg-white font-mono"
               />
               <button 
-                onClick={handleReward}
-                className="px-3 py-1.5 bg-red-600 text-white text-[8px] font-black rounded-lg uppercase animate-pulse"
+                onClick={handleRewardPayout}
+                disabled={isPayoutLoading}
+                className={`px-3 py-2 ${isPayoutLoading ? 'bg-gray-400' : 'bg-red-600'} text-white text-[8px] font-black rounded-lg uppercase shadow-sm active:scale-95 transition-all`}
               >
-                PAY
+                {isPayoutLoading ? '...' : 'PAY USER'}
               </button>
             </div>
           )}
