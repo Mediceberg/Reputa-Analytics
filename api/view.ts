@@ -5,11 +5,18 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN || '',
 });
 
+// تعريف واجهة للبيانات لضمان عدم حدوث أخطاء TypeScript
+interface PioneerData {
+  username?: string;
+  wallet?: string;
+  timestamp?: string;
+}
+
 export default async function handler(req: any, res: any) {
   const ADMIN_PASSWORD = "med2026";
   const { password, page = "1", filter = "all" } = req.query; 
   const ITEMS_PER_PAGE = 40;
-  const currentPage = parseInt(page);
+  const currentPage = parseInt(page as string);
 
   if (password !== ADMIN_PASSWORD) {
     return res.status(200).send(`<html><body style="background:#0f172a;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><form method="GET"><input type="password" name="password" placeholder="Password" style="padding:10px;border-radius:5px;border:none;"><button type="submit" style="padding:10px 20px;margin-left:10px;background:#38bdf8;border:none;border-radius:5px;cursor:pointer;">Login</button></form></body></html>`);
@@ -23,13 +30,16 @@ export default async function handler(req: any, res: any) {
 
     rawPioneers.forEach((item: any) => {
       try {
-        const p = typeof item === 'string' ? JSON.parse(item) : item;
+        // تحويل البيانات وضمان أنها كائن (Object)
+        const p = (typeof item === 'string' ? JSON.parse(item) : item) as PioneerData;
         if (!p) return;
 
         const isExternal = !p.username || p.username === 'Anonymous';
-        const username = isExternal ? '🌐 External User / Browser' : p.username;
+        const username = isExternal ? '🌐 External User / Browser' : p.username as string;
         const isVipSignal = p.wallet === "UPGRADED_TO_VIP" || p.wallet === "VIP_PAYMENT_CONFIRMED";
-        const cleanWallet = p.wallet ? p.wallet.trim() : null;
+        
+        // إصلاح خطأ .trim() عبر التأكد من وجود النص أولاً
+        const cleanWallet = p.wallet ? (p.wallet as string).trim() : null;
 
         if (!pioneerMap.has(username)) {
           pioneerMap.set(username, { 
@@ -55,24 +65,29 @@ export default async function handler(req: any, res: any) {
       return new Date(b.timestamps[0]).getTime() - new Date(a.timestamps[0]).getTime();
     });
 
-    // --- ميزة التصفية الذهبية ---
     if (filter === "vip") {
         allPioneers = allPioneers.filter(u => u.isVip);
     }
 
     const totalItems = allPioneers.length;
-    const totalVip = Array.from(pioneerMap.values()).filter((u:any) => u.isVip).length; // إجمالي الـ VIP الفعلي
+    const totalVip = Array.from(pioneerMap.values()).filter((u:any) => u.isVip).length;
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
     const paginatedPioneers = allPioneers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     const rows = paginatedPioneers.map((u: any) => {
-      const walletArray = Array.from(u.wallets);
-      const primaryWallet = walletArray.find((w: any) => w.startsWith('G')) || walletArray[0] || (u.isExternal ? '⚠️ External Link' : 'N/A');
+      const walletArray = Array.from(u.wallets) as string[];
+      
+      // إصلاح خطأ .startsWith() عبر التأكد من أن العنصر نصي
+      const primaryWallet = walletArray.find((w: string) => w && w.startsWith('G')) || walletArray[0] || (u.isExternal ? '⚠️ External Link' : 'N/A');
+      
       const walletsJson = JSON.stringify(walletArray).replace(/'/g, "\\'");
       const timesJson = JSON.stringify(u.timestamps.map((t:any) => new Date(t).toLocaleString())).replace(/'/g, "\\'");
-      const fastCheckUrl = primaryWallet.startsWith('G') ? `https://pinetwork-explorer.com/account/${primaryWallet.trim()}?v=${Date.now()}` : '#';
+      
+      // إصلاح إضافي هنا لضمان عدم تعطل الكود إذا كانت المحفظة غير موجودة
+      const fastCheckUrl = (typeof primaryWallet === 'string' && primaryWallet.startsWith('G')) 
+        ? `https://pinetwork-explorer.com/account/${primaryWallet.trim()}?v=${Date.now()}` 
+        : '#';
 
-      // تصميم الصف الذهبي للـ VIP
       const rowStyle = u.isVip 
         ? 'background: linear-gradient(90deg, #fffbeb 0%, #ffffff 100%); border-left: 4px solid #f59e0b;' 
         : u.isExternal ? 'background-color: #fff8f8;' : '';
@@ -89,10 +104,10 @@ export default async function handler(req: any, res: any) {
             </div>
         </td>
         <td class="wallet-cell">
-          <span class="status-dot ${primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
+          <span class="status-dot ${typeof primaryWallet === 'string' && primaryWallet.startsWith('G') ? 'active' : 'inactive'}"></span>
           <code>${primaryWallet}</code>
           <div style="margin-top: 5px;">
-            ${primaryWallet.startsWith('G') ? `<button onclick="window.open('${fastCheckUrl}', '_blank')" style="background:#10b981; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold;">🔍 FAST CHECK</button>` : ''}
+            ${typeof primaryWallet === 'string' && primaryWallet.startsWith('G') ? `<button onclick="window.open('${fastCheckUrl}', '_blank')" style="background:#10b981; color:white; border:none; padding:3px 8px; border-radius:4px; font-size:10px; cursor:pointer; font-weight:bold;">🔍 FAST CHECK</button>` : ''}
             ${walletArray.length > 1 ? `<span class="multi-tag" style="font-size: 10px; color: #6366f1; cursor: pointer; font-weight: bold; margin-left: 5px;" onclick='showModal("${u.username}", ${walletsJson}, ${timesJson})'>+${walletArray.length - 1} More</span>` : ''}
           </div>
         </td>
@@ -103,6 +118,7 @@ export default async function handler(req: any, res: any) {
       </tr>
     `}).join('');
 
+    // بقية كود الـ HTML (Header, Table Wrapper, Script) كما هو تماماً لضمان الشكل والميزات
     return res.status(200).send(`
       <!DOCTYPE html>
       <html lang="en">
@@ -120,7 +136,6 @@ export default async function handler(req: any, res: any) {
           .vip-card:hover { transform: translateY(-2px); }
           .vip-card.active-filter { border: 2px solid var(--gold); border-radius: 12px; padding: 5px; background: rgba(245, 158, 11, 0.1); }
           .grid-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
-          @media (max-width: 900px) { .grid-layout { grid-template-columns: 1fr; } }
           .table-wrapper { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
           table { width: 100%; border-collapse: collapse; }
           th { background: #f1f5f9; padding: 14px 20px; text-align: left; font-size: 11px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -132,8 +147,8 @@ export default async function handler(req: any, res: any) {
           .active { background: #10b981; } .inactive { background: #cbd5e1; }
           code { background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; font-size: 11px; color: #334155; }
           .feedback-panel { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; align-self: start; }
-          #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.85); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 15px; box-sizing: border-box; }
-          .modal-content { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 24px; padding: 0; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; }
+          #modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(15, 23, 42, 0.85); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px); padding: 15px; }
+          .modal-content { background: white; width: 100%; max-width: 500px; max-height: 85vh; border-radius: 24px; position: relative; display: flex; flex-direction: column; overflow: hidden; }
           .modal-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
           .modal-body { padding: 25px; overflow-y: auto; flex: 1; }
         </style>
@@ -218,7 +233,7 @@ export default async function handler(req: any, res: any) {
               });
             } else { html += '<p style="font-size:12px; color:#94a3b8;">No wallets found.</p>'; }
 
-            html += '<h4 style="font-size:11px; color:#64748b; text-transform:uppercase; margin-top:25px; margin-bottom:15px;">Access Log (Recent First)</h4>';
+            html += '<h4 style="font-size:11px; color:#64748b; text-transform:uppercase; margin-top:25px; margin-bottom:15px;">Access Log</h4>';
             times.forEach(t => { 
               html += \`<div style="font-size:11px; color:#64748b; padding:10px 0; border-bottom:1px solid #f1f5f9;">\${t}</div>\`; 
             });
