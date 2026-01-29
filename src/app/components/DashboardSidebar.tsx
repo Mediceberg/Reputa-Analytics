@@ -109,7 +109,12 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
               {MODE_IMPACTS[mode.mode].label}
             </p>
             <p className="text-[10px] uppercase tracking-wide" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>
-              {mode.mode === 'mainnet' ? '100% Impact' : mode.mode === 'testnet' ? '25% Impact' : 'No Impact'}
+              {mode.mode === 'mainnet' 
+                ? (t('app.mode.impact.full') || '100% Impact')
+                : mode.mode === 'testnet' 
+                  ? (t('app.mode.impact.partial') || '25% Impact')
+                  : (t('app.mode.impact.none') || 'No Impact')
+              }
             </p>
           </div>
           {mode.connected && (

@@ -170,9 +170,15 @@ export function UnifiedDashboard({
     return result;
   }, [walletData.accountAge, walletData.transactions?.length, userPoints.checkIn, userPoints.activity, userPoints.streak]);
 
+  const modeAdjustedScore = useMemo(() => {
+    const baseScore = atomicResult.adjustedScore;
+    const impact = MODE_IMPACTS[mode.mode];
+    return Math.round(baseScore * (impact.impactPercentage / 100));
+  }, [atomicResult.adjustedScore, mode.mode]);
+
   const levelProgress = useMemo(() => {
-    return getLevelProgress(atomicResult.adjustedScore);
-  }, [atomicResult.adjustedScore]);
+    return getLevelProgress(mode.mode === 'demo' ? atomicResult.adjustedScore : modeAdjustedScore);
+  }, [atomicResult.adjustedScore, modeAdjustedScore, mode.mode]);
 
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
@@ -353,13 +359,34 @@ export function UnifiedDashboard({
                   <p 
                     className="text-4xl font-black tracking-tight"
                     style={{ 
-                      color: trustColors.text,
-                      textShadow: `0 0 30px ${trustColors.text}50`,
+                      color: mode.mode === 'demo' ? '#6B7280' : trustColors.text,
+                      textShadow: mode.mode === 'demo' ? 'none' : `0 0 30px ${trustColors.text}50`,
                     }}
                   >
-                    {levelProgress.displayScore.toLocaleString()}
+                    {mode.mode === 'demo' ? (
+                      <span className="flex items-center gap-2">
+                        {levelProgress.displayScore.toLocaleString()}
+                        <span className="text-xs text-gray-500">(Demo)</span>
+                      </span>
+                    ) : (
+                      levelProgress.displayScore.toLocaleString()
+                    )}
                   </p>
-                  <p className="text-[10px] uppercase text-white/60 font-bold tracking-widest mt-1">Reputa Score</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[10px] uppercase text-white/60 font-bold tracking-widest">Reputa Score</p>
+                    {mode.mode !== 'mainnet' && (
+                      <span 
+                        className="text-[8px] uppercase font-bold px-1.5 py-0.5 rounded"
+                        style={{ 
+                          background: MODE_IMPACTS[mode.mode].bgColor,
+                          color: MODE_IMPACTS[mode.mode].color,
+                          border: `1px solid ${MODE_IMPACTS[mode.mode].borderColor}`
+                        }}
+                      >
+                        {mode.mode === 'demo' ? '0%' : '25%'}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 
                 {/* Vertical Divider */}
