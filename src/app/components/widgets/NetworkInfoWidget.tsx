@@ -197,20 +197,17 @@ export function NetworkInfoWidget({ isMainnet = true, refreshInterval = 30000 }:
         </div>
       )}
 
-      {/* Last Updated */}
+      {/* Last Updated - Simplified footer */}
       {metrics && (
-        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+        <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-center">
           <div className="flex items-center gap-2">
-            <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">Last Updated</span>
-            <span className={`text-[7px] font-bold uppercase px-1.5 py-0.5 rounded border ${
-              metrics.source === 'blockexplorer' 
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-            }`}>
-              {metrics.source === 'blockexplorer' ? 'Live' : 'Estimated'}
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              metrics.source === 'blockexplorer' ? 'bg-emerald-500' : 'bg-amber-500'
+            } animate-pulse`} />
+            <span className="text-[8px] font-bold uppercase tracking-widest text-gray-500">
+              {metrics.source === 'blockexplorer' ? 'Live Data' : 'Estimated'} • {formatDate(metrics.lastUpdated)}
             </span>
           </div>
-          <span className="text-[8px] font-bold text-gray-500">{formatDate(metrics.lastUpdated)}</span>
         </div>
       )}
     </div>

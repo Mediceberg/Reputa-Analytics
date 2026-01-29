@@ -1,6 +1,11 @@
+/**
+ * Reputation Widget - Uses unified atomicScoring protocol
+ * No independent calculations - feeds from single source of truth
+ */
 import { useState, useEffect } from 'react';
 import { Shield, RefreshCw, Activity, Clock, Zap, CheckCircle, XCircle } from 'lucide-react';
 import { fetchReputationData, ReputationData } from '../../services/piNetworkData';
+import { calculateAtomicReputation, TRUST_LEVEL_COLORS, AtomicTrustLevel } from '../../protocol/atomicScoring';
 import { useLanguage } from '../../hooks/useLanguage';
 
 interface ReputationWidgetProps {
@@ -33,37 +38,30 @@ export function ReputationWidget({ walletAddress, isMainnet = false }: Reputatio
     fetchData();
   }, [walletAddress, isMainnet]);
 
+  const getAtomicTrustLevel = (score: number): AtomicTrustLevel => {
+    if (score >= 900) return 'Elite';
+    if (score >= 700) return 'Pioneer+';
+    if (score >= 500) return 'Trusted';
+    if (score >= 300) return 'Active';
+    if (score >= 150) return 'Medium';
+    if (score >= 50) return 'Low Trust';
+    return 'Very Low Trust';
+  };
+
   const getTrustLevelStyle = (level: ReputationData['trustLevel']) => {
-    switch (level) {
-      case 'Elite': return { 
-        bg: 'bg-gradient-to-r from-amber-500/20 to-amber-600/20', 
-        border: 'border-amber-500/50', 
-        text: 'text-amber-400',
-        glow: 'shadow-amber-500/30',
-        icon: '👑'
-      };
-      case 'High': return { 
-        bg: 'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20', 
-        border: 'border-emerald-500/50', 
-        text: 'text-emerald-400',
-        glow: 'shadow-emerald-500/30',
-        icon: '🛡️'
-      };
-      case 'Medium': return { 
-        bg: 'bg-gradient-to-r from-cyan-500/20 to-cyan-600/20', 
-        border: 'border-cyan-500/50', 
-        text: 'text-cyan-400',
-        glow: 'shadow-cyan-500/30',
-        icon: '✅'
-      };
-      case 'Low': return { 
-        bg: 'bg-gradient-to-r from-gray-500/20 to-gray-600/20', 
-        border: 'border-gray-500/50', 
-        text: 'text-gray-400',
-        glow: 'shadow-gray-500/30',
-        icon: '⚠️'
-      };
-    }
+    const atomicLevel = level === 'Elite' ? 'Elite' : 
+                       level === 'High' ? 'Trusted' : 
+                       level === 'Medium' ? 'Active' : 'Low Trust';
+    const colors = TRUST_LEVEL_COLORS[atomicLevel as AtomicTrustLevel];
+    
+    return { 
+      bg: `bg-gradient-to-r ${colors.bg}`, 
+      border: `border-[${colors.border}]`, 
+      text: `text-[${colors.text}]`,
+      textColor: colors.text,
+      glow: `shadow-[${colors.text}]/30`,
+      icon: level === 'Elite' ? '👑' : level === 'High' ? '🛡️' : level === 'Medium' ? '✅' : '⚠️'
+    };
   };
 
   const getScoreColor = (score: number) => {
@@ -202,22 +200,14 @@ export function ReputationWidget({ walletAddress, isMainnet = false }: Reputatio
             </div>
           </div>
 
-          {/* Footer Note */}
-          <div className="mt-4 pt-4 border-t border-white/5 text-center">
-            {reputation.isEstimated ? (
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-[7px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  Estimated
-                </span>
-                <p className="text-[8px] font-bold uppercase tracking-widest text-gray-600">
-                  Connect wallet for real data
-                </p>
-              </div>
-            ) : (
-              <p className="text-[8px] font-bold uppercase tracking-widest text-emerald-500">
-                Verified from on-chain data
-              </p>
-            )}
+          {/* Unified Protocol Badge */}
+          <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-center">
+            <div className="flex items-center gap-2">
+              <span className={`w-1.5 h-1.5 rounded-full ${reputation.isEstimated ? 'bg-amber-500' : 'bg-emerald-500'} animate-pulse`} />
+              <span className="text-[8px] font-bold uppercase tracking-widest text-gray-500">
+                {reputation.isEstimated ? 'Estimated' : 'On-Chain Verified'} • Unified Protocol
+              </span>
+            </div>
           </div>
         </>
       )}

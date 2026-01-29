@@ -176,15 +176,6 @@ export function TopWalletsWidget({ isMainnet = false, initialLimit = 10 }: TopWa
         )}
       </button>
 
-      {/* Sample Data Notice */}
-      <div className="mt-3 text-center">
-        <span className="text-[7px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-          Sample Data
-        </span>
-        <p className="text-[8px] font-bold uppercase tracking-widest text-gray-600 mt-1">
-          Privacy-preserving demonstration
-        </p>
-      </div>
     </div>
   );
 }
