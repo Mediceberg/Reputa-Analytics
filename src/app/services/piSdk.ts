@@ -14,9 +14,29 @@ export function isPiBrowser(): boolean {
   if (typeof window === 'undefined') return false;
   
   const isPiUA = /PiBrowser/i.test(navigator.userAgent);
-  const hasPi = 'Pi' in window;
   
-  return hasPi && isPiUA;
+  return isPiUA;
+}
+
+export function waitForPiSDK(timeout: number = 5000): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && 'Pi' in window) {
+      resolve(true);
+      return;
+    }
+    
+    const startTime = Date.now();
+    const checkInterval = setInterval(() => {
+      if (typeof window !== 'undefined' && 'Pi' in window) {
+        clearInterval(checkInterval);
+        resolve(true);
+      } else if (Date.now() - startTime > timeout) {
+        clearInterval(checkInterval);
+        console.warn('[PI SDK] SDK did not load within timeout');
+        resolve(false);
+      }
+    }, 100);
+  });
 }
 
 export function isPiSDKAvailable(): boolean {
@@ -49,13 +69,25 @@ export async function initializePiSDK(): Promise<boolean> {
 
 export async function authenticateUser(scopes: string[] = ['username', 'payments', 'wallet_address']): Promise<PiUser> {
   if (!isPiBrowser()) {
-    return { username: "Guest_Explorer", uid: "demo" };
+    console.warn('[PI SDK] Not in Pi Browser - user agent check failed');
+    throw new Error('Please open this app in Pi Browser to login with your Pi account.');
+  }
+
+  const sdkReady = await waitForPiSDK(5000);
+  if (!sdkReady) {
+    console.error('[PI SDK] SDK not available after waiting');
+    throw new Error('Pi SDK is not available. Please refresh the page.');
   }
 
   const Pi = (window as any).Pi;
 
   try {
+    console.log('[PI SDK] Starting authentication with scopes:', scopes);
     const auth = await Pi.authenticate(scopes, onIncompletePaymentFound);
+    
+    if (!auth || !auth.user) {
+      throw new Error('Authentication returned no user data');
+    }
     
     const user: PiUser = {
       uid: auth.user.uid,
@@ -64,7 +96,7 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
       accessToken: auth.accessToken
     };
     
-    console.log('[PI SDK] Authentication successful:', user.username);
+    console.log('[PI SDK] Authentication successful:', user.username, 'UID:', user.uid);
     return user;
   } catch (error: any) {
     console.error('[PI SDK] Auth Failed:', error);
@@ -73,21 +105,33 @@ export async function authenticateUser(scopes: string[] = ['username', 'payments
 }
 
 export async function loginWithPi(): Promise<PiUser | null> {
-  if (!isPiSDKAvailable()) {
-    console.warn('[PI SDK] Please open this app in Pi Browser to login');
+  if (!isPiBrowser()) {
+    alert('Please open this app in Pi Browser to login with your Pi account.');
     return null;
   }
 
   try {
+    const sdkReady = await waitForPiSDK(5000);
+    if (!sdkReady) {
+      alert('Pi SDK is not available. Please refresh the page.');
+      return null;
+    }
+    
     const initialized = await initializePiSDK();
     if (!initialized) {
       throw new Error('Failed to initialize Pi SDK');
     }
     
     const user = await authenticateUser(['username', 'payments', 'wallet_address']);
+    
+    if (!user || !user.uid) {
+      throw new Error('Authentication failed - no user returned');
+    }
+    
     return user;
   } catch (error: any) {
     console.error('[PI SDK] Login failed:', error);
+    alert('Login failed: ' + (error.message || 'Unknown error'));
     return null;
   }
 }

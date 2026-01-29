@@ -205,30 +205,37 @@ function ReputaAppContent() {
   useEffect(() => {
     const initApp = async () => {
       if (!piBrowser) {
+        console.log('[App] Not in Pi Browser, setting guest user');
         setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
         setIsInitializing(false);
         return;
       }
       
+      console.log('[App] In Pi Browser, waiting for SDK...');
+      
       const timeout = setTimeout(() => {
-        if (isInitializing) {
-          setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
-          setIsInitializing(false);
-        }
-      }, 5000);
+        console.warn('[App] SDK initialization timeout');
+        setIsInitializing(false);
+      }, 8000);
 
       try {
-        await initializePiSDK();
-        const user = await authenticateUser(['username', 'wallet_address', 'payments']).catch(() => null);
-        if (user) {
-          setCurrentUser(user);
-          syncToAdmin(user.username, user.wallet_address || "Pending...");
-          const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
-          setIsVip(res.isVip);
-          setPaymentCount(res.count || 0);
+        const initialized = await initializePiSDK();
+        console.log('[App] SDK initialized:', initialized);
+        
+        if (initialized) {
+          const user = await authenticateUser(['username', 'wallet_address', 'payments']);
+          console.log('[App] Authentication result:', user?.username, user?.uid);
+          
+          if (user && user.uid) {
+            setCurrentUser(user);
+            syncToAdmin(user.username, user.wallet_address || "Pending...");
+            const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+            setIsVip(res.isVip);
+            setPaymentCount(res.count || 0);
+          }
         }
-      } catch (e) { 
-        console.warn("Pi SDK failed"); 
+      } catch (e: any) { 
+        console.error('[App] SDK/Auth failed:', e.message);
       } finally { 
         clearTimeout(timeout);
         setIsInitializing(false); 

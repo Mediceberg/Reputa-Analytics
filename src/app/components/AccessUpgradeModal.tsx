@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { createVIPPayment } from '../services/piPayments';
+import { isPiBrowser } from '../services/piSdk';
 
 interface AccessUpgradeModalProps {
   isOpen: boolean;
@@ -23,15 +24,18 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
     e.preventDefault();
     e.stopPropagation();
 
-    if (!currentUser) {
-      alert("Please wait for user authentication...");
+    if (!isPiBrowser()) {
+      alert("Please open this app in Pi Browser to make payments");
       return;
     }
 
-    if (currentUser.uid === "demo") {
-      onUpgrade();
-      onClose();
-      alert("✅ VIP Unlocked (Demo Mode)");
+    if (!currentUser) {
+      alert("Please login with your Pi account first");
+      return;
+    }
+
+    if (!currentUser.uid || currentUser.uid === "demo") {
+      alert("Please login with your Pi account first to make real payments");
       return;
     }
 
@@ -40,8 +44,9 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
         onUpgrade();
         onClose();
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Payment Initiation Failed:", err);
+      alert("Payment failed: " + (err.message || 'Unknown error'));
     }
   };
 

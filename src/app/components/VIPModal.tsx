@@ -1,14 +1,17 @@
 import { Crown, Check, X, Sparkles, Shield, Zap } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
+import { createVIPPayment } from '../services/piPayments';
+import { isPiBrowser } from '../services/piSdk';
 
 interface VIPModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPurchase: () => void;
+  uid?: string;
 }
 
-export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
+export function VIPModal({ isOpen, onClose, onPurchase, uid }: VIPModalProps) {
   const features = [
     'Unlimited wallet analyses',
     'Professional audit reports',
@@ -21,49 +24,24 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
   ];
 
   const handlePurchase = async () => {
+    if (!isPiBrowser()) {
+      alert('Please open this app in Pi Browser to make payments');
+      return;
+    }
+    
+    if (!uid) {
+      alert('Please login with your Pi account first');
+      return;
+    }
+    
     try {
-      const res = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'approve',
-          paymentId: `vip_${Date.now()}`, 
-          amount: 1,
-          memo: "Reputa VIP Lifetime Membership"
-        })
-      });
-      
-      const approval = await res.json();
-
-      if (approval.approved) {
-        if (window.Pi) {
-          const payment = await window.Pi.createPayment({
-            amount: 1,
-            memo: "Reputa VIP Upgrade",
-            metadata: { type: "vip_upgrade" }
-          }, {
-            onReadyForServerApproval: (paymentId: string) => {
-              console.log("Payment ready for server approval:", paymentId);
-            },
-            onReadyForServerCompletion: (paymentId: string, txid: string) => {
-              fetch('/api/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'complete', paymentId, txid, status: 'completed' })
-              });
-            },
-            onCancel: (paymentId: string) => console.log("Payment cancelled", paymentId),
-            onError: (error: Error, paymentId?: string) => console.error(error, paymentId),
-          });
-        } else {
-          console.warn("Pi SDK not found, using onPurchase callback");
-        }
-        
+      await createVIPPayment(uid, () => {
         onPurchase();
-      }
-    } catch (error) {
-      console.error('VIP upgrade failed:', error);
-      alert('Failed to initiate secure payment. Please try again in Pi Browser.');
+        onClose();
+      });
+    } catch (error: any) {
+      console.error('VIP payment failed:', error);
+      alert('Payment failed: ' + (error.message || 'Unknown error'));
     }
   };
 
