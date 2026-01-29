@@ -1,7 +1,11 @@
+/**
+ * Wallet API
+ * GET/POST wallet data with dynamic transaction history from Redis
+ */
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Redis } from '@upstash/redis';
 
-// إعداد الاتصال بـ Redis لجلب البيانات الديناميكية
 const redis = new Redis({
   url: process.env.KV_REST_API_URL || '',
   token: process.env.KV_REST_API_TOKEN || '',
@@ -30,33 +34,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rawWallet = walletAddress || `G${Math.random().toString(36).substring(2, 56).toUpperCase()}`;
     const cleanWallet = rawWallet.trim().replace(/[^a-zA-Z0-9]/g, "");
 
-    // --- الجزء المطور: جلب بيانات المعاملات الحقيقية والتفصيلية من Redis ---
-    
-    // جلب عدد المعاملات المخزن (tx_count) أو البدء من 0
     const storedTxCount = await redis.get(`tx_count:${cleanWallet}`) || 0;
     const totalTx = parseInt(storedTxCount as string);
 
-    // جلب قائمة آخر المعاملات (تم زيادة المدى إلى 10 لعرض قائمة غنية كما في الصورة)
     const recentActivityRaw = await redis.lrange(`history:${cleanWallet}`, 0, 9) || [];
     
     const recentActivity = recentActivityRaw.map(item => {
       const tx = typeof item === 'string' ? JSON.parse(item) : item;
       
-      // التأكد من استخراج البيانات الدقيقة المحفوظة في ملف الدفع
       return {
         id: tx.id || Math.random().toString(36).substring(7),
         type: tx.type || "Sent",
-        subType: tx.subType || "Wallet Transfer", // النوع التفصيلي المطلوب
+        subType: tx.subType || "Wallet Transfer",
         amount: tx.amount || "0.00",
         status: tx.status || "Success",
         exactTime: tx.exactTime || new Date(tx.timestamp || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-        dateLabel: tx.dateLabel || "Today", // التسمية اليومية المطلوبة
+        dateLabel: tx.dateLabel || "Today",
         timestamp: tx.timestamp || new Date().toISOString(),
         to: tx.to || cleanWallet
       };
     });
 
-    // إذا كانت القائمة فارغة، نظهر معاملة ترحيبية مهيأة بنفس النمط الدقيق
     const dynamicActivity = recentActivity.length > 0 ? recentActivity : [
       {
         id: "init_01",
@@ -74,25 +72,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const walletData = {
       walletAddress: cleanWallet,
       explorerUrl: `https://minepi.com/blockexplorer-testnet/account/${cleanWallet}?v=${Date.now()}`,
-      
       balance: parseFloat((Math.random() * 500 + 50).toFixed(2)),
       network: (process.env.PI_NETWORK as string) || 'testnet',
       userId: userId || 'active_user',
       lastUpdated: new Date().toISOString(),
-      
       transactions: {
         total: totalTx,
         sent: totalTx > 0 ? Math.floor(totalTx * 0.7) : 0,
         received: totalTx > 0 ? Math.ceil(totalTx * 0.3) : 0
       },
-
-      // إرسال قائمة النشاط بالبيانات الدقيقة والمطورة
       recentActivity: dynamicActivity,
-      
       cacheRef: Math.random().toString(36).substring(7)
     };
 
-    console.log('[GET-WALLET - DYNAMIC DATA]', { wallet: cleanWallet, txCount: totalTx });
+    console.log('[WALLET - DYNAMIC DATA]', { wallet: cleanWallet, txCount: totalTx });
 
     return res.status(200).json({
       success: true,
@@ -100,7 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error) {
-    console.error('[GET-WALLET ERROR]', error);
+    console.error('[WALLET ERROR]', error);
     return res.status(500).json({ error: 'Failed to fetch dynamic wallet data' });
   }
 }
