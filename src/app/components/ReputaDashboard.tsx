@@ -49,7 +49,7 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
   const loadReport = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/get-wallet?walletAddress=${walletAddress}&userId=${userId}`);
+      const response = await fetch(`/api/wallet?walletAddress=${walletAddress}&userId=${userId}`);
       const apiData = await response.json();
       
       const newReport = await generateCompleteReport(walletAddress, userId, undefined, isVIP);
@@ -97,10 +97,10 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
       return;
     }
     try {
-      const approveRes = await fetch('/api/approve', {
+      const approveRes = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId: `pay_${Date.now()}`, userId, amount: 1 })
+        body: JSON.stringify({ action: 'approve', paymentId: `pay_${Date.now()}`, userId, amount: 1 })
       });
       const approval = await approveRes.json();
       if (approval.approved) {

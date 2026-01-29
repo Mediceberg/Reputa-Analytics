@@ -22,10 +22,11 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
 
   const handlePurchase = async () => {
     try {
-      const res = await fetch('/api/approve', {
+      const res = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          action: 'approve',
           paymentId: `vip_${Date.now()}`, 
           amount: 1,
           memo: "Reputa VIP Lifetime Membership"
@@ -45,10 +46,10 @@ export function VIPModal({ isOpen, onClose, onPurchase }: VIPModalProps) {
               console.log("Payment ready for server approval:", paymentId);
             },
             onReadyForServerCompletion: (paymentId: string, txid: string) => {
-              fetch('/api/complete', {
+              fetch('/api/payments', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paymentId, txid, status: 'completed' })
+                body: JSON.stringify({ action: 'complete', paymentId, txid, status: 'completed' })
               });
             },
             onCancel: (paymentId: string) => console.log("Payment cancelled", paymentId),

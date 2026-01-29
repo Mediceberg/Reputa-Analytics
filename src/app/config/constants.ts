@@ -51,12 +51,12 @@ export const TRUST_LEVELS = {
   Low: { min: 0, color: '#ef4444', label: 'Low' }
 } as const;
 
-// نقاط النهاية للـ API التي سيتصل بها التطبيق (Vercel Functions)
 export const API_ENDPOINTS = {
-  approve: '/api/approve',
-  complete: '/api/complete',
-  getWallet: '/api/get-wallet',
-  auth: '/api/auth'
+  payments: '/api/payments',
+  wallet: '/api/wallet',
+  user: '/api/user',
+  auth: '/api/auth',
+  top100: '/api/top100'
 };
 
 // مفاتيح التخزين المحلي لضمان استمرارية جلسة المستخدم وحالة الدفع

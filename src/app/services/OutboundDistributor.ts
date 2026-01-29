@@ -11,7 +11,7 @@ export const executeExternalPayout = async (
   try {
     console.log(`[Payout] Initiating payout of ${amount} Pi to: ${address}`);
 
-    const response = await fetch('/api/pi-payment', {
+    const response = await fetch('/api/payments', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

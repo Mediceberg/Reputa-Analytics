@@ -147,7 +147,7 @@ function recordSuccess(): void {
 
 export async function fetchTop100WalletsFromPiScan(): Promise<Top100Wallet[]> {
   try {
-    const response = await fetchWithRetry('/api/top100wallets/scrape');
+    const response = await fetchWithRetry('/api/top100?action=list');
     const data = await response.json();
     
     // Handle nested response format: { success: true, data: { wallets: [...] } }

@@ -117,7 +117,7 @@ export function logout(): void {
 
 function onIncompletePaymentFound(payment: any) {
   if (payment && payment.identifier) {
-    fetch('/api/pi-payment', {
+    fetch('/api/payments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -127,4 +127,26 @@ function onIncompletePaymentFound(payment: any) {
       })
     }).catch(err => console.error("Payment Recovery Failed", err));
   }
+}
+
+export async function loginWithPiAndLoadReputation(): Promise<{ user: PiUser | null; reputationLoaded: boolean }> {
+  const user = await loginWithPi();
+  
+  if (user && user.uid !== 'demo') {
+    try {
+      const { reputationService } = await import('./reputationService');
+      await reputationService.loadUserReputation(user.uid);
+      localStorage.setItem('piUserId', user.uid);
+      localStorage.setItem('piUsername', user.username);
+      if (user.wallet_address) {
+        localStorage.setItem('piWalletAddress', user.wallet_address);
+      }
+      return { user, reputationLoaded: true };
+    } catch (error) {
+      console.error('[PI SDK] Failed to load reputation:', error);
+      return { user, reputationLoaded: false };
+    }
+  }
+  
+  return { user, reputationLoaded: false };
 }

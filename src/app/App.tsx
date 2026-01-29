@@ -17,10 +17,10 @@ function FeedbackSection({ username }: { username: string }) {
     if (!feedback.trim()) return;
     setStatus('SENDING...');
     try {
-      const res = await fetch('/api/save-data', {
+      const res = await fetch('/api/user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, text: feedback, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ type: 'feedback', username, text: feedback, timestamp: new Date().toISOString() }),
       });
       if (res.ok) { setFeedback(''); setStatus('✅ THANK YOU!'); setTimeout(() => setStatus(''), 3000); }
     } catch (e) { setStatus('❌ ERROR'); setTimeout(() => setStatus(''), 2000); }
@@ -134,7 +134,7 @@ function ReputaAppContent() {
 
     setIsPayoutLoading(true);
     try {
-      const response = await fetch('/api/pi-payment', {
+      const response = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

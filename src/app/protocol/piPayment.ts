@@ -113,10 +113,10 @@ async function approvePayment(
   amount: number
 ): Promise<void> {
   try {
-    const response = await fetch('/api/approve', {
+    const response = await fetch('/api/payments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId, userId, amount, network: 'testnet' })
+      body: JSON.stringify({ action: 'approve', paymentId, userId, amount, network: 'testnet' })
     });
     
     if (!response.ok) {
@@ -139,10 +139,10 @@ async function completePayment(
   amount: number
 ): Promise<void> {
   try {
-    const response = await fetch('/api/complete', {
+    const response = await fetch('/api/payments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentId, txid, userId, amount, network: 'testnet' })
+      body: JSON.stringify({ action: 'complete', paymentId, txid, userId, amount, network: 'testnet' })
     });
     
     if (!response.ok) {
