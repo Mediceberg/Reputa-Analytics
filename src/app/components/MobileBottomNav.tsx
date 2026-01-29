@@ -24,25 +24,29 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom"
+      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom"
       style={{
         background: 'linear-gradient(180deg, rgba(15, 17, 23, 0.98) 0%, rgba(10, 11, 15, 1) 100%)',
         borderTop: '1px solid rgba(139, 92, 246, 0.2)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 8px)',
       }}
     >
-      <div className="flex items-center justify-around px-2 py-2">
+      <div className="flex items-center justify-around px-1 py-1.5">
         {navItems.map((item) => {
           const isActive = activeItem === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onItemClick(item.id)}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all active:scale-95"
-              style={isActive ? {
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.1) 100%)',
-              } : {}}
+              className="flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all active:scale-95"
+              style={{ 
+                minWidth: '56px', 
+                minHeight: '48px', 
+                padding: '6px 8px',
+                ...(isActive && { background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.1) 100%)' })
+              }}
             >
               <item.icon 
                 className="w-5 h-5 transition-colors"
@@ -65,7 +69,8 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
         {onMenuClick && (
           <button
             onClick={onMenuClick}
-            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all active:scale-95"
+            className="flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all active:scale-95"
+            style={{ minWidth: '56px', minHeight: '48px', padding: '6px 8px' }}
           >
             <Menu 
               className="w-5 h-5"

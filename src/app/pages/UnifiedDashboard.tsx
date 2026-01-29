@@ -242,7 +242,7 @@ export function UnifiedDashboard({
 
       <main className="flex-1 p-3 lg:p-6 overflow-auto relative z-10 mobile-main-content">
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 mobile-header">
           <div className="flex items-center gap-2 sm:gap-4">
             <button 
               onClick={onReset}
