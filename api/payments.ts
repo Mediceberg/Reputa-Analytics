@@ -1,11 +1,12 @@
 /**
  * Consolidated Payments API
  * Handles all payment-related operations: approve, complete, payout, send-pi
- * Single endpoint with action routing
+ * Full A2U (App-to-User) payment flow with blockchain transaction
  */
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { Redis } from '@upstash/redis';
+import * as StellarSdk from 'stellar-sdk';
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL || '',
@@ -17,6 +18,84 @@ const PI_API_KEY = PI_NETWORK === 'mainnet'
   ? process.env.PI_API_KEY_MAINNET 
   : process.env.PI_API_KEY;
 const PI_API_BASE = 'https://api.minepi.com/v2';
+const APP_WALLET_SEED = process.env.APP_WALLET_SEED;
+
+const PI_HORIZON_URL = PI_NETWORK === 'mainnet'
+  ? 'https://api.mainnet.minepi.com'
+  : 'https://api.testnet.minepi.com';
+
+const piServer = new StellarSdk.Horizon.Server(PI_HORIZON_URL, { allowHttp: false });
+
+async function submitA2UTransaction(
+  toAddress: string, 
+  amount: number, 
+  memo: string,
+  paymentId: string
+): Promise<{ txid: string } | { error: string }> {
+  if (!APP_WALLET_SEED) {
+    return { error: 'APP_WALLET_SEED not configured' };
+  }
+
+  try {
+    const sourceKeypair = StellarSdk.Keypair.fromSecret(APP_WALLET_SEED);
+    const sourcePublicKey = sourceKeypair.publicKey();
+    
+    const account = await piServer.loadAccount(sourcePublicKey);
+    
+    const transaction = new StellarSdk.TransactionBuilder(account, {
+      fee: StellarSdk.BASE_FEE,
+      networkPassphrase: PI_NETWORK === 'mainnet' 
+        ? 'Pi Network' 
+        : 'Pi Testnet',
+    })
+      .addOperation(StellarSdk.Operation.payment({
+        destination: toAddress,
+        asset: StellarSdk.Asset.native(),
+        amount: amount.toFixed(7),
+      }))
+      .addMemo(StellarSdk.Memo.text(memo.substring(0, 28)))
+      .setTimeout(180)
+      .build();
+
+    transaction.sign(sourceKeypair);
+
+    const result = await piServer.submitTransaction(transaction);
+    console.log(`[A2U] Transaction submitted: ${result.hash}`);
+    
+    return { txid: result.hash };
+  } catch (error: any) {
+    console.error('[A2U] Transaction failed:', error);
+    const errorMessage = error.response?.data?.extras?.result_codes?.operations?.[0] 
+      || error.message 
+      || 'Transaction failed';
+    return { error: errorMessage };
+  }
+}
+
+async function completeA2UPayment(paymentId: string, txid: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const response = await fetch(`${PI_API_BASE}/payments/${paymentId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${PI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ txid })
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error(`[A2U] Complete failed:`, data);
+      return { success: false, error: data.message || 'Complete failed' };
+    }
+    
+    console.log(`[A2U] Payment ${paymentId} completed`);
+    return { success: true, data };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
 
 function setCorsHeaders(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -101,6 +180,10 @@ async function handleComplete(body: any, res: VercelResponse) {
 async function handlePayout(body: any, res: VercelResponse) {
   const { address, amount, uid, memo, eventId } = body;
 
+  if (!APP_WALLET_SEED) {
+    return res.status(500).json({ error: "Server not configured for A2U payments" });
+  }
+
   if (!uid) {
     return res.status(400).json({ error: "Missing UID - user must be authenticated" });
   }
@@ -120,10 +203,11 @@ async function handlePayout(body: any, res: VercelResponse) {
   const existingIdempotent = await redis.get(`idempotent:${idempotencyKey}`);
   if (existingIdempotent) {
     const existingData = JSON.parse(existingIdempotent as string);
-    console.log(`[PAYOUT] Duplicate request blocked for ${idempotencyKey}`);
+    console.log(`[A2U] Duplicate request blocked for ${idempotencyKey}`);
     return res.status(200).json({ 
       success: true, 
       paymentId: existingData.paymentId,
+      txid: existingData.txid,
       network: existingData.network,
       duplicate: true,
       message: "This payout was already processed"
@@ -138,10 +222,14 @@ async function handlePayout(body: any, res: VercelResponse) {
     });
   }
 
+  const paymentMemo = (memo || "Reputa Reward").substring(0, 28);
+  let paymentId: string | null = null;
+  let txid: string | null = null;
+
   try {
-    console.log(`[PAYOUT] Initiating ${payoutAmount} Pi to ${address} for UID ${uid} on ${PI_NETWORK}`);
+    console.log(`[A2U] Step 1: Creating payment for ${payoutAmount} Pi to UID ${uid} on ${PI_NETWORK}`);
     
-    const response = await fetch(`${PI_API_BASE}/payments`, {
+    const createResponse = await fetch(`${PI_API_BASE}/payments`, {
       method: 'POST',
       headers: { 
         'Authorization': `Key ${PI_API_KEY}`, 
@@ -150,7 +238,7 @@ async function handlePayout(body: any, res: VercelResponse) {
       body: JSON.stringify({
         payment: {
           amount: payoutAmount,
-          memo: memo || "Reputa Score Reward Payout",
+          memo: paymentMemo,
           metadata: { 
             type: "app_to_user_payout",
             network: PI_NETWORK,
@@ -163,52 +251,114 @@ async function handlePayout(body: any, res: VercelResponse) {
       }),
     });
 
-    const data = await response.json();
+    const createData = await createResponse.json();
     
-    if (!response.ok) {
-      console.error(`[PAYOUT ERROR] API response:`, data);
-      const errorMessage = data?.error_message || data?.message || 'Payment creation failed';
-      return res.status(response.status).json({ 
+    if (!createResponse.ok) {
+      console.error(`[A2U] Step 1 FAILED:`, createData);
+      const errorMessage = createData?.error_message || createData?.message || 'Payment creation failed';
+      return res.status(createResponse.status).json({ 
         error: errorMessage,
-        details: data,
+        step: 'create',
+        details: createData,
         network: PI_NETWORK
       });
     }
 
-    if (data.identifier) {
-      await redis.set(`payout_pending:${uid}`, data.identifier, { ex: 7200 });
-      
-      await redis.set(`idempotent:${idempotencyKey}`, JSON.stringify({
-        paymentId: data.identifier,
-        network: PI_NETWORK,
-        amount: payoutAmount,
-        createdAt: new Date().toISOString()
-      }), { ex: 86400 * 7 });
-      
-      await redis.set(`payout_history:${data.identifier}`, JSON.stringify({
-        uid,
-        address,
-        amount: payoutAmount,
-        status: 'pending',
-        network: PI_NETWORK,
-        idempotencyKey,
-        createdAt: new Date().toISOString()
-      }), { ex: 86400 * 30 });
-    }
+    paymentId = createData.identifier;
+    const recipientAddress = createData.to_address || address;
+    
+    console.log(`[A2U] Step 1 SUCCESS: Payment ${paymentId} created, recipient: ${recipientAddress}`);
+    
+    await redis.set(`payout_pending:${uid}`, paymentId, { ex: 7200 });
+    await redis.set(`payout_history:${paymentId}`, JSON.stringify({
+      uid, address: recipientAddress, amount: payoutAmount, status: 'created',
+      network: PI_NETWORK, idempotencyKey, createdAt: new Date().toISOString()
+    }), { ex: 86400 * 30 });
 
-    console.log(`[PAYOUT SUCCESS] Payment ${data.identifier} created on ${PI_NETWORK}`);
+    console.log(`[A2U] Step 2: Submitting blockchain transaction...`);
+    
+    const txResult = await submitA2UTransaction(
+      recipientAddress,
+      payoutAmount,
+      paymentMemo,
+      paymentId as string
+    );
+    
+    if ('error' in txResult) {
+      console.error(`[A2U] Step 2 FAILED:`, txResult.error);
+      await redis.set(`payout_history:${paymentId}`, JSON.stringify({
+        uid, address: recipientAddress, amount: payoutAmount, status: 'tx_failed',
+        network: PI_NETWORK, error: txResult.error, createdAt: new Date().toISOString()
+      }), { ex: 86400 * 30 });
+      
+      return res.status(500).json({ 
+        error: `Blockchain transaction failed: ${txResult.error}`,
+        step: 'submit',
+        paymentId,
+        network: PI_NETWORK
+      });
+    }
+    
+    txid = txResult.txid;
+    console.log(`[A2U] Step 2 SUCCESS: Transaction ${txid} submitted`);
+
+    console.log(`[A2U] Step 3: Completing payment on Pi server...`);
+    
+    const completeResult = await completeA2UPayment(paymentId as string, txid);
+    
+    if (!completeResult.success) {
+      console.error(`[A2U] Step 3 FAILED:`, completeResult.error);
+      await redis.set(`payout_history:${paymentId}`, JSON.stringify({
+        uid, address: recipientAddress, amount: payoutAmount, status: 'complete_failed',
+        network: PI_NETWORK, txid, error: completeResult.error, createdAt: new Date().toISOString()
+      }), { ex: 86400 * 30 });
+      
+      return res.status(200).json({ 
+        success: true,
+        warning: 'Transaction sent but completion pending',
+        paymentId,
+        txid,
+        network: PI_NETWORK
+      });
+    }
+    
+    console.log(`[A2U] Step 3 SUCCESS: Payment completed!`);
+    
+    await redis.del(`payout_pending:${uid}`);
+    
+    await redis.set(`idempotent:${idempotencyKey}`, JSON.stringify({
+      paymentId, txid, network: PI_NETWORK, amount: payoutAmount,
+      completedAt: new Date().toISOString()
+    }), { ex: 86400 * 7 });
+    
+    await redis.set(`payout_history:${paymentId}`, JSON.stringify({
+      uid, address: recipientAddress, amount: payoutAmount, status: 'completed',
+      network: PI_NETWORK, txid, idempotencyKey, completedAt: new Date().toISOString()
+    }), { ex: 86400 * 30 });
     
     return res.status(200).json({ 
       success: true, 
-      paymentId: data.identifier,
+      paymentId,
+      txid,
       network: PI_NETWORK,
-      data 
+      message: `Successfully sent ${payoutAmount} Pi`
     });
+    
   } catch (error: any) {
-    console.error('[PAYOUT ERROR]', error.message);
+    console.error('[A2U] Unexpected error:', error.message);
+    
+    if (paymentId) {
+      await redis.set(`payout_history:${paymentId}`, JSON.stringify({
+        uid, address, amount: payoutAmount, status: 'error',
+        network: PI_NETWORK, txid, error: error.message, createdAt: new Date().toISOString()
+      }), { ex: 86400 * 30 });
+    }
+    
     return res.status(500).json({ 
-      error: "Network error - please try again",
-      details: error.message 
+      error: "Payment processing error - please try again",
+      details: error.message,
+      paymentId,
+      txid
     });
   }
 }
@@ -285,6 +435,28 @@ async function handleClearPending(body: any, res: VercelResponse) {
   }
 }
 
+async function handleIncompletePayments(res: VercelResponse) {
+  try {
+    const response = await fetch(`${PI_API_BASE}/payments/incomplete_server_payments`, {
+      headers: { 'Authorization': `Key ${PI_API_KEY}` }
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch incomplete payments', details: data });
+    }
+    
+    return res.status(200).json({
+      incomplete: data.incomplete_server_payments || [],
+      network: PI_NETWORK,
+      count: data.incomplete_server_payments?.length || 0
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 async function handleCheckPayoutStatus(body: any, res: VercelResponse) {
   const { uid, paymentId } = body;
   
@@ -353,6 +525,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       case 'check_status':
         return handleCheckPayoutStatus(body, res);
+      
+      case 'incomplete_payments':
+        return handleIncompletePayments(res);
       
       default:
         if (paymentId && action) {

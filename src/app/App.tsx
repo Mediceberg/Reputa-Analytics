@@ -169,9 +169,11 @@ function ReputaAppContent() {
       if (response.ok && result.success) {
         const networkLabel = result.network === 'mainnet' ? 'Mainnet' : 'Testnet';
         if (result.duplicate) {
-          alert(`ℹ️ This payout was already processed.\nPayment ID: ${result.paymentId}`);
+          alert(`ℹ️ This payout was already processed.\nPayment ID: ${result.paymentId}\nTxID: ${result.txid || 'N/A'}`);
+        } else if (result.warning) {
+          alert(`⚠️ ${result.warning}\nPayment ID: ${result.paymentId}\nTxID: ${result.txid}`);
         } else {
-          alert(`✅ Payout Initiated on ${networkLabel}!\nPayment ID: ${result.paymentId}\nCheck your wallet shortly.`);
+          alert(`✅ Payout Completed on ${networkLabel}!\nPayment ID: ${result.paymentId}\nTxID: ${result.txid}\n\n${result.message}`);
         }
         setManualWallet('');
       } else if (response.status === 409) {
@@ -180,7 +182,8 @@ function ReputaAppContent() {
         const errorDetail = typeof result.error === 'string' 
           ? result.error 
           : result.error?.error_message || result.details?.message || "Check App Wallet balance";
-        alert(`❌ Payout Failed: ${errorDetail}`);
+        const stepInfo = result.step ? ` (Step: ${result.step})` : '';
+        alert(`❌ Payout Failed${stepInfo}: ${errorDetail}`);
       }
     } catch (e) {
       alert("Network error. Please ensure your App Wallet is funded in the Developer Portal.");
