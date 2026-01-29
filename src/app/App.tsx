@@ -79,11 +79,11 @@ function ReputaAppContent() {
   const [isPayoutLoading, setIsPayoutLoading] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const piBrowser = isPiBrowser();
+  const [piBrowser, setPiBrowser] = useState(false);
   const { refreshWallet } = useTrust();
 
   const handlePiLogin = async () => {
-    if (!piBrowser) {
+    if (!piBrowser && !isPiBrowser()) {
       alert("Please open this app in Pi Browser to login with your Pi account.");
       return;
     }
@@ -204,17 +204,40 @@ function ReputaAppContent() {
 
   useEffect(() => {
     const initApp = async () => {
-      if (!piBrowser) {
+      console.log('[App] Starting initialization...');
+      
+      const checkPiBrowser = () => {
+        if (typeof window === 'undefined') return false;
+        const ua = navigator.userAgent.toLowerCase();
+        const isPiUA = ua.includes('pibrowser') || ua.includes('pi browser') || ua.includes('pinet');
+        const hasPiSDK = 'Pi' in window;
+        return isPiUA || hasPiSDK;
+      };
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      let detectedPiBrowser = checkPiBrowser();
+      
+      if (!detectedPiBrowser) {
+        console.log('[App] First check: not Pi Browser, waiting for SDK...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        detectedPiBrowser = checkPiBrowser();
+      }
+      
+      setPiBrowser(detectedPiBrowser);
+      console.log('[App] Pi Browser detection:', detectedPiBrowser);
+      
+      if (!detectedPiBrowser) {
         console.log('[App] Not in Pi Browser, setting guest user');
         setCurrentUser({ username: "Guest_Explorer", uid: "demo", wallet_address: "GDU22WEH7M3O...DEMO" });
         setIsInitializing(false);
         return;
       }
       
-      console.log('[App] In Pi Browser, waiting for SDK...');
+      console.log('[App] In Pi Browser, initializing SDK...');
       
       const timeout = setTimeout(() => {
-        console.warn('[App] SDK initialization timeout');
+        console.warn('[App] SDK initialization timeout - showing login prompt');
         setIsInitializing(false);
       }, 8000);
 
@@ -233,6 +256,8 @@ function ReputaAppContent() {
             setIsVip(res.isVip);
             setPaymentCount(res.count || 0);
           }
+        } else {
+          console.warn('[App] SDK not initialized - user can login manually');
         }
       } catch (e: any) { 
         console.error('[App] SDK/Auth failed:', e.message);
@@ -242,7 +267,7 @@ function ReputaAppContent() {
       }
     };
     initApp();
-  }, [piBrowser]);
+  }, []);
 
   const handleWalletCheck = async (address: string) => {
     const isDemo = address.toLowerCase().trim() === 'demo';
@@ -278,7 +303,7 @@ function ReputaAppContent() {
     }
   };
 
-  if (isInitializing && piBrowser) {
+  if (isInitializing) {
     return (
       <div className="min-h-screen futuristic-bg flex flex-col items-center justify-center">
         <div className="relative">
@@ -299,7 +324,7 @@ function ReputaAppContent() {
           />
         </div>
         <p className="font-black animate-pulse uppercase tracking-[0.3em] text-xs" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>
-          Initialising Reputa...
+          {piBrowser ? 'Connecting to Pi Network...' : 'Initialising Reputa...'}
         </p>
       </div>
     );

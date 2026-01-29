@@ -13,9 +13,21 @@ export interface PiUser {
 export function isPiBrowser(): boolean {
   if (typeof window === 'undefined') return false;
   
-  const isPiUA = /PiBrowser/i.test(navigator.userAgent);
+  const ua = navigator.userAgent.toLowerCase();
+  const isPiUA = ua.includes('pibrowser') || ua.includes('pi browser') || ua.includes('pinet');
   
-  return isPiUA;
+  const hasPiSDK = 'Pi' in window;
+  
+  const hasPiEnvironment = typeof (window as any).SDKMessaging !== 'undefined' ||
+                           typeof (window as any).PiNetwork !== 'undefined';
+  
+  const result = isPiUA || hasPiSDK || hasPiEnvironment;
+  
+  if (result) {
+    console.log('[PI SDK] Pi Browser detected:', { isPiUA, hasPiSDK, hasPiEnvironment });
+  }
+  
+  return result;
 }
 
 export function waitForPiSDK(timeout: number = 5000): Promise<boolean> {
