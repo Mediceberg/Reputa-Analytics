@@ -145,36 +145,83 @@ async function handleApprove(paymentId: string, res: VercelResponse) {
 }
 
 async function handleComplete(body: any, res: VercelResponse) {
-  const { paymentId, txid, userId, amount } = body;
+  const { paymentId, txid, uid, userId, amount } = body;
+  
+  const userIdentifier = uid || userId;
 
-  if (!paymentId || !txid || !userId) {
+  if (!paymentId || !txid) {
     return res.status(400).json({ 
-      error: 'Missing required fields',
-      completed: false 
+      error: 'Payment completion failed: Missing required fields',
+      completed: false,
+      success: false
     });
   }
 
-  console.log(`[COMPLETE] Payment ${paymentId}, TXID: ${txid}, User: ${userId}`);
+  console.log(`[COMPLETE] Payment ${paymentId}, TXID: ${txid}, User: ${userIdentifier}`);
 
-  const subscriptionData = {
-    userId,
-    paymentId,
-    txid,
-    amount,
-    type: 'vip_subscription',
-    status: 'completed',
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    reputationBonus: 50
-  };
+  try {
+    const piResponse = await fetch(`${PI_API_BASE}/payments/${paymentId}/complete`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${PI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ txid })
+    });
 
-  console.log('[SUBSCRIPTION UPDATED]', subscriptionData);
+    const piData = await piResponse.json();
+    
+    if (!piResponse.ok) {
+      console.error(`[COMPLETE] Pi API error:`, piData);
+      return res.status(piResponse.status).json({
+        error: piData.message || 'Payment completion failed on Pi server',
+        completed: false,
+        success: false,
+        details: piData
+      });
+    }
 
-  return res.status(200).json({
-    completed: true,
-    subscription: subscriptionData,
-    message: 'VIP subscription activated successfully'
-  });
+    console.log(`[COMPLETE] Pi API success:`, piData);
+
+    if (userIdentifier) {
+      await redis.set(`vip:${userIdentifier}`, JSON.stringify({
+        paymentId,
+        txid,
+        activatedAt: new Date().toISOString(),
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      }), { ex: 365 * 24 * 60 * 60 });
+
+      await redis.incr(`payment_count:${userIdentifier}`);
+    }
+
+    const subscriptionData = {
+      userId: userIdentifier,
+      paymentId,
+      txid,
+      amount,
+      type: 'vip_subscription',
+      status: 'completed',
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      reputationBonus: 50
+    };
+
+    console.log('[SUBSCRIPTION UPDATED]', subscriptionData);
+
+    return res.status(200).json({
+      completed: true,
+      success: true,
+      subscription: subscriptionData,
+      message: 'VIP subscription activated successfully'
+    });
+  } catch (error: any) {
+    console.error('[COMPLETE] Error:', error);
+    return res.status(500).json({
+      error: error.message || 'Payment completion failed',
+      completed: false,
+      success: false
+    });
+  }
 }
 
 async function handlePayout(body: any, res: VercelResponse) {

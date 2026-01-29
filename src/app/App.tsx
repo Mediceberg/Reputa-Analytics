@@ -324,7 +324,7 @@ function ReputaAppContent() {
           />
         </div>
         <p className="font-black animate-pulse uppercase tracking-[0.3em] text-xs" style={{ color: 'rgba(139, 92, 246, 0.9)' }}>
-          {piBrowser ? 'Connecting to Pi Network...' : 'Initialising Reputa...'}
+          {piBrowser ? 'Connecting Reputa...' : 'Initialising Reputa...'}
         </p>
       </div>
     );
@@ -396,15 +396,15 @@ function ReputaAppContent() {
               className="text-[8px] sm:text-[9px] font-medium uppercase tracking-widest truncate max-w-[120px] sm:max-w-none" 
               style={{ color: 'rgba(160, 164, 184, 0.6)', fontFamily: 'var(--font-sans)' }}
             >
-              {currentUser?.username || 'Guest'} {isVip && "VIP"}
+              Welcome, {currentUser?.username || 'Guest'} {isVip && "⭐ VIP"}
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-3">
-          {logoClickCount >= 5 && (
+          {logoClickCount >= 5 && piBrowser && currentUser && currentUser.uid !== 'demo' && (
             <div 
-              className="hidden sm:flex items-center gap-2 p-2 rounded-xl animate-in zoom-in duration-300"
+              className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-xl animate-in zoom-in duration-300"
               style={{ 
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -412,10 +412,10 @@ function ReputaAppContent() {
             >
               <input 
                 type="text"
-                placeholder="Target Wallet (G...)"
+                placeholder="Wallet (G...)"
                 value={manualWallet}
                 onChange={(e) => setManualWallet(e.target.value)}
-                className="text-[8px] p-2 rounded-lg w-28 outline-none font-mono"
+                className="text-[8px] p-1.5 sm:p-2 rounded-lg w-20 sm:w-28 outline-none font-mono"
                 style={{
                   background: 'rgba(15, 17, 23, 0.8)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -425,12 +425,12 @@ function ReputaAppContent() {
               <button 
                 onClick={handleRewardPayout}
                 disabled={isPayoutLoading}
-                className="px-3 py-2 text-white text-[8px] font-black rounded-lg uppercase active:scale-95 transition-all"
+                className="px-2 sm:px-3 py-1.5 sm:py-2 text-white text-[7px] sm:text-[8px] font-black rounded-lg uppercase active:scale-95 transition-all"
                 style={{
                   background: isPayoutLoading ? 'rgba(100, 100, 100, 0.5)' : 'rgba(239, 68, 68, 0.8)',
                 }}
               >
-                {isPayoutLoading ? '...' : 'PAY USER'}
+                {isPayoutLoading ? '...' : 'A2U'}
               </button>
             </div>
           )}

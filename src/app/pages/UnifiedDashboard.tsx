@@ -64,7 +64,13 @@ export function UnifiedDashboard({
   username
 }: UnifiedDashboardProps) {
   const { t, language, changeLanguage } = useLanguage();
-  const [mode, setMode] = useState<AppMode>({ mode: 'demo', connected: false });
+  const [mode, setMode] = useState<AppMode>(() => {
+    const savedMode = localStorage.getItem('reputaNetworkMode');
+    if (savedMode === 'mainnet' || savedMode === 'testnet') {
+      return { mode: savedMode as NetworkMode, connected: true };
+    }
+    return { mode: 'testnet', connected: true };
+  });
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
@@ -186,17 +192,19 @@ export function UnifiedDashboard({
   const handleModeChange = (newMode: NetworkMode) => {
     if (newMode === 'demo') {
       setMode({ mode: 'demo', connected: false });
+      localStorage.setItem('reputaNetworkMode', 'demo');
     } else {
-      setMode(prev => ({ 
+      setMode({ 
         mode: newMode, 
         connected: true,
         walletAddress: walletData.address
-      }));
+      });
+      localStorage.setItem('reputaNetworkMode', newMode);
     }
   };
 
   const handleModeToggle = () => {
-    const modes: NetworkMode[] = ['demo', 'testnet', 'mainnet'];
+    const modes: NetworkMode[] = ['testnet', 'mainnet', 'demo'];
     const currentIndex = modes.indexOf(mode.mode);
     const nextIndex = (currentIndex + 1) % modes.length;
     handleModeChange(modes[nextIndex]);
