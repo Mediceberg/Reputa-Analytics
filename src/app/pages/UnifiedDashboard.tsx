@@ -291,60 +291,133 @@ export function UnifiedDashboard({
           </div>
         </div>
 
-        {/* Compact Profile Card */}
+        {/* Enhanced Profile & Reputation Card */}
         <div 
-          className="rounded-2xl p-4 mb-5" 
+          className="rounded-2xl p-5 mb-5" 
           style={{ 
-            background: 'rgba(20, 22, 30, 0.8)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
+            background: 'linear-gradient(135deg, rgba(20, 22, 30, 0.95) 0%, rgba(30, 25, 45, 0.9) 100%)',
+            border: `1px solid ${trustColors.border}`,
+            boxShadow: `0 0 40px ${trustColors.bg}, inset 0 1px 0 rgba(255, 255, 255, 0.05)`,
           }}
         >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-11 h-11 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
-                  border: '1px solid rgba(139, 92, 246, 0.3)',
-                }}
-              >
-                <User className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white/95">{username || 'Pioneer'}</h2>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[11px] text-purple-400/80">{formatAddress(walletData.address)}</span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    Lv.{levelProgress.levelIndex + 1}
-                  </span>
+          {/* User Info Row */}
+          <div className="flex items-center gap-3 mb-4">
+            <div 
+              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.15) 100%)`,
+                border: `1px solid ${trustColors.border}`,
+                boxShadow: `0 0 20px ${trustColors.bg}`,
+              }}
+            >
+              <User className="w-6 h-6" style={{ color: trustColors.text }} />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-base font-bold text-white/95">{username || 'Pioneer'}</h2>
+              <span className="font-mono text-[11px] text-white/50">{formatAddress(walletData.address)}</span>
+            </div>
+          </div>
+
+          {/* Prominent Reputation Score Display */}
+          <div 
+            className="rounded-xl p-4 mb-4"
+            style={{
+              background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(139, 92, 246, 0.1) 100%)`,
+              border: `1px solid ${trustColors.border}`,
+            }}
+          >
+            <div className="flex items-center justify-between">
+              {/* Score Display */}
+              <div className="flex items-center gap-4">
+                <div className="text-center">
+                  <p 
+                    className="text-4xl font-black tracking-tight"
+                    style={{ 
+                      color: trustColors.text,
+                      textShadow: `0 0 30px ${trustColors.text}50`,
+                    }}
+                  >
+                    {levelProgress.displayScore.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] uppercase text-white/60 font-bold tracking-widest mt-1">Reputa Score</p>
+                </div>
+                
+                {/* Vertical Divider */}
+                <div className="w-px h-14 bg-white/10" />
+                
+                {/* Level Badge */}
+                <div className="text-center">
+                  <div 
+                    className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-1"
+                    style={{
+                      background: `linear-gradient(135deg, ${trustColors.text}30 0%, ${trustColors.text}10 100%)`,
+                      border: `2px solid ${trustColors.text}`,
+                      boxShadow: `0 0 25px ${trustColors.text}40`,
+                    }}
+                  >
+                    <span className="text-xl font-black" style={{ color: trustColors.text }}>
+                      {levelProgress.levelIndex + 1}
+                    </span>
+                  </div>
+                  <p className="text-[9px] uppercase text-white/50 font-bold tracking-wider">Level</p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-xl font-bold text-purple-400">{levelProgress.displayScore.toLocaleString()}</p>
-                <p className="text-[9px] uppercase text-white/50 font-medium">Reputa Score</p>
+              {/* Trust Rank Badge */}
+              <div 
+                className="px-4 py-3 rounded-xl text-center"
+                style={{
+                  background: trustColors.bg,
+                  border: `1px solid ${trustColors.border}`,
+                }}
+              >
+                <p 
+                  className="text-sm font-black uppercase tracking-wide"
+                  style={{ color: trustColors.text }}
+                >
+                  {levelProgress.currentLevel}
+                </p>
+                <p className="text-[8px] uppercase text-white/40 font-bold mt-0.5">Trust Rank</p>
               </div>
             </div>
           </div>
 
-          {/* Minimal Progress Bar */}
-          <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.04)' }}>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-medium text-purple-400/80">{levelProgress.currentLevel}</span>
+          {/* Progress to Next Level */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span 
+                  className="text-[11px] font-bold uppercase tracking-wide"
+                  style={{ color: trustColors.text }}
+                >
+                  {levelProgress.currentLevel}
+                </span>
+                {levelProgress.nextLevel && (
+                  <>
+                    <span className="text-white/20">→</span>
+                    <span className="text-[11px] font-medium text-white/40">{levelProgress.nextLevel}</span>
+                  </>
+                )}
+              </div>
               {levelProgress.nextLevel && (
-                <span className="text-[9px] text-white/40">{levelProgress.pointsToNextLevel.toLocaleString()} to next</span>
+                <span className="text-[10px] text-white/50 font-medium">
+                  <span style={{ color: trustColors.text }} className="font-bold">{levelProgress.pointsToNextLevel.toLocaleString()}</span> pts to next
+                </span>
               )}
             </div>
-            <div className="w-full h-1.5 rounded-full overflow-hidden bg-white/5">
+            <div className="w-full h-2.5 rounded-full overflow-hidden bg-white/5">
               <div 
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-full transition-all duration-700 ease-out"
                 style={{ 
                   width: `${levelProgress.progressInLevel}%`,
-                  background: 'linear-gradient(90deg, #8B5CF6 0%, #00D9FF 100%)',
+                  background: `linear-gradient(90deg, ${trustColors.text} 0%, #00D9FF 100%)`,
+                  boxShadow: `0 0 15px ${trustColors.text}60`,
                 }}
               />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className="text-[9px] text-white/30">{levelProgress.progressInLevel.toFixed(0)}% complete</span>
+              <span className="text-[9px] text-white/30">Max: 1,000</span>
             </div>
           </div>
         </div>
