@@ -11,7 +11,7 @@ import { PiDexSection } from '../components/PiDexSection';
 import { TrustGauge } from '../components/TrustGauge';
 import { TransactionList } from '../components/TransactionList';
 import { AuditReport } from '../components/AuditReport';
-import { NetworkInfoWidget, TopWalletsWidget, ReputationWidget } from '../components/widgets';
+import { NetworkInfoWidget, TopWalletsWidget } from '../components/widgets';
 import { NetworkInfoPage } from './NetworkInfoPage';
 import { TopWalletsPage } from './TopWalletsPage';
 import { ReputationPage } from './ReputationPage';
@@ -768,12 +768,8 @@ export function UnifiedDashboard({
                 </div>
 
                 {/* Quick Preview Widgets */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <NetworkInfoWidget isMainnet={mode.mode !== 'testnet'} />
-                  <ReputationWidget 
-                    walletAddress={walletData.address} 
-                    isMainnet={mode.mode !== 'testnet'} 
-                  />
                   <TopWalletsWidget isMainnet={mode.mode !== 'testnet'} />
                 </div>
               </div>
