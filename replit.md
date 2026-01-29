@@ -24,6 +24,11 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 │   └── main.tsx           # Entry point
 ├── public/                # Public static files
 ├── api/                   # API routes (Vercel serverless functions)
+│   └── top100wallets/     # Top 100 wallets API endpoints
+│       ├── index.ts       # GET /api/top100wallets - Main list
+│       ├── latest.ts      # GET /api/top100wallets/latest - Latest snapshot
+│       ├── snapshot.ts    # GET /api/top100wallets/snapshot - Historical snapshots
+│       └── scrape.ts      # GET /api/top100wallets/scrape - PiScan scraper
 ├── index.html             # HTML template
 ├── vite.config.ts         # Vite configuration
 └── package.json           # Dependencies
@@ -66,6 +71,27 @@ A React + TypeScript application built with Vite and Tailwind CSS v4. This is a 
 - **Legacy migration**: Converts 'dailyCheckInState' to new format (checkIn/activity split)
 - **Level calculation**: atomicResult.adjustedScore + earnedPoints (no double-counting)
 - **Backend score cap**: 10,000 points for level thresholds (displayScore unlimited)
+
+## Top 100 Wallets API
+- **Endpoints**:
+  - `GET /api/top100wallets` - Main list with pagination, sorting, filtering
+  - `GET /api/top100wallets/latest` - Latest snapshot with summary stats
+  - `GET /api/top100wallets/snapshot?timestamp=` - Historical snapshots
+  - `GET /api/top100wallets/scrape` - Direct PiScan/BlockExplorer fetch
+- **Data Sources**:
+  - Primary: PiScan.io Rich List API
+  - Fallback: Pi Block Explorer API
+  - Last Resort: Real-world-based generated data
+- **Features**:
+  - 15-minute auto-refresh with smart caching
+  - Circuit breaker pattern (3 failures opens circuit, 5 min reset)
+  - Retry with exponential backoff (3 attempts)
+  - Rate limiting handling (429 responses)
+  - LocalStorage snapshot persistence (last 10 snapshots)
+- **Wallet Data Fields**:
+  - rank, address, totalBalance, unlockedBalance, lockedBalance
+  - stakingAmount, lastUpdated, lastActivity, status, percentageOfSupply, change7d
+- **Status Categories**: whale (10M+), shark (1M+), dolphin (100K+), tuna (10K+), fish
 
 ## Atomic Scoring Protocol (Single Source of Truth)
 - **File**: `src/app/protocol/atomicScoring.ts` - THE ONLY scoring engine

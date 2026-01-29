@@ -1,36 +1,70 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, Wallet, Trophy, Medal, Search, Filter, RefreshCw, ArrowUpDown, Activity, Clock, TrendingUp } from 'lucide-react';
-import { fetchTopWallets, TopWallet } from '../services/piNetworkData';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  ArrowLeft, Wallet, Trophy, Medal, Search, Filter, RefreshCw, 
+  ArrowUpDown, Activity, Clock, TrendingUp, Lock, Unlock, Coins,
+  ExternalLink, AlertCircle, CheckCircle2
+} from 'lucide-react';
+import { 
+  fetchTop100Wallets, 
+  Top100Wallet, 
+  Top100WalletsSnapshot,
+  subscribeToWallets,
+  startAutoRefresh,
+  stopAutoRefresh,
+  formatBalance,
+  getStatusColor,
+  getWalletRankLabel
+} from '../services/top100WalletsService';
 
 interface TopWalletsPageProps {
   onBack: () => void;
 }
 
 export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
-  const [wallets, setWallets] = useState<TopWallet[]>([]);
+  const [snapshot, setSnapshot] = useState<Top100WalletsSnapshot | null>(null);
+  const [wallets, setWallets] = useState<Top100Wallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'rank' | 'balance' | 'activity'>('rank');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'dormant' | 'new'>('all');
-  const [isMainnet, setIsMainnet] = useState(true);
+  const [sortBy, setSortBy] = useState<'rank' | 'balance' | 'unlocked' | 'locked' | 'change'>('rank');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'whale' | 'shark' | 'dolphin' | 'tuna' | 'fish'>('all');
+  const [lastRefresh, setLastRefresh] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
-  const loadWallets = async () => {
+  const loadWallets = useCallback(async (forceRefresh: boolean = false) => {
     setLoading(true);
+    setError(null);
     try {
-      const data = await fetchTopWallets(isMainnet);
-      setWallets(data);
-    } catch (error) {
-      console.error('Failed to load wallets:', error);
+      const data = await fetchTop100Wallets(forceRefresh);
+      setSnapshot(data);
+      setWallets(data.wallets);
+      setLastRefresh(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.error('Failed to load wallets:', err);
+      setError('Failed to load wallet data. Using cached data if available.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadWallets();
-  }, [isMainnet]);
+    startAutoRefresh(15 * 60 * 1000);
+
+    const unsubscribe = subscribeToWallets((newSnapshot) => {
+      setSnapshot(newSnapshot);
+      setWallets(newSnapshot.wallets);
+      setLastRefresh(new Date().toLocaleTimeString());
+    });
+
+    return () => {
+      unsubscribe();
+      stopAutoRefresh();
+    };
+  }, [loadWallets]);
 
   const formatNumber = (num: number): string => {
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
     if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
     if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
     return num.toLocaleString();
@@ -54,12 +88,23 @@ export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
     return <span className="text-sm font-bold text-gray-500">#{rank}</span>;
   };
 
-  const getStatusColor = (status: string) => {
+  const getWalletStatusStyles = (status: string) => {
     switch (status) {
-      case 'active': return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' };
-      case 'dormant': return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' };
-      case 'new': return { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' };
-      default: return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30' };
+      case 'whale': return { bg: 'bg-purple-500/20', text: 'text-purple-400', border: 'border-purple-500/30', label: 'Whale (10M+)' };
+      case 'shark': return { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30', label: 'Shark (1M+)' };
+      case 'dolphin': return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', label: 'Dolphin (100K+)' };
+      case 'tuna': return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', label: 'Tuna (10K+)' };
+      case 'fish': return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'Fish' };
+      default: return { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'Unknown' };
+    }
+  };
+
+  const toggleSortOrder = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'rank' ? 'asc' : 'desc');
     }
   };
 
@@ -70,22 +115,31 @@ export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
       return true;
     })
     .sort((a, b) => {
+      let comparison = 0;
       switch (sortBy) {
-        case 'balance': return b.balance - a.balance;
-        case 'activity': return b.activityScore - a.activityScore;
-        default: return a.rank - b.rank;
+        case 'balance': comparison = b.totalBalance - a.totalBalance; break;
+        case 'unlocked': comparison = b.unlockedBalance - a.unlockedBalance; break;
+        case 'locked': comparison = b.lockedBalance - a.lockedBalance; break;
+        case 'change': comparison = (b.change7d || 0) - (a.change7d || 0); break;
+        default: comparison = a.rank - b.rank;
       }
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
   const stats = {
-    totalBalance: wallets.reduce((sum, w) => sum + w.balance, 0),
-    avgActivity: wallets.reduce((sum, w) => sum + w.activityScore, 0) / wallets.length || 0,
-    activeCount: wallets.filter(w => w.status === 'active').length,
+    totalBalance: wallets.reduce((sum, w) => sum + w.totalBalance, 0),
+    totalLocked: wallets.reduce((sum, w) => sum + w.lockedBalance, 0),
+    totalUnlocked: wallets.reduce((sum, w) => sum + w.unlockedBalance, 0),
+    whaleCount: wallets.filter(w => w.status === 'whale').length,
+    sharkCount: wallets.filter(w => w.status === 'shark').length,
   };
+
+  const circulatingSupply = snapshot?.circulatingSupply || 8396155970;
+  const top100Percentage = ((stats.totalBalance / circulatingSupply) * 100).toFixed(2);
 
   return (
     <div className="min-h-screen p-6" style={{ background: 'linear-gradient(180deg, #0A0B0F 0%, #0F1117 100%)' }}>
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
@@ -97,27 +151,25 @@ export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
-              <button
-                onClick={() => setIsMainnet(true)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  isMainnet ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-gray-500 hover:text-gray-400'
-                }`}
-              >
-                Mainnet
-              </button>
-              <button
-                onClick={() => setIsMainnet(false)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  !isMainnet ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-gray-500 hover:text-gray-400'
-                }`}
-              >
-                Testnet
-              </button>
-            </div>
+            {snapshot && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
+                snapshot.isLive 
+                  ? 'bg-emerald-500/10 border-emerald-500/30' 
+                  : 'bg-amber-500/10 border-amber-500/30'
+              }`}>
+                {snapshot.isLive ? (
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <AlertCircle className="w-3 h-3 text-amber-400" />
+                )}
+                <span className={`text-xs font-medium ${snapshot.isLive ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {snapshot.isLive ? 'Live Data' : 'Cached Data'} • {snapshot.source}
+                </span>
+              </div>
+            )}
 
             <button
-              onClick={loadWallets}
+              onClick={() => loadWallets(true)}
               disabled={loading}
               aria-label="Refresh wallet list"
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 transition-all disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
@@ -139,48 +191,65 @@ export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
             <Wallet className="w-10 h-10 text-purple-400" />
           </div>
           <h1 className="text-3xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-display)' }}>
-            Top 100 Wallets
+            Top 100 Pi Network Wallets
           </h1>
           <p className="text-gray-400 text-sm max-w-md mx-auto">
-            Explore the most active and highest-balance wallets on the Pi Network
+            Real-time data from Pi Network blockchain • Auto-refreshes every 15 minutes
           </p>
-          <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <Activity className="w-3 h-3 text-amber-400" />
-            <span className="text-xs font-medium text-amber-400">Sample data for privacy protection</span>
-          </div>
+          {lastRefresh && (
+            <p className="text-xs text-gray-500 mt-2">Last updated: {lastRefresh}</p>
+          )}
+          {error && (
+            <div className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+              <AlertCircle className="w-3 h-3 text-red-400" />
+              <span className="text-xs font-medium text-red-400">{error}</span>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-cyan-400" />
+                <Coins className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase">Total Balance</p>
-                <p className="text-xl font-bold text-white">{formatNumber(stats.totalBalance)} π</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <Activity className="w-5 h-5 text-purple-400" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase">Avg Activity Score</p>
-                <p className="text-xl font-bold text-white">{stats.avgActivity.toFixed(1)}</p>
+                <p className="text-lg font-bold text-white">{formatNumber(stats.totalBalance)} π</p>
+                <p className="text-xs text-cyan-400">{top100Percentage}% of supply</p>
               </div>
             </div>
           </div>
           <div className="p-4 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-emerald-400" />
+                <Unlock className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase">Active Wallets</p>
-                <p className="text-xl font-bold text-white">{stats.activeCount} / 100</p>
+                <p className="text-xs text-gray-500 uppercase">Unlocked</p>
+                <p className="text-lg font-bold text-white">{formatNumber(stats.totalUnlocked)} π</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase">Locked</p>
+                <p className="text-lg font-bold text-white">{formatNumber(stats.totalLocked)} π</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <Trophy className="w-5 h-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase">Whales / Sharks</p>
+                <p className="text-lg font-bold text-white">{stats.whaleCount} / {stats.sharkCount}</p>
               </div>
             </div>
           </div>
@@ -198,12 +267,12 @@ export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Filter className="w-4 h-4 text-gray-500" />
-            {['all', 'active', 'dormant', 'new'].map((status) => (
+            {(['all', 'whale', 'shark', 'dolphin', 'tuna'] as const).map((status) => (
               <button
                 key={status}
-                onClick={() => setFilterStatus(status as any)}
+                onClick={() => setFilterStatus(status)}
                 className={`px-3 py-2 rounded-lg text-xs font-bold capitalize transition-all ${
                   filterStatus === status
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
@@ -214,106 +283,133 @@ export function TopWalletsPage({ onBack }: TopWalletsPageProps) {
               </button>
             ))}
           </div>
-
-          <div className="flex items-center gap-2">
-            <ArrowUpDown className="w-4 h-4 text-gray-500" />
-            {[
-              { key: 'rank', label: 'Rank' },
-              { key: 'balance', label: 'Balance' },
-              { key: 'activity', label: 'Activity' },
-            ].map((sort) => (
-              <button
-                key={sort.key}
-                onClick={() => setSortBy(sort.key as any)}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                  sortBy === sort.key
-                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                    : 'bg-white/5 text-gray-500 border border-white/10 hover:text-gray-400'
-                }`}
-              >
-                {sort.label}
-              </button>
-            ))}
-          </div>
         </div>
 
-        {loading ? (
+        {loading && wallets.length === 0 ? (
           <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-purple-500/30 border-t-purple-500 animate-spin" />
-              <span className="text-gray-400 text-sm">Loading wallets...</span>
-            </div>
+            <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin" />
           </div>
         ) : (
-          <div className="rounded-2xl overflow-hidden border border-white/10"
-            style={{ background: 'linear-gradient(135deg, rgba(30, 33, 40, 0.6) 0%, rgba(20, 22, 28, 0.8) 100%)' }}
-          >
-            <div className="grid grid-cols-12 gap-4 p-4 bg-white/5 border-b border-white/10 text-xs font-bold text-gray-500 uppercase">
-              <div className="col-span-1">Rank</div>
-              <div className="col-span-4">Address</div>
-              <div className="col-span-2 text-right">Balance</div>
-              <div className="col-span-2 text-center">Activity</div>
-              <div className="col-span-2 text-center">Last Active</div>
-              <div className="col-span-1 text-center">Status</div>
-            </div>
-
-            <div className="max-h-[600px] overflow-y-auto">
-              {filteredWallets.map((wallet, index) => {
-                const statusColors = getStatusColor(wallet.status);
-                return (
-                  <div
-                    key={wallet.rank}
-                    className={`grid grid-cols-12 gap-4 p-4 items-center border-b border-white/5 hover:bg-white/5 transition-all ${
-                      index < 3 ? 'bg-gradient-to-r from-yellow-500/5 to-transparent' : ''
-                    }`}
-                  >
-                    <div className="col-span-1 flex items-center justify-center">
-                      {getRankIcon(wallet.rank)}
-                    </div>
-                    <div className="col-span-4">
-                      <span className="font-mono text-sm text-white">{wallet.address}</span>
-                    </div>
-                    <div className="col-span-2 text-right">
-                      <span className="font-bold text-white">{formatNumber(wallet.balance)}</span>
-                      <span className="text-cyan-400 ml-1">π</span>
-                    </div>
-                    <div className="col-span-2 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="w-16 h-2 rounded-full bg-white/10 overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-500"
-                            style={{ width: `${wallet.activityScore}%` }}
-                          />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-4 px-4 text-xs font-bold text-gray-500 uppercase">
+                    <button onClick={() => toggleSortOrder('rank')} className="flex items-center gap-1 hover:text-gray-300">
+                      Rank {sortBy === 'rank' && <ArrowUpDown className="w-3 h-3" />}
+                    </button>
+                  </th>
+                  <th className="text-left py-4 px-4 text-xs font-bold text-gray-500 uppercase">Address</th>
+                  <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase">
+                    <button onClick={() => toggleSortOrder('balance')} className="flex items-center gap-1 ml-auto hover:text-gray-300">
+                      Total Balance {sortBy === 'balance' && <ArrowUpDown className="w-3 h-3" />}
+                    </button>
+                  </th>
+                  <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase hidden md:table-cell">
+                    <button onClick={() => toggleSortOrder('unlocked')} className="flex items-center gap-1 ml-auto hover:text-gray-300">
+                      Unlocked {sortBy === 'unlocked' && <ArrowUpDown className="w-3 h-3" />}
+                    </button>
+                  </th>
+                  <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase hidden md:table-cell">
+                    <button onClick={() => toggleSortOrder('locked')} className="flex items-center gap-1 ml-auto hover:text-gray-300">
+                      Locked {sortBy === 'locked' && <ArrowUpDown className="w-3 h-3" />}
+                    </button>
+                  </th>
+                  <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase hidden lg:table-cell">Staking</th>
+                  <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase hidden lg:table-cell">
+                    <button onClick={() => toggleSortOrder('change')} className="flex items-center gap-1 ml-auto hover:text-gray-300">
+                      7d Change {sortBy === 'change' && <ArrowUpDown className="w-3 h-3" />}
+                    </button>
+                  </th>
+                  <th className="text-center py-4 px-4 text-xs font-bold text-gray-500 uppercase">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredWallets.map((wallet) => {
+                  const statusStyles = getWalletStatusStyles(wallet.status);
+                  return (
+                    <tr 
+                      key={wallet.address} 
+                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          {getRankIcon(wallet.rank)}
                         </div>
-                        <span className="text-xs text-gray-400">{wallet.activityScore}</span>
-                      </div>
-                    </div>
-                    <div className="col-span-2 text-center">
-                      <div className="flex items-center justify-center gap-1 text-gray-400">
-                        <Clock className="w-3 h-3" />
-                        <span className="text-xs">{formatTime(wallet.lastActive)}</span>
-                      </div>
-                    </div>
-                    <div className="col-span-1 flex justify-center">
-                      <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase ${statusColors.bg} ${statusColors.text} border ${statusColors.border}`}>
-                        {wallet.status}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="p-4 bg-white/5 border-t border-white/10 flex items-center justify-between">
-              <span className="text-xs text-gray-500">
-                Showing {filteredWallets.length} of {wallets.length} wallets
-              </span>
-              <span className="text-xs text-gray-500">
-                {isMainnet ? 'Mainnet' : 'Testnet'} Data
-              </span>
-            </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm text-white">{wallet.address}</span>
+                          <a 
+                            href={`https://piscan.io/account/${wallet.address}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-gray-500 hover:text-cyan-400 transition-colors"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">{getWalletRankLabel(wallet.rank)}</p>
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <span className="text-lg font-bold text-white">{formatBalance(wallet.totalBalance)}</span>
+                        <span className="text-gray-400 ml-1">π</span>
+                        <p className="text-xs text-cyan-400">{wallet.percentageOfSupply.toFixed(4)}%</p>
+                      </td>
+                      <td className="py-4 px-4 text-right hidden md:table-cell">
+                        <span className="text-sm text-emerald-400">{formatBalance(wallet.unlockedBalance)} π</span>
+                      </td>
+                      <td className="py-4 px-4 text-right hidden md:table-cell">
+                        <span className="text-sm text-amber-400">{formatBalance(wallet.lockedBalance)} π</span>
+                      </td>
+                      <td className="py-4 px-4 text-right hidden lg:table-cell">
+                        <span className="text-sm text-purple-400">{formatBalance(wallet.stakingAmount)} π</span>
+                      </td>
+                      <td className="py-4 px-4 text-right hidden lg:table-cell">
+                        {wallet.change7d !== undefined ? (
+                          <span className={`text-sm font-medium ${wallet.change7d >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {wallet.change7d >= 0 ? '+' : ''}{wallet.change7d.toFixed(2)}%
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-500">-</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-bold capitalize ${statusStyles.bg} ${statusStyles.text} border ${statusStyles.border}`}>
+                          {wallet.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
+
+        {filteredWallets.length === 0 && !loading && (
+          <div className="text-center py-20">
+            <p className="text-gray-500">No wallets match your search criteria</p>
+          </div>
+        )}
+
+        <div className="mt-8 p-4 rounded-xl bg-white/5 border border-white/10">
+          <h3 className="text-sm font-bold text-gray-400 mb-3">Data Source Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-500">
+            <div>
+              <p className="font-medium text-gray-400">Primary Source</p>
+              <p>PiScan.io Rich List API</p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-400">Fallback Source</p>
+              <p>Pi Block Explorer API</p>
+            </div>
+            <div>
+              <p className="font-medium text-gray-400">Refresh Interval</p>
+              <p>Every 15 minutes (auto)</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
