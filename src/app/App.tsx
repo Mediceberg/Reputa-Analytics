@@ -302,15 +302,15 @@ function ReputaAppContent() {
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
       
       <header 
-        className="p-4 backdrop-blur-xl sticky top-0 z-50 flex justify-between items-center"
+        className="px-3 py-3 sm:p-4 backdrop-blur-xl sticky top-0 z-50 flex justify-between items-center safe-area-top"
         style={{
-          background: 'rgba(10, 11, 15, 0.8)',
+          background: 'rgba(10, 11, 15, 0.9)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div 
-            className="relative w-10 h-10 flex items-center justify-center rounded-xl cursor-pointer active:scale-95 transition-transform"
+            className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl cursor-pointer active:scale-95 transition-transform"
             style={{
               background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.95) 0%, rgba(20, 22, 30, 0.9) 100%)',
               boxShadow: '0 0 20px rgba(0, 217, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
@@ -320,30 +320,30 @@ function ReputaAppContent() {
             <img 
               src={logoImage} 
               alt="logo" 
-              className="w-7 h-7 object-contain" 
+              className="w-6 h-6 sm:w-7 sm:h-7 object-contain" 
               style={{ filter: 'drop-shadow(0 0 6px rgba(0, 217, 255, 0.5))', mixBlendMode: 'screen' }}
             />
           </div>
           <div className="leading-tight">
             <h1 
-              className="font-bold text-base tracking-tight"
+              className="font-bold text-sm sm:text-base tracking-tight"
               style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-display)', textShadow: '0 0 20px rgba(0, 217, 255, 0.4)' }}
             >
               Reputa Score
             </h1>
             <p 
-              className="text-[9px] font-medium uppercase tracking-widest" 
+              className="text-[8px] sm:text-[9px] font-medium uppercase tracking-widest truncate max-w-[120px] sm:max-w-none" 
               style={{ color: 'rgba(160, 164, 184, 0.6)', fontFamily: 'var(--font-sans)' }}
             >
-              Welcome, {currentUser?.username || 'Guest_Explorer'} {isVip && "VIP"}
+              {currentUser?.username || 'Guest'} {isVip && "VIP"}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {logoClickCount >= 5 && (
             <div 
-              className="flex items-center gap-2 p-2 rounded-xl animate-in zoom-in duration-300"
+              className="hidden sm:flex items-center gap-2 p-2 rounded-xl animate-in zoom-in duration-300"
               style={{ 
                 background: 'rgba(239, 68, 68, 0.1)',
                 border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -377,15 +377,15 @@ function ReputaAppContent() {
             <button
               onClick={handlePiLogin}
               disabled={isLoggingIn}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all active:scale-95"
               style={{
                 background: 'linear-gradient(135deg, rgba(255, 186, 0, 0.2) 0%, rgba(255, 140, 0, 0.2) 100%)',
                 border: '1px solid rgba(255, 186, 0, 0.4)',
               }}
             >
               <LogIn className="w-4 h-4" style={{ color: '#FFBA00' }} />
-              <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#FFBA00' }}>
-                {isLoggingIn ? 'Connecting...' : 'Pi Login'}
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider" style={{ color: '#FFBA00' }}>
+                {isLoggingIn ? '...' : 'Login'}
               </span>
             </button>
           )}
@@ -393,7 +393,7 @@ function ReputaAppContent() {
             href="https://t.me/+zxYP2x_4IWljOGM0" 
             target="_blank" 
             rel="noopener noreferrer" 
-            className="p-2.5 rounded-xl transition-all"
+            className="p-2 sm:p-2.5 rounded-xl transition-all"
             style={{
               background: 'rgba(34, 158, 217, 0.15)',
               border: '1px solid rgba(34, 158, 217, 0.3)',
@@ -404,7 +404,7 @@ function ReputaAppContent() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12 flex-1 relative z-10">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-12 flex-1 relative z-10">
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="relative">
@@ -437,26 +437,26 @@ function ReputaAppContent() {
       </main>
 
       <footer 
-        className="p-8 text-center flex flex-col items-center gap-5 relative z-10"
+        className="p-4 sm:p-8 text-center flex flex-col items-center gap-4 sm:gap-5 relative z-10"
         style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}
       >
         <a 
           href="https://t.me/+zxYP2x_4IWljOGM0" 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="flex items-center gap-3 px-6 py-3 rounded-full transition-all active:scale-95"
+          className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-all active:scale-95"
           style={{
             background: 'rgba(34, 158, 217, 0.1)',
             border: '1px solid rgba(34, 158, 217, 0.3)',
           }}
         >
           <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
-          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(34, 158, 217, 0.9)' }}>
-            Join Telegram Community
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(34, 158, 217, 0.9)' }}>
+            Join Community
           </span>
         </a>
-        <div className="text-[10px] font-bold tracking-[0.4em] uppercase" style={{ color: 'rgba(100, 105, 130, 0.5)' }}>
-          Reputa Score v2 Stable
+        <div className="text-[9px] sm:text-[10px] font-bold tracking-[0.3em] sm:tracking-[0.4em] uppercase" style={{ color: 'rgba(100, 105, 130, 0.5)' }}>
+          Reputa Score v2
         </div>
       </footer>
 

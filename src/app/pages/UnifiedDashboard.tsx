@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
+import { MobileBottomNav } from '../components/MobileBottomNav';
 import { TransactionTimeline } from '../components/charts/TransactionTimeline';
 import { PointsBreakdown } from '../components/charts/PointsBreakdown';
 import { RiskActivity } from '../components/charts/RiskActivity';
@@ -229,51 +230,55 @@ export function UnifiedDashboard({
     <div className="min-h-screen futuristic-bg flex">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
       
-      <DashboardSidebar 
-        mode={mode} 
-        onModeToggle={handleModeToggle}
-        activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
-        onItemClick={handleSidebarNavigation}
-      />
+      {/* Desktop Sidebar - hidden on mobile */}
+      <div className="desktop-sidebar hidden lg:flex">
+        <DashboardSidebar 
+          mode={mode} 
+          onModeToggle={handleModeToggle}
+          activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
+          onItemClick={handleSidebarNavigation}
+        />
+      </div>
 
-      <main className="flex-1 p-6 overflow-auto relative z-10">
+      <main className="flex-1 p-3 lg:p-6 overflow-auto relative z-10 mobile-main-content">
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-4">
             <button 
               onClick={onReset}
-              className="p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-purple-500/40 group"
+              className="p-2 sm:p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-purple-500/40 group touch-target"
               style={{ border: '1px solid rgba(139, 92, 246, 0.3)' }}
             >
-              <ArrowLeft className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 group-hover:text-purple-300" />
             </button>
             <div>
-              <h1 className="text-xl font-black uppercase tracking-wide neon-text-purple">{t('dashboard.title')}</h1>
+              <h1 className="text-base sm:text-xl font-black uppercase tracking-wide neon-text-purple">{t('dashboard.title')}</h1>
               {username && (
-                <p className="text-sm" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>{t('dashboard.welcome')}, {username}</p>
+                <p className="text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none" style={{ color: 'rgba(160, 164, 184, 0.8)' }}>{username}</p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             <Button 
               onClick={onUpgradePrompt} 
-              className="gap-2 bg-gradient-to-r from-purple-600 via-purple-700 to-cyan-600 text-white font-bold text-xs uppercase shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all border border-purple-400/30"
+              className="gap-1 sm:gap-2 bg-gradient-to-r from-purple-600 via-purple-700 to-cyan-600 text-white font-bold text-[10px] sm:text-xs uppercase shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all border border-purple-400/30 px-2 sm:px-3 py-1.5 sm:py-2"
             >
-              <Sparkles className="w-4 h-4" />
-              {isProUser ? 'Pro Active' : 'Upgrade'}
+              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">{isProUser ? 'Pro Active' : 'Upgrade'}</span>
+              <span className="sm:hidden">{isProUser ? 'Pro' : 'VIP'}</span>
             </Button>
             
             <button
               onClick={() => window.location.reload()}
-              className="p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-cyan-500/40"
+              className="p-2 sm:p-3 rounded-xl transition-all active:scale-95 glass-card hover:border-cyan-500/40 touch-target"
               style={{ border: '1px solid rgba(0, 217, 255, 0.3)' }}
               title="Refresh Data"
             >
               <RefreshCw className="w-4 h-4 text-cyan-400" />
             </button>
 
-            <div className="relative group">
+            <div className="relative group hidden sm:block">
               <button
                 className="flex items-center gap-2 glass-card px-4 py-2.5 hover:border-cyan-500/40 transition-all"
                 style={{ border: '1px solid rgba(0, 217, 255, 0.3)' }}
@@ -1023,6 +1028,12 @@ export function UnifiedDashboard({
           </div>
         )}
       </main>
+
+      {/* Mobile Bottom Navigation - visible only on mobile */}
+      <MobileBottomNav
+        activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
+        onItemClick={handleSidebarNavigation}
+      />
     </div>
   );
 }

@@ -54,8 +54,8 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
   ];
 
   return (
-    <div className="relative">
-      <div className="text-center mb-12">
+    <div className="relative px-2 sm:px-0">
+      <div className="text-center mb-8 sm:mb-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,7 +91,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
             }}
           />
           <div 
-            className="relative w-28 h-28 flex items-center justify-center rounded-2xl"
+            className="relative w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center rounded-2xl"
             style={{
               background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 22, 30, 0.95) 100%)',
               boxShadow: '0 0 60px rgba(0, 217, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -100,7 +100,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
             <img 
               src={logoImage} 
               alt="Reputa Score" 
-              className="w-20 h-20 object-contain animate-float"
+              className="w-14 h-14 sm:w-20 sm:h-20 object-contain animate-float"
               style={{ 
                 filter: 'drop-shadow(0 0 15px rgba(0, 217, 255, 0.6))',
                 mixBlendMode: 'screen',
@@ -113,7 +113,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 tracking-tight"
+          className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-2 tracking-tight"
           style={{ 
             color: 'rgba(255, 255, 255, 0.98)',
             fontFamily: 'var(--font-display)',
@@ -183,7 +183,7 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
         className="max-w-xl mx-auto"
       >
         <div
-          className="p-6 md:p-8 rounded-2xl"
+          className="p-4 sm:p-6 md:p-8 rounded-2xl mx-2 sm:mx-0"
           style={{
             background: isFocused 
               ? 'linear-gradient(145deg, rgba(25, 28, 35, 0.9) 0%, rgba(35, 38, 48, 0.85) 100%)'
@@ -213,17 +213,17 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
                   onChange={(e) => setAddress(e.target.value)}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
-                  placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                  className="w-full pr-14 text-sm uppercase rounded-xl transition-all"
+                  placeholder="GXXX...XXX"
+                  className="w-full pr-14 text-sm uppercase rounded-xl transition-all touch-target"
                   style={{ 
-                    height: '56px',
-                    padding: '0 56px 0 16px',
+                    height: '52px',
+                    padding: '0 56px 0 14px',
                     background: 'rgba(15, 17, 23, 0.8)',
                     border: '1px solid rgba(255, 255, 255, 0.08)',
                     color: 'rgba(255, 255, 255, 0.95)',
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '12px',
-                    letterSpacing: '0.02em',
+                    fontSize: '11px',
+                    letterSpacing: '0.01em',
                   }}
                 />
                 <div 
@@ -246,12 +246,12 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button 
                 type="submit" 
-                className="flex-1 flex items-center justify-center gap-2.5 text-xs font-semibold uppercase tracking-wider rounded-xl transition-all"
+                className="flex-1 flex items-center justify-center gap-2.5 text-xs font-semibold uppercase tracking-wider rounded-xl transition-all touch-target active:scale-98"
                 style={{ 
-                  height: '52px',
+                  height: '48px',
                   background: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%)',
                   color: 'white',
                   fontFamily: 'var(--font-sans)',
