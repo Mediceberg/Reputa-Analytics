@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, RefreshCw, Wallet, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, RefreshCw, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchTopWallets, TopWallet } from '../../services/piNetworkData';
 import { useLanguage } from '../../hooks/useLanguage';
 
@@ -89,7 +89,7 @@ export function TopWalletsWidget({ isMainnet = false, initialLimit = 10 }: TopWa
               Top 100 Wallets
             </h3>
             <span className="text-[9px] font-bold uppercase tracking-widest text-gray-500">
-              By Balance & Activity
+              By Balance
             </span>
           </div>
         </div>
@@ -143,15 +143,11 @@ export function TopWalletsWidget({ isMainnet = false, initialLimit = 10 }: TopWa
                 </div>
               </div>
 
-              {/* Balance & Activity */}
+              {/* Balance */}
               <div className="text-right">
                 <p className="text-sm font-black text-white">
                   {formatNumber(wallet.balance)} <span className="text-cyan-400 text-[10px]">π</span>
                 </p>
-                <div className="flex items-center gap-1 justify-end mt-0.5">
-                  <Activity className="w-2.5 h-2.5 text-emerald-400" />
-                  <span className="text-[9px] font-bold text-emerald-400">{wallet.activityScore}%</span>
-                </div>
               </div>
             </div>
           );
