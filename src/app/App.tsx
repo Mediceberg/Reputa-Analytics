@@ -17,7 +17,7 @@ function FeedbackSection({ username }: { username: string }) {
     if (!feedback.trim()) return;
     setStatus('SENDING...');
     try {
-      const res = await fetch('/api/save-feedback', {
+      const res = await fetch('/api/save-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, text: feedback, timestamp: new Date().toISOString() }),
