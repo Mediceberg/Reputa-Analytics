@@ -1,132 +1,197 @@
-import { TokenBalance } from '../protocol/types';
 import { useLanguage } from '../hooks/useLanguage';
-import { TrendingUp, Coins, Search, ArrowUpRight, Filter } from 'lucide-react';
-import { useState } from 'react';
+import { Coins, Wallet, ArrowUpRight, ArrowDownLeft, RefreshCw, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 interface PiDexSectionProps {
-  tokens: TokenBalance[];
+  walletAddress?: string;
+  balance?: number;
+  totalSent?: number;
+  totalReceived?: number;
+  isMainnet?: boolean;
 }
 
-export function PiDexSection({ tokens }: PiDexSectionProps) {
+interface WalletAsset {
+  symbol: string;
+  name: string;
+  balance: number;
+  value: number;
+  type: 'native' | 'locked' | 'available';
+}
+
+export function PiDexSection({ 
+  walletAddress = '',
+  balance = 0,
+  totalSent = 0,
+  totalReceived = 0,
+  isMainnet = false
+}: PiDexSectionProps) {
   const { t } = useLanguage();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const filteredTokens = tokens.filter(token => 
-    token.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    token.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const assets: WalletAsset[] = [
+    {
+      symbol: 'PI',
+      name: 'Pi Network',
+      balance: balance,
+      value: balance,
+      type: 'native',
+    },
+  ];
 
-  const totalValue = tokens.reduce((sum, token) => sum + token.value, 0);
+  const totalValue = balance;
+
+  const handleRefresh = async () => {
+    setIsLoading(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setLastUpdated(new Date());
+    setIsLoading(false);
+  };
+
+  const openExplorer = () => {
+    if (walletAddress) {
+      const explorerUrl = isMainnet 
+        ? `https://blockexplorer.minepi.com/accounts/${walletAddress}`
+        : `https://pi-blockchain.net/accounts/${walletAddress}`;
+      window.open(explorerUrl, '_blank');
+    }
+  };
 
   return (
-    <div className="glass-card p-6 flex flex-col h-[500px] border border-white/10">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div 
+      className="rounded-2xl p-5 h-full"
+      style={{
+        background: 'rgba(20, 22, 30, 0.8)',
+        border: '1px solid rgba(139, 92, 246, 0.2)',
+      }}
+    >
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center border border-purple-500/30">
-            <Coins className="w-5 h-5 text-cyan-400" />
+          <div 
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+            }}
+          >
+            <Wallet className="w-5 h-5 text-purple-400" />
           </div>
           <div>
-            <h3 className="font-black text-sm text-white uppercase tracking-widest">
-              {t('dex.title')}
-            </h3>
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{tokens.length} {t('dex.tokens')}</p>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wide">Portfolio</h3>
+            <p className="text-[10px] text-white/40">Real blockchain data</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 bg-white/5 p-3 rounded-xl border border-white/5">
-          <div className="text-right">
-            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-0.5">{t('dex.value')}</p>
-            <p className="font-black text-lg neon-text-cyan leading-none">
-              {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-xs text-cyan-400">π</span>
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="p-2 rounded-lg transition-all hover:bg-white/5"
+            aria-label="Refresh data"
+          >
+            <RefreshCw className={`w-4 h-4 text-white/40 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <div className="relative mb-4 group">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 group-focus-within:text-cyan-400 transition-colors" />
-        <input 
-          type="text" 
-          placeholder="Search tokens..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-white/5 border border-white/10 rounded-lg py-2.5 pl-10 pr-4 text-xs font-bold text-white placeholder:text-gray-600 focus:outline-none focus:border-cyan-500/50 transition-all"
-        />
+      <div 
+        className="p-4 rounded-xl mb-4"
+        style={{
+          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.1) 100%)',
+          border: '1px solid rgba(139, 92, 246, 0.25)',
+        }}
+      >
+        <p className="text-[10px] text-white/50 uppercase tracking-wider mb-1">Total Balance</p>
+        <p className="text-3xl font-black text-white">
+          {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+          <span className="text-lg text-purple-400 ml-1">π</span>
+        </p>
       </div>
 
-      {/* Token List with Scroll */}
-      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
-        {filteredTokens.length > 0 ? (
-          filteredTokens.map((token, index) => {
-            const percentage = (token.value / totalValue) * 100;
-            return (
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div 
+          className="p-3 rounded-xl"
+          style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="text-[9px] text-emerald-400 uppercase font-bold">Received</span>
+          </div>
+          <p className="text-base font-bold text-white">
+            {totalReceived.toLocaleString('en-US', { maximumFractionDigits: 2 })} π
+          </p>
+        </div>
+
+        <div 
+          className="p-3 rounded-xl"
+          style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.2)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
+            <span className="text-[9px] text-red-400 uppercase font-bold">Sent</span>
+          </div>
+          <p className="text-base font-bold text-white">
+            {totalSent.toLocaleString('en-US', { maximumFractionDigits: 2 })} π
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {assets.map((asset, index) => (
+          <div 
+            key={index}
+            className="p-3 rounded-xl flex items-center justify-between"
+            style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+            }}
+          >
+            <div className="flex items-center gap-3">
               <div 
-                key={index} 
-                className="group p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/[0.08] hover:border-cyan-500/20 transition-all cursor-pointer"
+                className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
+                }}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10 group-hover:border-cyan-500/30 transition-colors relative">
-                      <span className="text-lg">{token.logo}</span>
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-black text-xs text-white uppercase tracking-wide">
-                          {token.symbol}
-                        </p>
-                        <ArrowUpRight className="w-2.5 h-2.5 text-gray-600 group-hover:text-cyan-400 transition-colors" />
-                      </div>
-                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{token.name}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="font-black text-xs text-white">
-                      {token.balance.toLocaleString('en-US', { maximumFractionDigits: 2 })}
-                    </p>
-                    <p className="text-[10px] font-bold text-cyan-400/80">
-                      ≈ {token.value.toFixed(2)} π
-                    </p>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,217,255,0.3)]"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-bold">
-                    <span>{percentage.toFixed(1)}%</span>
-                  </div>
-                </div>
+                <span className="text-white font-bold text-sm">π</span>
               </div>
-            );
-          })
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center py-12 opacity-40">
-            <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center mb-4">
-              <Coins className="w-8 h-8 text-gray-600" />
+              <div>
+                <p className="text-xs font-bold text-white">{asset.symbol}</p>
+                <p className="text-[10px] text-white/40">{asset.name}</p>
+              </div>
             </div>
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('dex.no_tokens')}</p>
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">
+                {asset.balance.toLocaleString('en-US', { maximumFractionDigits: 4 })}
+              </p>
+              <p className="text-[10px] text-purple-400">Native</p>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Footer / Stats */}
-      <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between opacity-60">
+      <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-          <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Network Live</span>
+          <span className="text-[9px] text-white/40">
+            {isMainnet ? 'Mainnet' : 'Testnet'} • {lastUpdated.toLocaleTimeString()}
+          </span>
         </div>
-        <button className="text-[9px] font-black text-cyan-400 uppercase tracking-widest hover:text-cyan-300 transition-colors">
-          Manage Assets →
-        </button>
+        {walletAddress && (
+          <button 
+            onClick={openExplorer}
+            className="flex items-center gap-1 text-[10px] font-bold text-purple-400 hover:text-purple-300 transition-colors"
+          >
+            View on Explorer
+            <ExternalLink className="w-3 h-3" />
+          </button>
+        )}
       </div>
     </div>
   );

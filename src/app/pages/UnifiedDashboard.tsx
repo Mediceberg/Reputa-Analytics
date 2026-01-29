@@ -663,7 +663,13 @@ export function UnifiedDashboard({
                 <TokenPortfolio data={portfolioData} />
               </div>
               <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                <PiDexSection tokens={tokens} />
+                <PiDexSection 
+                  walletAddress={walletData.address}
+                  balance={walletData.balance}
+                  totalSent={walletData.transactions?.filter(tx => tx.type === 'sent').reduce((sum, tx) => sum + tx.amount, 0) || 0}
+                  totalReceived={walletData.transactions?.filter(tx => tx.type === 'received').reduce((sum, tx) => sum + tx.amount, 0) || 0}
+                  isMainnet={mode.mode !== 'testnet'}
+                />
               </div>
             </div>
           </div>
