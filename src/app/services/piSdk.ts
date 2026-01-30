@@ -14,13 +14,17 @@ export function isPiBrowser(): boolean {
   if (typeof window === 'undefined') return false;
   
   const ua = navigator.userAgent.toLowerCase();
-  const isPiUA = ua.includes('pibrowser') || ua.includes('pi browser') || ua.includes('pinet');
+  const isPiUA = ua.includes('pibrowser') || 
+                 ua.includes('pi browser') || 
+                 ua.includes('pinet') ||
+                 ua.includes('pi network');
   
   if (isPiUA) {
     console.log('[PI SDK] Pi Browser detected via User-Agent');
     return true;
   }
   
+  console.log('[PI SDK] Not Pi Browser - User-Agent:', ua.substring(0, 80));
   return false;
 }
 

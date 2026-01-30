@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';  
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, LogIn } from 'lucide-react'; 
+import { Send, MessageSquare, LogIn, Share2 } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { UnifiedDashboard } from './pages/UnifiedDashboard';
+import { ShareReputaCard } from './components/ShareReputaCard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
@@ -78,6 +79,7 @@ function ReputaAppContent() {
   const [manualWallet, setManualWallet] = useState('');
   const [isPayoutLoading, setIsPayoutLoading] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
 
   const [piBrowser, setPiBrowser] = useState(false);
   const { refreshWallet } = useTrust();
@@ -239,7 +241,11 @@ function ReputaAppContent() {
       const checkPiBrowser = () => {
         if (typeof window === 'undefined') return false;
         const ua = navigator.userAgent.toLowerCase();
-        return ua.includes('pibrowser') || ua.includes('pi browser') || ua.includes('pinet');
+        const isPiUA = ua.includes('pibrowser') || 
+                       ua.includes('pi browser') || 
+                       ua.includes('pinet') ||
+                       ua.includes('pi network');
+        return isPiUA;
       };
       
       const detectedPiBrowser = checkPiBrowser();
@@ -393,7 +399,9 @@ function ReputaAppContent() {
             className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl cursor-pointer active:scale-95 transition-transform"
             style={{
               background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.95) 0%, rgba(20, 22, 30, 0.9) 100%)',
-              boxShadow: '0 0 20px rgba(0, 217, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
+              boxShadow: logoClickCount > 0 && logoClickCount < 5 
+                ? `0 0 ${10 + logoClickCount * 5}px rgba(239, 68, 68, ${0.2 + logoClickCount * 0.1})` 
+                : '0 0 20px rgba(0, 217, 255, 0.2), inset 0 1px 0 rgba(255,255,255,0.03)',
             }}
             onClick={() => setLogoClickCount(prev => prev + 1)}
           >
@@ -403,6 +411,14 @@ function ReputaAppContent() {
               className="w-6 h-6 sm:w-7 sm:h-7 object-contain" 
               style={{ filter: 'drop-shadow(0 0 6px rgba(0, 217, 255, 0.5))', mixBlendMode: 'screen' }}
             />
+            {logoClickCount > 0 && logoClickCount < 5 && (
+              <span 
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[8px] font-bold flex items-center justify-center"
+                style={{ background: 'rgba(239, 68, 68, 0.9)', color: 'white' }}
+              >
+                {logoClickCount}
+              </span>
+            )}
           </div>
           <div className="leading-tight">
             <h1 
@@ -467,6 +483,19 @@ function ReputaAppContent() {
               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider" style={{ color: '#FFBA00' }}>
                 {isLoggingIn ? '...' : 'Login'}
               </span>
+            </button>
+          )}
+          {walletData && (
+            <button
+              onClick={() => setShowShareCard(true)}
+              className="p-2 sm:p-2.5 rounded-xl transition-all active:scale-95"
+              style={{
+                background: 'rgba(139, 92, 246, 0.15)',
+                border: '1px solid rgba(139, 92, 246, 0.3)',
+              }}
+              title="Share your score"
+            >
+              <Share2 className="w-4 h-4" style={{ color: '#8B5CF6' }} />
             </button>
           )}
           <a 
@@ -551,6 +580,18 @@ function ReputaAppContent() {
           syncToAdmin(currentUser?.username || 'Guest', "UPGRADED_TO_VIP");
         }} 
       />
+      
+      {showShareCard && walletData && (
+        <ShareReputaCard
+          username={walletData.username || currentUser?.username || 'Pioneer'}
+          score={walletData.reputaScore || 0}
+          level={walletData.level || 1}
+          trustRank={walletData.trustRank || 'Standard'}
+          walletAddress={walletData.wallet || currentUser?.wallet_address}
+          onClose={() => setShowShareCard(false)}
+        />
+      )}
+      
       <Analytics />
     </div>
   );
