@@ -39,6 +39,7 @@ import {
   getBackendScoreCap,
   mapAtomicToTrustLevel
 } from '../protocol/atomicScoring';
+import { reputationService, UnifiedScoreData } from '../services/reputationService';
 import { 
   ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
   Activity, Clock, Zap, Sparkles, BarChart3, FileText,
@@ -78,71 +79,41 @@ export function UnifiedDashboard({
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
   const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
-  const [userPoints, setUserPoints] = useState(() => {
-    const defaultPoints = {
-      total: walletData.reputaScore || 0,
-      checkIn: 0,
-      transactions: 0,
-      activity: 0,
-      streak: 0,
-    };
-    
-    const validatePoints = (pts: Record<string, unknown>) => ({
-      total: typeof pts.total === 'number' && !isNaN(pts.total) ? pts.total : defaultPoints.total,
-      checkIn: typeof pts.checkIn === 'number' && !isNaN(pts.checkIn) ? pts.checkIn : 0,
-      transactions: typeof pts.transactions === 'number' && !isNaN(pts.transactions) ? pts.transactions : 0,
-      activity: typeof pts.activity === 'number' && !isNaN(pts.activity) ? pts.activity : 0,
-      streak: typeof pts.streak === 'number' && !isNaN(pts.streak) ? pts.streak : 0,
-    });
-    
-    const savedPoints = localStorage.getItem('userPointsState');
-    if (savedPoints) {
-      try {
-        const parsed = JSON.parse(savedPoints);
-        return validatePoints(parsed);
-      } catch {
-        return defaultPoints;
-      }
-    }
-    const checkInData = localStorage.getItem('dailyCheckInState');
-    if (checkInData) {
-      try {
-        const parsed = JSON.parse(checkInData);
-        const checkInPts = Number(parsed.totalPointsFromCheckIn) || 0;
-        const adPts = Number(parsed.totalPointsFromAds) || 0;
-        const streakPts = Number(parsed.streakBonusPoints) || 0;
-        return {
-          total: (walletData.reputaScore || 0) + checkInPts + adPts + streakPts,
-          checkIn: checkInPts,
-          transactions: 0,
-          activity: adPts,
-          streak: streakPts,
-        };
-      } catch {
-        return defaultPoints;
-      }
-    }
-    return {
-      total: walletData.reputaScore || 0,
-      checkIn: 0,
-      transactions: 0,
-      activity: 0,
-      streak: 0,
-    };
+  const [unifiedScoreData, setUnifiedScoreData] = useState<UnifiedScoreData | null>(null);
+  const [userPoints, setUserPoints] = useState({
+    total: walletData.reputaScore || 0,
+    checkIn: 0,
+    transactions: 0,
+    activity: 0,
+    streak: 0,
   });
+  
+  useEffect(() => {
+    async function loadUnifiedScore() {
+      const uid = localStorage.getItem('piUserId') || `user_${Date.now()}`;
+      await reputationService.loadUserReputation(uid);
+      const unified = reputationService.getUnifiedScore();
+      setUnifiedScoreData(unified);
+      setUserPoints({
+        total: unified.totalScore,
+        checkIn: unified.checkInPoints,
+        transactions: 0,
+        activity: unified.activityPoints,
+        streak: unified.streakBonus,
+      });
+    }
+    loadUnifiedScore();
+  }, []);
 
-  const handlePointsEarned = (points: number, type: 'checkin' | 'ad' | 'merge') => {
-    setUserPoints((prev: typeof userPoints) => {
-      const newState = {
-        ...prev,
-        total: prev.total + points,
-        checkIn: type === 'checkin' ? prev.checkIn + points : prev.checkIn,
-        activity: type === 'ad' ? prev.activity + points : prev.activity,
-      };
-      if (mode.mode !== 'demo') {
-        localStorage.setItem('userPointsState', JSON.stringify(newState));
-      }
-      return newState;
+  const handlePointsEarned = async (points: number, type: 'checkin' | 'ad' | 'merge') => {
+    const unified = reputationService.getUnifiedScore();
+    setUnifiedScoreData(unified);
+    setUserPoints({
+      total: unified.totalScore,
+      checkIn: unified.checkInPoints,
+      transactions: 0,
+      activity: unified.activityPoints,
+      streak: unified.streakBonus,
     });
   };
   
@@ -165,20 +136,24 @@ export function UnifiedDashboard({
   }, [period]);
 
   const atomicResult = useMemo(() => {
-    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
+    if (unifiedScoreData) {
+      const demoData = generateDemoActivityData();
+      demoData.accountAgeDays = walletData.accountAge || 180;
+      demoData.internalTxCount = walletData.transactions?.length || 25;
+      demoData.dailyCheckins = unifiedScoreData.totalCheckInDays;
+      demoData.adBonuses = Math.floor(unifiedScoreData.activityPoints / 5);
+      const result = calculateAtomicReputation(demoData);
+      result.interaction.dailyCheckins = unifiedScoreData.totalCheckInDays;
+      result.interaction.totalPoints = unifiedScoreData.totalScore;
+      result.adjustedScore = unifiedScoreData.totalScore;
+      result.rawScore = unifiedScoreData.blockchainScore + unifiedScoreData.checkInPoints;
+      return result;
+    }
     const demoData = generateDemoActivityData();
     demoData.accountAgeDays = walletData.accountAge || 180;
     demoData.internalTxCount = walletData.transactions?.length || 25;
-    demoData.dailyCheckins = Math.floor(userPoints.checkIn / 10);
-    demoData.adBonuses = Math.floor(userPoints.activity / 5);
-    const result = calculateAtomicReputation(demoData);
-    result.interaction.dailyCheckins = Math.floor(userPoints.checkIn / 10);
-    result.interaction.adBonuses = Math.floor(userPoints.activity / 5);
-    result.interaction.totalPoints += earnedPoints;
-    result.adjustedScore += earnedPoints;
-    result.rawScore += earnedPoints;
-    return result;
-  }, [walletData.accountAge, walletData.transactions?.length, userPoints.checkIn, userPoints.activity, userPoints.streak]);
+    return calculateAtomicReputation(demoData);
+  }, [walletData.accountAge, walletData.transactions?.length, unifiedScoreData]);
 
   const modeAdjustedScore = useMemo(() => {
     const baseScore = atomicResult.adjustedScore;
@@ -436,7 +411,6 @@ export function UnifiedDashboard({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyCheckIn 
                 onPointsEarned={handlePointsEarned}
-                isDemo={mode.mode === 'demo'}
               />
               
               <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>

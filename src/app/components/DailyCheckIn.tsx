@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Gift, Play, CheckCircle, Zap, Merge } from 'lucide-react';
 import { reputationService, UserReputationState } from '../services/reputationService';
+import { SCORING_RULES } from '../protocol/scoringRulesEngine';
 
 interface DailyCheckInProps {
   userId?: string;
   onPointsEarned?: (points: number, type: 'checkin' | 'merge') => void;
-  isDemo?: boolean;
 }
 
-const CHECKIN_POINTS = 3;
-const AD_BONUS_POINTS = 5;
+const CHECKIN_POINTS = SCORING_RULES.DAILY_CHECKIN.basePoints;
+const AD_BONUS_POINTS = SCORING_RULES.AD_BONUS.basePoints;
 
-export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCheckInProps) {
+export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
   const [state, setState] = useState<UserReputationState | null>(null);
   const [canCheckIn, setCanCheckIn] = useState(true);
   const [countdown, setCountdown] = useState('');
@@ -20,24 +20,6 @@ export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCh
 
   useEffect(() => {
     async function loadState() {
-      if (isDemo) {
-        setState({
-          uid: 'demo',
-          reputationScore: 150,
-          dailyCheckInPoints: 45,
-          totalCheckInDays: 15,
-          lastCheckIn: null,
-          lastAdWatch: null,
-          streak: 5,
-          adClaimedForCheckIn: null,
-          lastCheckInId: null,
-          interactionHistory: [],
-          lastUpdated: null,
-        });
-        setIsLoading(false);
-        return;
-      }
-
       const uid = userId || localStorage.getItem('piUserId') || `user_${Date.now()}`;
       const loadedState = await reputationService.loadUserReputation(uid);
       setState(loadedState);
@@ -45,7 +27,7 @@ export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCh
     }
 
     loadState();
-  }, [userId, isDemo]);
+  }, [userId]);
 
   const updateAvailability = useCallback(() => {
     if (!state) return;
@@ -62,7 +44,7 @@ export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCh
   }, [updateAvailability]);
 
   const handleCheckIn = async () => {
-    if (isDemo || !state) return;
+    if (!state) return;
 
     try {
       const result = await reputationService.performDailyCheckIn();
@@ -77,7 +59,7 @@ export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCh
   };
 
   const handleMergePoints = async () => {
-    if (isDemo || !state || state.dailyCheckInPoints <= 0) return;
+    if (!state || state.dailyCheckInPoints <= 0) return;
 
     setIsMerging(true);
     
@@ -166,8 +148,7 @@ export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCh
             {canCheckIn ? (
               <button
                 onClick={handleCheckIn}
-                disabled={isDemo}
-                className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold text-xs transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold text-xs transition-all active:scale-[0.98]"
               >
                 <CheckCircle className="w-3.5 h-3.5 inline mr-1.5" />
                 Claim
@@ -203,7 +184,7 @@ export function DailyCheckIn({ userId, onPointsEarned, isDemo = false }: DailyCh
         {canMerge && (
           <button
             onClick={handleMergePoints}
-            disabled={isMerging || isDemo}
+            disabled={isMerging}
             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2"
           >
             {isMerging ? (

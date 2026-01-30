@@ -3,6 +3,7 @@
  * Single source of truth for all reputation-related operations
  * Integrates with WalletDataService for real blockchain data
  * Connects to the backend API for persistent storage
+ * Uses the Central Scoring Rules Engine for all calculations
  */
 
 import { 
@@ -10,9 +11,19 @@ import {
   WalletActivityData,
   AtomicReputationResult,
   AtomicTrustLevel,
-  getLevelProgress
+  getLevelProgress,
+  TRUST_LEVEL_COLORS
 } from '../protocol/atomicScoring';
 import { walletDataService, WalletSnapshot, ActivityEvent } from './walletDataService';
+import {
+  SCORING_RULES,
+  calculateLevelFromScore,
+  calculateStreakBonus,
+  canApplyRule,
+  validateStreak,
+  CumulativeScore,
+  BACKEND_SCORE_CAP,
+} from '../protocol/scoringRulesEngine';
 
 export interface UserReputationState {
   uid: string;
@@ -181,21 +192,20 @@ export class ReputationService {
       throw new Error('User not loaded');
     }
 
+    const canCheck = this.canPerformCheckIn();
+    if (!canCheck.canCheckIn) {
+      return { success: false, pointsEarned: 0, newState: this.currentState };
+    }
+
     const now = new Date();
     const checkInId = `checkin_${now.getTime()}`;
     
-    let newStreak = 1;
-    if (this.currentState.lastCheckIn) {
-      const lastDate = new Date(this.currentState.lastCheckIn);
-      const hoursDiff = (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60);
-      if (hoursDiff >= 24 && hoursDiff < 48) {
-        newStreak = this.currentState.streak + 1;
-      }
-    }
-
-    const CHECKIN_POINTS = 3;
-    const streakBonus = newStreak === 7 ? 10 : 0;
-    const totalPointsEarned = CHECKIN_POINTS + streakBonus;
+    const streakCheck = validateStreak(this.currentState.lastCheckIn);
+    let newStreak = streakCheck.resetStreak ? 1 : (this.currentState.streak || 0) + 1;
+    
+    const basePoints = SCORING_RULES.DAILY_CHECKIN.basePoints;
+    const streakBonus = calculateStreakBonus(newStreak);
+    const totalPointsEarned = basePoints + streakBonus;
 
     const newState: UserReputationState = {
       ...this.currentState,
@@ -209,7 +219,7 @@ export class ReputationService {
           type: 'daily_checkin',
           points: totalPointsEarned,
           timestamp: now.toISOString(),
-          description: `Daily check-in (+${CHECKIN_POINTS} pts${streakBonus > 0 ? `, +${streakBonus} streak bonus` : ''})`,
+          description: `Daily check-in (+${basePoints} pts${streakBonus > 0 ? `, +${streakBonus} streak bonus` : ''})`,
         },
         ...this.currentState.interactionHistory.slice(0, 99),
       ],
@@ -232,19 +242,19 @@ export class ReputationService {
     }
 
     const now = new Date();
-    const AD_BONUS_POINTS = 5;
+    const adBonusPoints = SCORING_RULES.AD_BONUS.basePoints;
 
     const newState: UserReputationState = {
       ...this.currentState,
-      dailyCheckInPoints: this.currentState.dailyCheckInPoints + AD_BONUS_POINTS,
+      dailyCheckInPoints: this.currentState.dailyCheckInPoints + adBonusPoints,
       lastAdWatch: now.toISOString(),
       adClaimedForCheckIn: this.currentState.lastCheckInId,
       interactionHistory: [
         {
           type: 'ad_bonus',
-          points: AD_BONUS_POINTS,
+          points: adBonusPoints,
           timestamp: now.toISOString(),
-          description: `Ad bonus claimed (+${AD_BONUS_POINTS} pts)`,
+          description: `Ad bonus claimed (+${adBonusPoints} pts)`,
         },
         ...this.currentState.interactionHistory.slice(0, 99),
       ],
@@ -256,7 +266,7 @@ export class ReputationService {
 
     return {
       success: true,
-      pointsEarned: AD_BONUS_POINTS,
+      pointsEarned: adBonusPoints,
       newState,
     };
   }
@@ -329,27 +339,14 @@ export class ReputationService {
   }
 
   canCheckIn(): { canCheckIn: boolean; countdown: string; hoursRemaining: number } {
-    if (!this.currentState?.lastCheckIn) {
-      return { canCheckIn: true, countdown: '', hoursRemaining: 0 };
-    }
-
-    const now = new Date();
-    const lastCheckInDate = new Date(this.currentState.lastCheckIn);
-    const timeDiff = now.getTime() - lastCheckInDate.getTime();
-    const hoursDiff = timeDiff / (1000 * 60 * 60);
-    const COOLDOWN_HOURS = 24;
-
-    if (hoursDiff >= COOLDOWN_HOURS) {
-      return { canCheckIn: true, countdown: '', hoursRemaining: 0 };
-    }
-
-    const remainingMs = (COOLDOWN_HOURS * 60 * 60 * 1000) - timeDiff;
-    const hours = Math.floor(remainingMs / (1000 * 60 * 60));
-    const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((remainingMs % (1000 * 60)) / 1000);
-    const countdown = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-
-    return { canCheckIn: false, countdown, hoursRemaining: COOLDOWN_HOURS - hoursDiff };
+    const result = this.canPerformCheckIn();
+    const COOLDOWN_HOURS = SCORING_RULES.DAILY_CHECKIN.cooldownHours;
+    const hoursRemaining = result.remainingMs > 0 ? result.remainingMs / (1000 * 60 * 60) : 0;
+    return {
+      canCheckIn: result.canCheckIn,
+      countdown: result.countdown,
+      hoursRemaining: hoursRemaining,
+    };
   }
 
   canClaimAdBonus(): boolean {
@@ -479,6 +476,127 @@ export class ReputationService {
     const hoursSinceSync = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60);
     return hoursSinceSync > 1;
   }
+
+  /**
+   * Get unified score data - Single Source of Truth for all pages
+   * This method calculates and returns all reputation data from the central protocol
+   */
+  getUnifiedScore(): UnifiedScoreData {
+    if (!this.currentState) {
+      return this.getDefaultUnifiedScore();
+    }
+
+    const totalScore = this.getTotalScore();
+    const levelInfo = calculateLevelFromScore(totalScore);
+    const atomicLevel = this.mapRankToAtomicLevel(levelInfo.rank);
+    const colors = TRUST_LEVEL_COLORS[atomicLevel];
+
+    return {
+      totalScore,
+      blockchainScore: this.currentState.blockchainScore || 0,
+      dailyCheckInPoints: this.currentState.dailyCheckInPoints || 0,
+      level: levelInfo.level,
+      trustRank: levelInfo.rank,
+      atomicTrustLevel: atomicLevel,
+      progressPercent: levelInfo.progressPercent,
+      pointsToNext: levelInfo.pointsToNext,
+      maxScore: BACKEND_SCORE_CAP,
+      streak: this.currentState.streak || 0,
+      totalCheckInDays: this.currentState.totalCheckInDays || 0,
+      lastCheckIn: this.currentState.lastCheckIn,
+      lastUpdated: this.currentState.lastUpdated,
+      colors,
+      walletAddress: this.currentState.walletAddress,
+      uid: this.currentState.uid,
+    };
+  }
+
+  private getDefaultUnifiedScore(): UnifiedScoreData {
+    const colors = TRUST_LEVEL_COLORS['Very Low Trust'];
+    return {
+      totalScore: 0,
+      blockchainScore: 0,
+      dailyCheckInPoints: 0,
+      level: 1,
+      trustRank: 'Very Low Trust',
+      atomicTrustLevel: 'Very Low Trust',
+      progressPercent: 0,
+      pointsToNext: 100,
+      maxScore: BACKEND_SCORE_CAP,
+      streak: 0,
+      totalCheckInDays: 0,
+      lastCheckIn: null,
+      lastUpdated: null,
+      colors,
+      walletAddress: undefined,
+      uid: '',
+    };
+  }
+
+  private mapRankToAtomicLevel(rank: string): AtomicTrustLevel {
+    const mapping: Record<string, AtomicTrustLevel> = {
+      'Very Low Trust': 'Very Low Trust',
+      'Low Trust': 'Low Trust',
+      'Medium': 'Medium',
+      'Active': 'Active',
+      'Trusted': 'Trusted',
+      'Pioneer+': 'Pioneer+',
+      'Elite': 'Elite',
+    };
+    return mapping[rank] || 'Low Trust';
+  }
+
+  /**
+   * Check if user can perform daily check-in using central rules
+   */
+  canPerformCheckIn(): { canCheckIn: boolean; countdown: string; remainingMs: number } {
+    const result = canApplyRule('DAILY_CHECKIN', this.currentState?.lastCheckIn || null);
+    return {
+      canCheckIn: result.canApply,
+      countdown: result.countdown,
+      remainingMs: result.remainingMs,
+    };
+  }
+
+  /**
+   * Get scoring rules for UI display
+   */
+  getScoringRules(): typeof SCORING_RULES {
+    return SCORING_RULES;
+  }
+
+  /**
+   * Calculate streak bonus using central rules
+   */
+  getStreakBonus(streak: number): number {
+    return calculateStreakBonus(streak);
+  }
+
+  /**
+   * Validate if streak should be reset
+   */
+  checkStreakValidity(): { isValid: boolean; resetStreak: boolean } {
+    return validateStreak(this.currentState?.lastCheckIn || null);
+  }
+}
+
+export interface UnifiedScoreData {
+  totalScore: number;
+  blockchainScore: number;
+  dailyCheckInPoints: number;
+  level: number;
+  trustRank: string;
+  atomicTrustLevel: AtomicTrustLevel;
+  progressPercent: number;
+  pointsToNext: number;
+  maxScore: number;
+  streak: number;
+  totalCheckInDays: number;
+  lastCheckIn: string | null;
+  lastUpdated: string | null;
+  colors: { bg: string; text: string; border: string };
+  walletAddress?: string;
+  uid: string;
 }
 
 export const reputationService = ReputationService.getInstance();
