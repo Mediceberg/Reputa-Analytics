@@ -64,9 +64,9 @@ export function MainCard({
       }}
     >
       <div className="p-4 sm:p-5">
-        <div className="flex items-center gap-3 mb-5">
+        <div className="flex items-center gap-3 mb-4">
           <div 
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
             style={{
               background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.15) 100%)`,
               border: `1.5px solid ${trustColors.border}`,
@@ -94,19 +94,37 @@ export function MainCard({
             </div>
             <p className="text-[11px] font-mono text-gray-500 truncate">{formatAddress(walletAddress)}</p>
           </div>
+        </div>
 
-          {balance !== undefined && (
+        <div 
+          className="flex items-center justify-between p-3 rounded-xl mb-4"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.12) 0%, rgba(139, 92, 246, 0.08) 100%)',
+            border: '1px solid rgba(0, 217, 255, 0.25)',
+            boxShadow: '0 4px 15px rgba(0, 217, 255, 0.1)',
+          }}
+        >
+          <div className="flex items-center gap-2">
             <div 
-              className="px-3 py-1.5 rounded-lg text-right"
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
-                background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(139, 92, 246, 0.08) 100%)',
-                border: '1px solid rgba(0, 217, 255, 0.2)',
+                background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(139, 92, 246, 0.15) 100%)',
+                border: '1px solid rgba(0, 217, 255, 0.3)',
               }}
             >
-              <p className="text-[9px] text-gray-400 uppercase">Balance</p>
-              <p className="text-base font-black text-cyan-400">{balance.toFixed(2)} π</p>
+              <span className="text-cyan-400 font-bold text-lg">π</span>
             </div>
-          )}
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase font-medium">Wallet Balance</p>
+              <p className="text-xl font-black text-cyan-400">
+                {balance !== undefined ? balance.toFixed(2) : '--'} <span className="text-base">π</span>
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] text-gray-500 uppercase">Network</p>
+            <p className="text-sm font-bold text-purple-400">Pi Mainnet</p>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-5">
