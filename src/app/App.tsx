@@ -211,9 +211,18 @@ function ReputaAppContent() {
           alert("Pending status cleared. Please try the payout again.");
         }
       } else {
-        const errorDetail = typeof result.error === 'string' 
+        let errorDetail = typeof result.error === 'string' 
           ? result.error 
           : result.error?.error_message || result.details?.message || "Check App Wallet balance";
+        
+        if (result.rawError) {
+          console.log('[A2U] Raw error from Pi API:', result.rawError);
+        }
+        
+        if (result.step === 'approve' && errorDetail.includes('approval failed')) {
+          errorDetail = 'Payment could not be approved. This may be due to:\n• App wallet insufficient balance\n• Network congestion\n• Please try again in a few seconds';
+        }
+        
         const stepInfo = result.step ? ` (Step: ${result.step})` : '';
         alert(`❌ Payout Failed${stepInfo}: ${errorDetail}`);
       }

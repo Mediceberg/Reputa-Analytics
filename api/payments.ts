@@ -248,6 +248,41 @@ async function handlePayout(body: any, res: VercelResponse) {
     return res.status(400).json({ error: "Invalid payout amount (must be 0.01-100 Pi)" });
   }
 
+  try {
+    console.log(`[A2U] Step 0: Checking for incomplete server payments for UID ${uid}...`);
+    const incompleteRes = await fetch(`${PI_API_BASE}/payments/incomplete_server_payments`, {
+      headers: { 'Authorization': `Key ${PI_API_KEY}` }
+    });
+    
+    if (incompleteRes.ok) {
+      const incompleteData = await incompleteRes.json();
+      const userIncomplete = incompleteData.incomplete_server_payments?.filter(
+        (p: any) => p.user_uid === uid
+      ) || [];
+      
+      if (userIncomplete.length > 0) {
+        console.log(`[A2U] Found ${userIncomplete.length} incomplete payments for user. Cancelling...`);
+        for (const payment of userIncomplete) {
+          try {
+            await fetch(`${PI_API_BASE}/payments/${payment.identifier}/cancel`, {
+              method: 'POST',
+              headers: { 
+                'Authorization': `Key ${PI_API_KEY}`, 
+                'Content-Type': 'application/json' 
+              }
+            });
+            console.log(`[A2U] Cancelled incomplete payment ${payment.identifier}`);
+          } catch (cancelErr) {
+            console.warn(`[A2U] Failed to cancel ${payment.identifier}:`, cancelErr);
+          }
+        }
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+  } catch (checkErr) {
+    console.warn('[A2U] Could not check incomplete payments:', checkErr);
+  }
+
   const amountCents = Math.round(payoutAmount * 100);
   const payoutEvent = eventId || 'reputa_reward';
   const idempotencyKey = `payout:${uid}:${amountCents}:${payoutEvent}`;
@@ -266,13 +301,7 @@ async function handlePayout(body: any, res: VercelResponse) {
     });
   }
   
-  const existingPayout = await redis.get(`payout_pending:${uid}`);
-  if (existingPayout) {
-    return res.status(409).json({ 
-      error: "A payout is already in progress for this user",
-      paymentId: existingPayout 
-    });
-  }
+  await redis.del(`payout_pending:${uid}`);
 
   const paymentMemo = (memo || "Reputa Reward").substring(0, 28);
   let paymentId: string | null = null;
@@ -346,11 +375,21 @@ async function handlePayout(body: any, res: VercelResponse) {
         network: PI_NETWORK, error: approveData.message || 'Approval failed', createdAt: new Date().toISOString()
       }), { ex: 86400 * 30 });
       
+      let errorMessage = approveData.message || 'Payment approval failed';
+      if (approveData.error === 'insufficient_balance' || errorMessage.includes('balance')) {
+        errorMessage = 'App wallet has insufficient balance. Please fund the app wallet in Pi Developer Portal.';
+      } else if (approveData.error === 'user_not_found' || errorMessage.includes('user')) {
+        errorMessage = 'User not found. Please ensure you are logged in with a valid Pi account.';
+      } else if (errorMessage.includes('ongoing') || errorMessage.includes('incomplete')) {
+        errorMessage = 'There is an ongoing payment. Please wait a moment and try again.';
+      }
+      
       return res.status(approveResponse.status).json({ 
-        error: approveData.message || 'Payment approval failed',
+        error: errorMessage,
         step: 'approve',
         paymentId,
-        network: PI_NETWORK
+        network: PI_NETWORK,
+        rawError: approveData
       });
     }
     
