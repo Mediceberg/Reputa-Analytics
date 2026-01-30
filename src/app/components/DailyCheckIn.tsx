@@ -5,13 +5,14 @@ import { SCORING_RULES } from '../protocol/scoringRulesEngine';
 
 interface DailyCheckInProps {
   userId?: string;
+  isDemo?: boolean;
   onPointsEarned?: (points: number, type: 'checkin' | 'merge') => void;
 }
 
 const CHECKIN_POINTS = SCORING_RULES.DAILY_CHECKIN.basePoints;
 const AD_BONUS_POINTS = SCORING_RULES.AD_BONUS.basePoints;
 
-export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
+export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCheckInProps) {
   const [state, setState] = useState<UserReputationState | null>(null);
   const [canCheckIn, setCanCheckIn] = useState(true);
   const [countdown, setCountdown] = useState('');
@@ -20,14 +21,17 @@ export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
 
   useEffect(() => {
     async function loadState() {
-      const uid = userId || localStorage.getItem('piUserId') || `user_${Date.now()}`;
+      const uid = isDemo ? 'demo' : (userId || localStorage.getItem('piUserId') || `user_${Date.now()}`);
+      if (isDemo) {
+        reputationService.setDemoMode(true);
+      }
       const loadedState = await reputationService.loadUserReputation(uid);
       setState(loadedState);
       setIsLoading(false);
     }
 
     loadState();
-  }, [userId]);
+  }, [userId, isDemo]);
 
   const updateAvailability = useCallback(() => {
     if (!state) return;

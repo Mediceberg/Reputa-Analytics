@@ -25,11 +25,6 @@ export function isPiBrowser(): boolean {
     return true;
   }
   
-  if ('Pi' in window && typeof (window as any).Pi?.authenticate === 'function') {
-    console.log('[PI SDK] Pi Browser detected via SDK presence');
-    return true;
-  }
-  
   console.log('[PI SDK] Not Pi Browser - UA:', ua.substring(0, 100));
   return false;
 }

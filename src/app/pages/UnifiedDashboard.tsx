@@ -92,30 +92,36 @@ export function UnifiedDashboard({
   
   useEffect(() => {
     async function loadUnifiedScore() {
-      const uid = localStorage.getItem('piUserId') || `user_${Date.now()}`;
+      const isDemo = mode.mode === 'demo' || !username || username === 'Guest_Explorer';
+      const uid = isDemo ? 'demo' : (localStorage.getItem('piUserId') || `user_${Date.now()}`);
+      
+      if (isDemo) {
+        reputationService.setDemoMode(true);
+      }
+      
       await reputationService.loadUserReputation(uid);
       const unified = reputationService.getUnifiedScore();
       setUnifiedScoreData(unified);
       setUserPoints({
         total: unified.totalScore,
-        checkIn: unified.checkInPoints,
+        checkIn: unified.dailyCheckInPoints || 0,
         transactions: 0,
-        activity: unified.activityPoints,
-        streak: unified.streakBonus,
+        activity: unified.blockchainScore || 0,
+        streak: unified.streak || 0,
       });
     }
     loadUnifiedScore();
-  }, []);
+  }, [mode.mode, username]);
 
   const handlePointsEarned = async (points: number, type: 'checkin' | 'ad' | 'merge') => {
     const unified = reputationService.getUnifiedScore();
     setUnifiedScoreData(unified);
     setUserPoints({
       total: unified.totalScore,
-      checkIn: unified.checkInPoints,
+      checkIn: unified.dailyCheckInPoints || 0,
       transactions: 0,
-      activity: unified.activityPoints,
-      streak: unified.streakBonus,
+      activity: unified.blockchainScore || 0,
+      streak: unified.streak || 0,
     });
   };
   
@@ -414,6 +420,7 @@ export function UnifiedDashboard({
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <DailyCheckIn 
                 onPointsEarned={handlePointsEarned}
+                isDemo={mode.mode === 'demo'}
               />
               
               <div className="glass-card p-5" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>

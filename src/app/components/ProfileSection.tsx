@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { User, Wallet, Activity, Calendar, Award, Star, TrendingUp, Shield, Zap, Target } from 'lucide-react';
 import { WalletData, AppMode } from '../protocol/types';
 import { 

@@ -261,13 +261,6 @@ function ReputaAppContent() {
           return true;
         }
         
-        await new Promise(r => setTimeout(r, 800));
-        
-        if ('Pi' in window && typeof (window as any).Pi?.authenticate === 'function') {
-          console.log('[App] Pi Browser detected via SDK');
-          return true;
-        }
-        
         console.log('[App] Not Pi Browser - UA:', ua.substring(0, 100));
         return false;
       };
