@@ -3,7 +3,7 @@
  * Implements Pi Network authentication with scopes for username, payments, and wallet_address
  */
 
-export interface PiUser { 
+export interface PiUser {  
   uid: string;
   username: string;
   wallet_address?: string;
