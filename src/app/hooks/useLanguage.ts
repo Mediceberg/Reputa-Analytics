@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; 
 import { Language } from '../protocol/types';
 import { getTranslation } from '../locales/translations';
 
