@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';  
+import React, { useState, useEffect } from 'react';   
 import { X, Upload, Download, Sparkles, Loader2, Shield, Zap, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
