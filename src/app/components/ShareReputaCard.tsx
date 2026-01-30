@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Share2, Copy, X, Shield, Star, Trophy, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image } from 'lucide-react';
 
 interface ShareReputaCardProps {
   username: string;
@@ -39,6 +39,8 @@ export const ShareReputaCard: React.FC<ShareReputaCardProps> = ({
   onClose
 }) => {
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const displayLevel = Math.min(Math.max(level, 1), 7);
   const levelName = levelNames[displayLevel - 1] || 'Pioneer';
@@ -52,6 +54,172 @@ Trust Rank: ${trustRank}
 
 Check yours at: reputa-score.vercel.app`;
 
+  const generateCardImage = async (): Promise<Blob | null> => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const width = 400;
+    const height = 520;
+    canvas.width = width;
+    canvas.height = height;
+
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#0F0A1F');
+    gradient.addColorStop(0.3, '#1A0F2E');
+    gradient.addColorStop(0.6, '#0F1A2E');
+    gradient.addColorStop(1, '#050810');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const x = (i * 60) - 50;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + height, height);
+    }
+    ctx.stroke();
+
+    const glowGradient = ctx.createRadialGradient(200, 200, 0, 200, 200, 300);
+    glowGradient.addColorStop(0, 'rgba(139, 92, 246, 0.15)');
+    glowGradient.addColorStop(0.5, 'rgba(0, 217, 255, 0.08)');
+    glowGradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowGradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const cornerGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 150);
+    cornerGlow.addColorStop(0, 'rgba(139, 92, 246, 0.25)');
+    cornerGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = cornerGlow;
+    ctx.fillRect(0, 0, 150, 150);
+
+    const bottomGlow = ctx.createRadialGradient(width, height, 0, width, height, 150);
+    bottomGlow.addColorStop(0, 'rgba(0, 217, 255, 0.25)');
+    bottomGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = bottomGlow;
+    ctx.fillRect(width - 150, height - 150, 150, 150);
+
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(10, 10, width - 20, height - 20, 20);
+    ctx.stroke();
+
+    const headerGradient = ctx.createLinearGradient(20, 25, 60, 65);
+    headerGradient.addColorStop(0, '#8B5CF6');
+    headerGradient.addColorStop(1, '#00D9FF');
+    ctx.fillStyle = headerGradient;
+    ctx.beginPath();
+    ctx.roundRect(25, 25, 40, 40, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 18px Inter, Arial, sans-serif';
+    ctx.fillText('R', 38, 52);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 18px Inter, Arial, sans-serif';
+    ctx.fillText('Reputa Score', 75, 52);
+
+    ctx.fillStyle = 'rgba(0, 217, 255, 0.2)';
+    ctx.beginPath();
+    ctx.roundRect(300, 30, 80, 28, 14);
+    ctx.fill();
+    ctx.fillStyle = '#00D9FF';
+    ctx.font = '12px Inter, Arial, sans-serif';
+    ctx.fillText('Pi Network', 315, 49);
+
+    const avatarGradient = ctx.createLinearGradient(160, 90, 240, 170);
+    avatarGradient.addColorStop(0, levelColor + '60');
+    avatarGradient.addColorStop(1, levelColor + '30');
+    ctx.fillStyle = avatarGradient;
+    ctx.beginPath();
+    ctx.arc(200, 130, 45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = levelColor;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = levelColor;
+    ctx.font = 'bold 36px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🏆', 200, 142);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 22px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`@${username}`, 200, 205);
+
+    if (walletAddress) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '12px JetBrains Mono, monospace';
+      const shortAddr = `${walletAddress.substring(0, 8)}...${walletAddress.slice(-6)}`;
+      ctx.fillText(shortAddr, 200, 225);
+    }
+
+    ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
+    ctx.beginPath();
+    ctx.roundRect(30, 245, width - 60, 100, 15);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#8B5CF6';
+    ctx.font = 'bold 48px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(139, 92, 246, 0.6)';
+    ctx.shadowBlur = 20;
+    ctx.fillText(score.toLocaleString(), 200, 300);
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '14px Inter, Arial, sans-serif';
+    ctx.fillText('Reputation Points', 200, 325);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.roundRect(30, 365, 165, 70, 12);
+    ctx.fill();
+
+    ctx.fillStyle = levelColor;
+    ctx.font = '18px Inter, Arial, sans-serif';
+    ctx.fillText(`⭐ Lv.${displayLevel}`, 112, 400);
+    ctx.fillStyle = levelColor;
+    ctx.font = '13px Inter, Arial, sans-serif';
+    ctx.fillText(levelName, 112, 420);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.roundRect(205, 365, 165, 70, 12);
+    ctx.fill();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 18px Inter, Arial, sans-serif';
+    ctx.fillText(trustRank, 287, 400);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.font = '13px Inter, Arial, sans-serif';
+    ctx.fillText('Trust Rank', 287, 420);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(30, 455);
+    ctx.lineTo(width - 30, 455);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '12px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('reputa-score.vercel.app', 200, 485);
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), 'image/png', 1.0);
+    });
+  };
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(shareText);
@@ -62,26 +230,72 @@ Check yours at: reputa-score.vercel.app`;
     }
   };
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
+  const handleShareImage = async () => {
+    setIsGenerating(true);
+    
+    try {
+      const imageBlob = await generateCardImage();
+      if (!imageBlob) {
+        throw new Error('Failed to generate image');
+      }
+
+      const file = new File([imageBlob], 'reputa-score.png', { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'My Reputa Score',
+          text: shareText,
+          files: [file]
+        });
+      } else if (navigator.share) {
         await navigator.share({
           title: 'My Reputa Score',
           text: shareText,
           url: 'https://reputa-score.vercel.app'
         });
-      } catch (shareError: any) {
-        if (shareError.name !== 'AbortError') {
-          handleCopy();
-        }
+      } else {
+        const url = URL.createObjectURL(imageBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'reputa-score.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       }
-    } else {
-      handleCopy();
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Share failed:', error);
+        handleCopy();
+      }
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    setIsGenerating(true);
+    try {
+      const imageBlob = await generateCardImage();
+      if (imageBlob) {
+        const url = URL.createObjectURL(imageBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reputa-score-${username}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0, 0, 0, 0.85)' }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0, 0, 0, 0.9)' }}>
       <div className="relative w-full max-w-sm animate-in zoom-in duration-300">
         <button
           onClick={onClose}
@@ -94,57 +308,56 @@ Check yours at: reputa-score.vercel.app`;
         <div
           className="rounded-2xl p-6 overflow-hidden relative"
           style={{
-            background: 'linear-gradient(145deg, #0F1117 0%, #1A1D26 50%, #0A0B0F 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.3)',
-            boxShadow: '0 0 40px rgba(139, 92, 246, 0.2)',
+            background: 'linear-gradient(145deg, #0F0A1F 0%, #1A0F2E 30%, #0F1A2E 60%, #050810 100%)',
+            border: '2px solid rgba(139, 92, 246, 0.4)',
+            boxShadow: '0 0 60px rgba(139, 92, 246, 0.3), 0 0 120px rgba(0, 217, 255, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
           }}
         >
-          {/* Background Logo Watermark */}
-          <div 
-            className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden"
-            style={{ opacity: 0.04 }}
-          >
-            <svg 
-              viewBox="0 0 200 200" 
-              className="w-[300px] h-[300px]"
-              style={{ transform: 'rotate(-15deg)' }}
-            >
-              <defs>
-                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#8B5CF6" />
-                  <stop offset="100%" stopColor="#00D9FF" />
-                </linearGradient>
-              </defs>
-              <circle cx="100" cy="100" r="90" fill="none" stroke="url(#logoGradient)" strokeWidth="8"/>
-              <circle cx="100" cy="100" r="70" fill="none" stroke="url(#logoGradient)" strokeWidth="4"/>
-              <path d="M100 40 L100 70 M100 130 L100 160 M40 100 L70 100 M130 100 L160 100" stroke="url(#logoGradient)" strokeWidth="6" strokeLinecap="round"/>
-              <text x="100" y="115" textAnchor="middle" fill="url(#logoGradient)" fontSize="50" fontWeight="bold" fontFamily="Arial">R</text>
-            </svg>
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute h-full w-px"
+                style={{
+                  left: `${i * 15}%`,
+                  background: 'linear-gradient(180deg, transparent 0%, rgba(139, 92, 246, 0.1) 50%, transparent 100%)',
+                  transform: 'skewX(-15deg)',
+                }}
+              />
+            ))}
           </div>
-          
-          {/* Decorative corner accents */}
-          <div className="absolute top-0 left-0 w-20 h-20 pointer-events-none" style={{ background: 'radial-gradient(circle at top left, rgba(139, 92, 246, 0.15) 0%, transparent 70%)' }} />
-          <div className="absolute bottom-0 right-0 w-20 h-20 pointer-events-none" style={{ background: 'radial-gradient(circle at bottom right, rgba(0, 217, 255, 0.15) 0%, transparent 70%)' }} />
-          <div className="flex items-center justify-between mb-4 relative z-10">
+
+          <div className="absolute top-0 left-0 w-32 h-32 pointer-events-none" style={{ background: 'radial-gradient(circle at top left, rgba(139, 92, 246, 0.25) 0%, transparent 70%)' }} />
+          <div className="absolute bottom-0 right-0 w-32 h-32 pointer-events-none" style={{ background: 'radial-gradient(circle at bottom right, rgba(0, 217, 255, 0.25) 0%, transparent 70%)' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)' }} />
+
+          <div className="flex items-center justify-between mb-5 relative z-10">
             <div className="flex items-center gap-2">
               <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)' }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)', boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)' }}
               >
-                <Shield className="w-5 h-5 text-white" />
+                <Shield className="w-6 h-6 text-white" />
               </div>
               <span className="text-white font-bold text-lg">Reputa Score</span>
             </div>
-            <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(0, 217, 255, 0.2)', color: '#00D9FF' }}>
+            <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: 'rgba(0, 217, 255, 0.2)', color: '#00D9FF', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
               Pi Network
             </span>
           </div>
 
-          <div className="text-center mb-4 relative z-10">
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${levelColor}40 0%, ${levelColor}20 100%)`, border: `2px solid ${levelColor}` }}>
-              <Trophy className="w-8 h-8" style={{ color: levelColor }} />
+          <div className="text-center mb-5 relative z-10">
+            <div 
+              className="w-20 h-20 mx-auto mb-3 rounded-full flex items-center justify-center"
+              style={{ 
+                background: `linear-gradient(135deg, ${levelColor}50 0%, ${levelColor}20 100%)`, 
+                border: `3px solid ${levelColor}`,
+                boxShadow: `0 0 30px ${levelColor}40`
+              }}
+            >
+              <Trophy className="w-10 h-10" style={{ color: levelColor }} />
             </div>
-            <h2 className="text-white font-bold text-xl mb-1">@{username}</h2>
+            <h2 className="text-white font-bold text-2xl mb-1">@{username}</h2>
             {walletAddress && (
               <p className="text-xs font-mono" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                 {walletAddress.substring(0, 8)}...{walletAddress.slice(-6)}
@@ -153,40 +366,66 @@ Check yours at: reputa-score.vercel.app`;
           </div>
 
           <div 
-            className="rounded-xl p-4 mb-4 text-center relative z-10"
-            style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}
+            className="rounded-2xl p-5 mb-5 text-center relative z-10"
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.1) 100%)', 
+              border: '1px solid rgba(139, 92, 246, 0.3)',
+              boxShadow: 'inset 0 2px 20px rgba(139, 92, 246, 0.1)'
+            }}
           >
-            <div className="text-5xl font-black mb-2" style={{ color: '#8B5CF6', textShadow: '0 0 20px rgba(139, 92, 246, 0.5)' }}>
+            <div 
+              className="text-5xl font-black mb-2"
+              style={{ 
+                background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.5))'
+              }}
+            >
               {score.toLocaleString()}
             </div>
-            <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Reputation Points</div>
+            <div className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Reputation Points</div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-4 relative z-10">
-            <div className="rounded-lg p-3 text-center" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+          <div className="grid grid-cols-2 gap-3 mb-5 relative z-10">
+            <div 
+              className="rounded-xl p-4 text-center"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Star className="w-4 h-4" style={{ color: levelColor }} />
-                <span className="text-lg font-bold text-white">Lv.{displayLevel}</span>
+                <Star className="w-5 h-5" style={{ color: levelColor }} />
+                <span className="text-xl font-bold text-white">Lv.{displayLevel}</span>
               </div>
-              <div className="text-xs" style={{ color: levelColor }}>{levelName}</div>
+              <div className="text-sm font-medium" style={{ color: levelColor }}>{levelName}</div>
             </div>
-            <div className="rounded-lg p-3 text-center" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
-              <div className="text-lg font-bold text-white mb-1">{trustRank}</div>
-              <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Trust Rank</div>
+            <div 
+              className="rounded-xl p-4 text-center"
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <div className="text-xl font-bold text-white mb-1">{trustRank}</div>
+              <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Trust Rank</div>
             </div>
           </div>
 
-          <div className="text-center pt-3 relative z-10" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+          <div className="text-center pt-4 relative z-10" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <p className="text-xs font-medium" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               reputa-score.vercel.app
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3 mt-4">
+        <div className="grid grid-cols-3 gap-2 mt-4">
           <button
             onClick={handleCopy}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all active:scale-95"
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95"
             style={{
               background: copied ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.1)',
               border: copied ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)',
@@ -194,18 +433,34 @@ Check yours at: reputa-score.vercel.app`;
             }}
           >
             {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-            <span>{copied ? 'Copied!' : 'Copy'}</span>
+            <span className="text-xs">{copied ? 'Copied!' : 'Copy'}</span>
           </button>
           <button
-            onClick={handleShare}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all active:scale-95"
+            onClick={handleDownload}
+            disabled={isGenerating}
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95"
+            style={{
+              background: 'rgba(0, 217, 255, 0.15)',
+              border: '1px solid rgba(0, 217, 255, 0.3)',
+              color: '#00D9FF',
+              opacity: isGenerating ? 0.6 : 1
+            }}
+          >
+            <Download className="w-5 h-5" />
+            <span className="text-xs">Save</span>
+          </button>
+          <button
+            onClick={handleShareImage}
+            disabled={isGenerating}
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95"
             style={{
               background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
               color: 'white',
+              opacity: isGenerating ? 0.6 : 1
             }}
           >
             <Share2 className="w-5 h-5" />
-            <span>Share</span>
+            <span className="text-xs">Share</span>
           </button>
         </div>
       </div>
