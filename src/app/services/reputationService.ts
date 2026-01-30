@@ -83,10 +83,35 @@ export class ReputationService {
   async loadUserReputation(uid: string, walletAddress?: string): Promise<UserReputationState> {
     this.uid = uid;
 
+    if (uid === 'demo' || uid.toLowerCase().includes('demo')) {
+      this.isDemo = true;
+      console.log('[ReputationService] Demo mode enabled for uid:', uid);
+    }
+
     if (this.isDemo) {
-      this.currentState = this.createNewState(uid);
-      if (walletAddress) this.currentState.walletAddress = walletAddress;
-      return this.currentState;
+      this.currentState = {
+        uid,
+        walletAddress: walletAddress || 'GDU22WEH7M3O...DEMO',
+        reputationScore: 632,
+        blockchainScore: 450,
+        dailyCheckInPoints: 182,
+        totalCheckInDays: 28,
+        lastCheckIn: new Date().toISOString().split('T')[0],
+        lastAdWatch: null,
+        streak: 7,
+        adClaimedForCheckIn: null,
+        lastCheckInId: null,
+        interactionHistory: [
+          { type: 'daily_checkin', points: 25, timestamp: new Date().toISOString(), description: 'Day 7 streak bonus' },
+          { type: 'wallet_scan', points: 50, timestamp: new Date(Date.now() - 86400000).toISOString(), description: 'Blockchain activity' },
+        ],
+        blockchainEvents: [],
+        walletSnapshot: undefined,
+        lastUpdated: new Date().toISOString(),
+        lastBlockchainSync: new Date().toISOString(),
+        isNew: false,
+      };
+      return this.currentState!;
     }
 
     try {

@@ -16,18 +16,12 @@ export function isPiBrowser(): boolean {
   const ua = navigator.userAgent.toLowerCase();
   const isPiUA = ua.includes('pibrowser') || ua.includes('pi browser') || ua.includes('pinet');
   
-  const hasPiSDK = 'Pi' in window;
-  
-  const hasPiEnvironment = typeof (window as any).SDKMessaging !== 'undefined' ||
-                           typeof (window as any).PiNetwork !== 'undefined';
-  
-  const result = isPiUA || hasPiSDK || hasPiEnvironment;
-  
-  if (result) {
-    console.log('[PI SDK] Pi Browser detected:', { isPiUA, hasPiSDK, hasPiEnvironment });
+  if (isPiUA) {
+    console.log('[PI SDK] Pi Browser detected via User-Agent');
+    return true;
   }
   
-  return result;
+  return false;
 }
 
 export function waitForPiSDK(timeout: number = 5000): Promise<boolean> {
