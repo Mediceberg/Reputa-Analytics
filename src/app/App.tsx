@@ -176,8 +176,17 @@ function ReputaAppContent() {
           alert(`✅ Payout Completed on ${networkLabel}!\nPayment ID: ${result.paymentId}\nTxID: ${result.txid}\n\n${result.message}`);
         }
         setManualWallet('');
-      } else if (response.status === 409) {
-        alert("⚠️ A payout is already in progress. Please wait or clear the pending payment.");
+      } else if (response.status === 409 || (result.step === 'create' && result.error?.includes('ongoing payment'))) {
+        const shouldClear = confirm("⚠️ There is an ongoing payment blocking this request. Would you like to clear it and try again?");
+        if (shouldClear) {
+          setIsPayoutLoading(true);
+          await fetch('/api/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'clear_pending', uid: currentUser.uid }),
+          });
+          alert("Pending status cleared. Please try the payout again.");
+        }
       } else {
         const errorDetail = typeof result.error === 'string' 
           ? result.error 

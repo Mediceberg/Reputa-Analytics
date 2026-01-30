@@ -601,8 +601,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case 'send':
         return handleSendPi(body, res);
       
-      case 'clear_pending':
-        return handleClearPending(body, res);
+    case 'clear_pending':
+      try {
+        const { uid } = body;
+        if (!uid) return res.status(400).json({ error: "Missing UID" });
+
+        await redis.del(`payout_pending:${uid}`);
+        
+        // Also fetch from Pi API to see if there are actual incomplete server payments
+        const incompleteRes = await fetch(`${PI_API_BASE}/payments/incomplete_server_payments`, {
+          headers: { 'Authorization': `Key ${PI_API_KEY}` }
+        });
+        const incompleteData = await incompleteRes.json();
+        
+        if (incompleteRes.ok && incompleteData.incomplete_server_payments) {
+          for (const payment of incompleteData.incomplete_server_payments) {
+            if (payment.uid === uid) {
+              console.log(`[PAYOUT] Found incomplete Pi server payment ${payment.identifier} for user ${uid}`);
+            }
+          }
+        }
+
+        console.log(`[PAYOUT] Cleared local pending lock for ${uid}`);
+        return res.status(200).json({ success: true, message: "Pending status cleared" });
+      } catch (error: any) {
+        return res.status(500).json({ error: error.message });
+      }
       
       case 'check_status':
         return handleCheckPayoutStatus(body, res);
