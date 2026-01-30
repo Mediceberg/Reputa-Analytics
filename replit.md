@@ -9,7 +9,9 @@ I prefer iterative development with a focus on delivering functional, tested com
 ## Recent Changes (January 2026)
 
 ### UI/UX Mobile Improvements (Latest)
-- **SideDrawer Component:** New hamburger menu navigation for mobile with wallet balance display, user info, and full navigation
+- **TopBar Component:** Fixed top navigation bar for mobile with menu button, wallet balance display, and notification icon
+- **MainCard Component:** Persistent profile card with professional design showing user info, wallet balance, reputa score, level, trust rank, and progress bar - always visible across navigations
+- **SideDrawer Component:** Hamburger menu navigation for mobile with wallet balance display, user info, and full navigation
 - **Simplified DailyCheckIn:** Compact 2-column layout, removed success overlay animation, ad bonus marked as "Coming Soon"
 - **Simplified ProfileSection:** Streamlined user card with 2-column stats, compact 4-column quick stats grid, cleaner score breakdown
 - **Mobile TransactionList:** Optimized for smaller screens with responsive padding and font sizes
