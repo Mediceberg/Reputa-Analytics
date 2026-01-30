@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; 
 import { ArrowLeft, Globe, TrendingUp, Lock, Unlock, Users, Database, RefreshCw, Activity, Zap, Clock, Server } from 'lucide-react';
 import { fetchNetworkMetrics, NetworkMetrics } from '../services/piNetworkData';
 
