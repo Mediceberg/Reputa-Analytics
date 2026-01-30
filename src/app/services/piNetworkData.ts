@@ -305,12 +305,16 @@ export async function fetchReputationData(
   const baseUrl = getApiBaseUrl(isMainnet);
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
     // Fetch account details
     const accountResponse = await fetch(`${baseUrl}/accounts/${walletAddress}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
       },
+      signal: controller.signal,
     });
 
     // Fetch transaction history
@@ -319,7 +323,10 @@ export async function fetchReputationData(
       headers: {
         'Accept': 'application/json',
       },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (!accountResponse.ok) {
       throw new Error(`Account not found: ${accountResponse.status}`);

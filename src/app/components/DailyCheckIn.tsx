@@ -89,7 +89,17 @@ export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
     return null;
   }
 
-  const canMerge = state.dailyCheckInPoints > 0;
+  const safeNumber = (val: any, fallback: number = 0): number => {
+    const num = Number(val);
+    return isNaN(num) || !isFinite(num) ? fallback : num;
+  };
+
+  const streak = safeNumber(state.streak);
+  const dailyCheckInPoints = safeNumber(state.dailyCheckInPoints);
+  const totalCheckInDays = safeNumber(state.totalCheckInDays);
+  const reputationScore = safeNumber(state.reputationScore);
+
+  const canMerge = dailyCheckInPoints > 0;
 
   return (
     <div 
@@ -112,7 +122,7 @@ export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
               <h3 className="text-sm font-bold text-white">Daily Check-in</h3>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-amber-400 font-semibold">
-                  {state.streak} day streak
+                  {streak} day streak
                 </span>
                 <Zap className="w-3 h-3 text-amber-400" />
               </div>
@@ -120,7 +130,7 @@ export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
           </div>
           
           <div className="text-right">
-            <p className="text-xl font-black text-cyan-400">{state.dailyCheckInPoints}</p>
+            <p className="text-xl font-black text-cyan-400">{dailyCheckInPoints}</p>
             <p className="text-[9px] text-gray-500 uppercase">Points</p>
           </div>
         </div>
@@ -192,7 +202,7 @@ export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
             ) : (
               <>
                 <Merge className="w-4 h-4" />
-                Merge {state.dailyCheckInPoints} pts to Reputation
+                Merge {dailyCheckInPoints} pts to Reputation
               </>
             )}
           </button>
@@ -200,10 +210,10 @@ export function DailyCheckIn({ userId, onPointsEarned }: DailyCheckInProps) {
 
         <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[10px]">
           <span className="text-gray-500">
-            Total: <span className="text-amber-400 font-bold">{state.totalCheckInDays}</span> days
+            Total: <span className="text-amber-400 font-bold">{totalCheckInDays}</span> days
           </span>
           <span className="text-gray-500">
-            Reputation: <span className="text-emerald-400 font-bold">{state.reputationScore}</span>
+            Reputation: <span className="text-emerald-400 font-bold">{reputationScore}</span>
           </span>
         </div>
       </div>

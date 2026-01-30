@@ -29,25 +29,75 @@ export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
   }, [reputation]);
 
   const loadReputation = async (addr: string) => {
-    if (!addr) return;
+    if (!addr) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const data = await fetchReputationData(addr, isMainnet);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      const data = await Promise.race([
+        fetchReputationData(addr, isMainnet),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 15000)
+        )
+      ]);
+      
+      clearTimeout(timeoutId);
       setReputation(data);
     } catch (error) {
       console.error('Failed to load reputation:', error);
+      setReputation({
+        score: 350,
+        trustLevel: 'Medium',
+        transactionCount: 25,
+        accountAge: 180,
+        networkActivity: 45,
+        onChainVerified: false,
+        isEstimated: true,
+        activityData: {
+          accountAgeDays: 180,
+          lastActivityDate: new Date(),
+          dailyCheckins: 0, adBonuses: 0, reportViews: 0, toolUsage: 0,
+          internalTxCount: 15, appInteractions: 5, sdkPayments: 2,
+          normalTrades: 3, uniqueTokens: 2, regularActivityWeeks: 4,
+          stakingDays: 0, smallExternalTransfers: 1, frequentExternalTransfers: 0,
+          suddenExits: 0, continuousDrain: 0, spamCount: 0, farmingInstances: 0, suspiciousLinks: 0,
+        },
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (address) {
-      loadReputation(address);
+    const targetAddress = address || walletAddress || '';
+    if (targetAddress) {
+      loadReputation(targetAddress);
     } else {
-      loadReputation('SAMPLE_WALLET');
+      setLoading(false);
+      setReputation({
+        score: 350,
+        trustLevel: 'Medium',
+        transactionCount: 25,
+        accountAge: 180,
+        networkActivity: 45,
+        onChainVerified: false,
+        isEstimated: true,
+        activityData: {
+          accountAgeDays: 180,
+          lastActivityDate: new Date(),
+          dailyCheckins: 0, adBonuses: 0, reportViews: 0, toolUsage: 0,
+          internalTxCount: 15, appInteractions: 5, sdkPayments: 2,
+          normalTrades: 3, uniqueTokens: 2, regularActivityWeeks: 4,
+          stakingDays: 0, smallExternalTransfers: 1, frequentExternalTransfers: 0,
+          suddenExits: 0, continuousDrain: 0, spamCount: 0, farmingInstances: 0, suspiciousLinks: 0,
+        },
+      });
     }
-  }, [isMainnet]);
+  }, [isMainnet, walletAddress]);
 
   const getTrustLevelColor = (level: string) => {
     switch (level) {
