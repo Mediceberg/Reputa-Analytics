@@ -5,7 +5,7 @@
  * Supports auto-refresh with configurable intervals
  */
 
-const PI_TESTNET_API = 'https://api.testnet.minepi.com';
+const PI_TESTNET_API = 'https://api.testnet.minepi.com'; 
 const PI_MAINNET_API = 'https://api.mainnet.minepi.com';
 const PI_BLOCK_EXPLORER = 'https://blockexplorer.minepi.com';
 
