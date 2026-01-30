@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';   
+import { useState, useEffect } from 'react';  
 import { Analytics } from '@vercel/analytics/react';
 import { Send, MessageSquare, LogIn } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
