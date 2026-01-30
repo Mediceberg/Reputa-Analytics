@@ -6,7 +6,7 @@
 
 // Core Functions - يتم تصدير الدوال التي تم ربطها بالبلوكشين والـ SDK
 export { fetchWalletData } from './wallet';
-export { analyzeTransaction, analyzeAllTransactions, getTransactionExplanation, flagSuspiciousTransactions } from './transactions';
+export { analyzeTransaction, analyzeAllTransactions, getTransactionExplanation, flagSuspiciousTransactions } from './transactions'; 
 export { analyzeStaking, estimateStaking } from './staking';
 export { processYearWithPiImage, calculateMiningConsistency } from './mining';
 export { verifyImage, createImageAlert } from './imageVerification';
