@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Upload, Download, Sparkles, Loader2, Shield, Zap, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { generateCompleteReport, checkVIPStatus, createVIPPayment } from '../protocol';
+import { generateCompleteReport, checkVIPStatus } from '../protocol';
+import { createVIPPayment } from '../services/piPayments';
 import { processYearWithPiImage } from '../protocol/mining';
 import type { PiUser, ReputationReport, MiningData } from '../protocol/types';
 
@@ -75,10 +76,10 @@ export function ReputaDashboard({ onClose, currentUser, walletAddress }: ReputaD
     if (!currentUser?.uid) return;
     
     try {
-      const success = await createVIPPayment(currentUser.uid);
-      if (success) {
-        alert('Payment initiated! Check your Pi Wallet to confirm.');
-      }
+      await createVIPPayment(currentUser.uid, () => {
+        setIsVIP(true);
+        alert('VIP activated! Thank you for your support.');
+      });
     } catch (error) {
       console.error('VIP upgrade failed:', error);
       alert('Payment failed to initialize. Please use Pi Browser.');

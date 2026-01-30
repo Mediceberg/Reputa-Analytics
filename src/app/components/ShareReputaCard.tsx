@@ -288,18 +288,32 @@ Check yours at: reputa-score.vercel.app`;
       }
 
       if (!shared) {
-        const url = URL.createObjectURL(imageBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'reputa-score.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        await navigator.clipboard.writeText(shareText);
-        setShareSuccess(true);
-        setTimeout(() => setShareSuccess(false), 3000);
+        // Use Data URL instead of Blob URL for better Pi Browser compatibility
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const dataUrl = reader.result as string;
+          
+          // Create download link with data URL
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `reputa-score-${username}.png`;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          
+          // Also copy text to clipboard
+          try {
+            await navigator.clipboard.writeText(shareText);
+          } catch (clipErr) {
+            console.log('Clipboard copy failed, but download succeeded');
+          }
+          
+          setShareSuccess(true);
+          setTimeout(() => setShareSuccess(false), 3000);
+        };
+        reader.readAsDataURL(imageBlob);
+        return; // Exit early since we're handling async
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
@@ -318,20 +332,32 @@ Check yours at: reputa-score.vercel.app`;
     try {
       const imageBlob = await generateCardImage();
       if (imageBlob) {
-        const url = URL.createObjectURL(imageBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reputa-score-${username}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // Use Data URL for better compatibility with Pi Browser
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result as string;
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `reputa-score-${username}.png`;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setIsGenerating(false);
+          setShareSuccess(true);
+          setTimeout(() => setShareSuccess(false), 3000);
+        };
+        reader.onerror = () => {
+          console.error('Failed to convert image to data URL');
+          setIsGenerating(false);
+        };
+        reader.readAsDataURL(imageBlob);
+        return; // Exit early for async handling
       }
     } catch (error) {
       console.error('Download failed:', error);
-    } finally {
-      setIsGenerating(false);
     }
+    setIsGenerating(false);
   };
 
   return (

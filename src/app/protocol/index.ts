@@ -11,7 +11,10 @@ export { analyzeStaking, estimateStaking } from './staking';
 export { processYearWithPiImage, calculateMiningConsistency } from './mining';
 export { verifyImage, createImageAlert } from './imageVerification';
 export { generateReport, formatVIPReport, formatRegularReport, exportReportJSON } from './report';
-export { initializePi, authenticate, createVIPPayment, checkVIPStatus, isPiAvailable } from './piPayment';
+// Payment functions are now in src/app/services/piPayments.ts and piSdk.ts
+// Legacy exports maintained for backward compatibility
+export { isPiAvailable, checkVIPStatus } from './piPayment';
+// createVIPPayment should be imported from '../services/piPayments' instead
 
 // Unified Atomic Scoring Protocol (Single source of truth for reputation)
 export { 

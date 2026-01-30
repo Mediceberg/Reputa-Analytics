@@ -1,20 +1,9 @@
 /**
- * Pi Payment Module - Handle Pi Network Testnet payments
+ * Pi Payment Module - Legacy functions for backward compatibility
+ * Main payment functions are in src/app/services/piPayments.ts
  */
 
 import type { PaymentData } from './types'; 
-
-interface PiSDK {
-  init: (options: { version: string }) => Promise<void>;
-  authenticate: (scopes: string[], onIncomplete: (payment: any) => void) => Promise<{ user: { uid: string; username: string } }>;
-  createPayment: (config: any, callbacks: any) => Promise<{ identifier: string }>;
-}
-
-declare global {
-  interface Window {
-    Pi?: PiSDK;
-  }
-}
 
 /**
  * Check if Pi SDK is available
@@ -25,6 +14,7 @@ export function isPiAvailable(): boolean {
 
 /**
  * Initialize Pi SDK - التأكد من النسخة والتشغيل
+ * @deprecated Use initializePiSDK from '../services/piSdk' instead
  */
 export async function initializePi(): Promise<void> {
   if (!isPiAvailable()) {
@@ -33,8 +23,8 @@ export async function initializePi(): Promise<void> {
   }
   
   try {
-    // إصدار 2.0 هو المستقر حالياً للتعامل مع المدفوعات
-    await window.Pi!.init({ version: '2.0' });
+    const Pi = (window as any).Pi;
+    await Pi.init({ version: '2.0' });
     console.log('[PI PAYMENT] SDK initialized');
   } catch (error) {
     console.error('[PI PAYMENT] Init failed:', error);
@@ -44,6 +34,7 @@ export async function initializePi(): Promise<void> {
 
 /**
  * Authenticate user - جلب البيانات الحقيقية للمستخدم
+ * @deprecated Use authenticateUser from '../services/piSdk' instead
  */
 export async function authenticate(): Promise<{ uid: string; username: string }> {
   if (!isPiAvailable()) {
@@ -51,8 +42,9 @@ export async function authenticate(): Promise<{ uid: string; username: string }>
   }
   
   try {
+    const Pi = (window as any).Pi;
     const scopes = ['username', 'payments'];
-    const auth = await window.Pi!.authenticate(scopes, onIncompletePayment);
+    const auth = await Pi.authenticate(scopes, onIncompletePayment);
     
     return {
       uid: auth.user.uid,
@@ -65,28 +57,27 @@ export async function authenticate(): Promise<{ uid: string; username: string }>
 }
 
 /**
- * Create VIP payment (1 Pi) - ربط الدفع بشبكة Testnet
+ * Create VIP payment (1 Pi) - Legacy version
+ * @deprecated Use createVIPPayment from '../services/piPayments' instead
  */
-export async function createVIPPayment(userId: string): Promise<PaymentData> {
+export async function createVIPPaymentLegacy(userId: string): Promise<PaymentData> {
   if (!isPiAvailable()) {
     throw new Error('Pi SDK not available. Please use Pi Browser.');
   }
   
   try {
-    // استدعاء واجهة الدفع الحقيقية من Pi SDK
-    const payment = await window.Pi!.createPayment({
+    const Pi = (window as any).Pi;
+    const payment = await Pi.createPayment({
       amount: 1,
       memo: 'Reputa Score VIP Subscription - Testnet',
       metadata: { type: 'vip_subscription', userId, network: 'testnet' }
     }, {
       onReadyForServerApproval: (paymentId: string) => {
         console.log('[PI PAYMENT] Ready for approval:', paymentId);
-        // إبلاغ السيرفر للموافقة (Approve)
         approvePayment(paymentId, userId, 1);
       },
       onReadyForServerCompletion: (paymentId: string, txid: string) => {
         console.log('[PI PAYMENT] Ready for completion:', paymentId, txid);
-        // إبلاغ السيرفر باكتمال النقل على البلوكشين (Complete)
         completePayment(paymentId, txid, userId, 1);
       },
       onCancel: (paymentId: string) => {
@@ -96,6 +87,10 @@ export async function createVIPPayment(userId: string): Promise<PaymentData> {
         console.error('[PI PAYMENT] Error:', error);
       }
     });
+    
+    if (!payment || !payment.identifier) {
+      throw new Error('Payment creation returned no identifier');
+    }
     
     return {
       paymentId: payment.identifier,

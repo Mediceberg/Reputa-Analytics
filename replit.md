@@ -38,12 +38,19 @@ The following features are CRITICAL to the application and must NEVER be broken 
 
 ## Recent Changes (January 2026)
 
-### Pi Browser Detection & Share Feature (Latest)
+### Pi Browser Detection & Share Feature (Latest - Jan 30, 2026)
 - **Fixed Pi Browser Detection:** Now uses ONLY User-Agent check (removed SDK presence check that caused false positives)
 - **Demo Mode Auto-Detection:** When not in Pi Browser, app automatically enters demo mode with Guest_Explorer user
-- **ShareReputaCard Component:** New feature to share reputation score with Web Share API and clipboard fallback
+- **Demo Data Display:** Demo mode now correctly shows sample data (632 reputation, 182 points, 7-day streak)
+- **ShareReputaCard Component:** Fixed for Pi Browser compatibility - uses Data URL instead of Blob URL for image download
 - **Share Button in Header:** Purple gradient button next to Telegram link (only shows when wallet data exists)
 - **A2U Payment Visual Counter:** Logo click counter (1-4) with glow effect, unlocks App-to-User payment at 5 clicks
+
+### Code Consolidation (Jan 30, 2026)
+- **Payment Functions Unified:** `createVIPPayment` now imported from `src/app/services/piPayments.ts` instead of legacy `protocol/piPayment.ts`
+- **Legacy piPayment.ts:** Marked as deprecated with proper documentation, uses type-safe window.Pi access
+- **Import Fixes:** Fixed all import issues in ReputaDashboard components to use correct payment service
+- **Type Declarations:** Added image type declarations for PNG/SVG/JPG imports
 
 ### UI/UX Mobile Improvements
 - **TopBar Component:** Fixed top navigation bar for mobile with menu button, wallet balance display, and notification icon

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Upload, TrendingUp, Shield, Activity, Clock, Award, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -7,11 +7,11 @@ import {
   generateCompleteReport, 
   processYearWithPiImage, 
   verifyImage,
-  createVIPPayment,
   checkVIPStatus,
   type ReputationReport,
   type MiningData 
 } from '../protocol';
+import { createVIPPayment } from '../services/piPayments';
 
 interface DashboardProps {
   walletAddress: string;
@@ -97,19 +97,13 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
       return;
     }
     try {
-      const approveRes = await fetch('/api/payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'approve', paymentId: `pay_${Date.now()}`, userId, amount: 1 })
-      });
-      const approval = await approveRes.json();
-      if (approval.approved) {
-        await createVIPPayment(userId);
+      await createVIPPayment(userId, () => {
         setIsVIP(true);
         loadReport();
-      }
+      });
     } catch (error) {
-      alert('VIP upgrade failed.');
+      console.error('VIP upgrade failed:', error);
+      alert('VIP upgrade failed. Please use Pi Browser.');
     }
   };
 
