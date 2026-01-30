@@ -8,7 +8,14 @@ I prefer iterative development with a focus on delivering functional, tested com
 
 ## Recent Changes (January 2026)
 
-### UI/UX Mobile Improvements (Latest)
+### Pi Browser Detection & Share Feature (Latest)
+- **Fixed Pi Browser Detection:** Now uses ONLY User-Agent check (removed SDK presence check that caused false positives)
+- **Demo Mode Auto-Detection:** When not in Pi Browser, app automatically enters demo mode with Guest_Explorer user
+- **ShareReputaCard Component:** New feature to share reputation score with Web Share API and clipboard fallback
+- **Share Button in Header:** Purple gradient button next to Telegram link (only shows when wallet data exists)
+- **A2U Payment Visual Counter:** Logo click counter (1-4) with glow effect, unlocks App-to-User payment at 5 clicks
+
+### UI/UX Mobile Improvements
 - **TopBar Component:** Fixed top navigation bar for mobile with menu button, wallet balance display, and notification icon
 - **MainCard Component:** Persistent profile card with professional design showing user info, wallet balance, reputa score, level, trust rank, and progress bar - always visible across navigations
 - **SideDrawer Component:** Hamburger menu navigation for mobile with wallet balance display, user info, and full navigation
