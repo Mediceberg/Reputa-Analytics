@@ -1,4 +1,4 @@
-import { User, Shield, Zap, Award, Star, TrendingUp } from 'lucide-react';
+import { User, Shield, Zap, Award, Star, TrendingUp, Share2 } from 'lucide-react';
 import { AtomicTrustLevel, TRUST_LEVEL_COLORS } from '../protocol/atomicScoring';
 
 interface MainCardProps {
@@ -12,6 +12,7 @@ interface MainCardProps {
   pointsToNext: number;
   maxPoints: number;
   isVip?: boolean;
+  onShare?: () => void;
 }
 
 const LEVEL_ICONS: Record<AtomicTrustLevel, React.ReactNode> = {
@@ -45,6 +46,7 @@ export function MainCard({
   pointsToNext,
   maxPoints,
   isVip = false,
+  onShare,
 }: MainCardProps) {
   const trustColors = TRUST_LEVEL_COLORS[trustLevel];
   const trustInfo = TRUST_LABELS[trustLevel];
@@ -94,6 +96,21 @@ export function MainCard({
             </div>
             <p className="text-[11px] font-mono text-gray-500 truncate">{formatAddress(walletAddress)}</p>
           </div>
+          
+          {onShare && (
+            <button
+              onClick={onShare}
+              className="p-2.5 rounded-xl transition-all active:scale-95 shrink-0"
+              style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.15) 100%)',
+                border: '1px solid rgba(139, 92, 246, 0.4)',
+                boxShadow: '0 0 15px rgba(139, 92, 246, 0.2)',
+              }}
+              title="Share your score"
+            >
+              <Share2 className="w-5 h-5 text-purple-400" />
+            </button>
+          )}
         </div>
 
         <div 

@@ -20,6 +20,7 @@ import { TopWalletsPage } from './TopWalletsPage';
 import { ReputationPage } from './ReputationPage';
 import { DailyCheckIn } from '../components/DailyCheckIn';
 import { PointsExplainer } from '../components/PointsExplainer';
+import { ShareReputaCard } from '../components/ShareReputaCard';
 import { MiningDaysWidget } from '../components/MiningDaysWidget';
 import { ProfileSection } from '../components/ProfileSection';
 import { 
@@ -79,6 +80,7 @@ export function UnifiedDashboard({
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
   const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [unifiedScoreData, setUnifiedScoreData] = useState<UnifiedScoreData | null>(null);
   const [userPoints, setUserPoints] = useState({
     total: walletData.reputaScore || 0,
@@ -324,6 +326,7 @@ export function UnifiedDashboard({
             pointsToNext={levelProgress.pointsToNextLevel}
             maxPoints={getBackendScoreCap()}
             isVip={isProUser}
+            onShare={() => setShowShareCard(true)}
           />
         </div>
 
@@ -1011,6 +1014,18 @@ export function UnifiedDashboard({
         balance={walletData.balance}
         onLogout={onReset}
       />
+
+      {/* Share Card Modal */}
+      {showShareCard && (
+        <ShareReputaCard
+          username={username || 'Pioneer'}
+          score={mode.mode === 'demo' ? 0 : levelProgress.displayScore}
+          level={levelProgress.levelIndex + 1}
+          trustRank={levelProgress.currentLevel}
+          walletAddress={walletData.address}
+          onClose={() => setShowShareCard(false)}
+        />
+      )}
     </div>
   );
 }
