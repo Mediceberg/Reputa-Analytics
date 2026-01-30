@@ -4,7 +4,7 @@
  * Full A2U (App-to-User) payment flow with blockchain transaction
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node'; 
+import type { VercelRequest, VercelResponse } from '@vercel/node';  
 import { Redis } from '@upstash/redis';
 import * as StellarSdk from 'stellar-sdk';
 
