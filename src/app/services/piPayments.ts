@@ -1,4 +1,4 @@
-import { isPiBrowser, waitForPiSDK, initializePiSDK } from './piSdk';
+import { isPiBrowser, waitForPiSDK, initializePiSDK } from './piSdk'; 
 
 interface PiPaymentSDK {
   init?: (options: { version: string; sandbox?: boolean }) => Promise<void>;
