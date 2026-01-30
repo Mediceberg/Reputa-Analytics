@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'; 
 import { 
   ArrowLeft, Wallet, Trophy, Medal, Search, Filter, RefreshCw, 
   ArrowUpDown, Activity, Clock, TrendingUp, Lock, Unlock, Coins,
