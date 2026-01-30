@@ -86,7 +86,8 @@ api/
 
 ## External Dependencies
 - **Pi Network SDK:** For user authentication, wallet integration, and on-chain interactions within the Pi Network.
-- **Redis (Upstash):** For persistent user state storage (reputation, points, interaction history)
+- **PostgreSQL (Replit):** Primary database for persistent storage (users, reputation, pioneers, feedback, wallet states)
+- **Redis (Upstash):** For caching and session storage
 - **PiScan.io Rich List API:** Primary source for top wallet data.
 - **Pi Block Explorer API:** Fallback data source for top wallets and real-time network metrics.
 - **Vercel:** Deployment platform, utilized for serverless API functions.
@@ -95,7 +96,16 @@ api/
 - **Framer Motion:** For declarative animations in React.
 
 ## Environment Variables Required
+- `DATABASE_URL` - PostgreSQL connection string (auto-configured by Replit)
 - `KV_REST_API_URL` - Upstash Redis URL
 - `KV_REST_API_TOKEN` - Upstash Redis Token
 - `PI_API_KEY` - Pi Network API Key (for payments)
 - `PI_NETWORK` - Network mode (testnet/mainnet)
+
+## Database Schema
+The PostgreSQL database contains the following tables:
+- `users` - User accounts (uid, username, wallet_address, is_vip, tx_count)
+- `reputation` - Reputation scores (uid, reputation_score, blockchain_score, daily_check_in_points, etc.)
+- `pioneers` - Registered pioneers (username, wallet)
+- `feedback` - User feedback (username, text)
+- `wallet_states` - Wallet state snapshots (uid, wallet_address, state_data)
