@@ -41,7 +41,7 @@ export function TransactionList({ transactions, walletAddress }: TransactionList
   };
 
   return (
-    <Card className="p-6 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-cyan-500/20 shadow-2xl shadow-cyan-500/10 overflow-hidden relative backdrop-blur-xl">
+    <Card className="p-4 sm:p-6 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-cyan-500/20 shadow-2xl shadow-cyan-500/10 overflow-hidden relative backdrop-blur-xl">
       {/* Background Effects */}
       <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2"></div>
       <div className="absolute bottom-0 right-0 w-48 h-48 bg-gradient-to-tl from-orange-500/10 to-yellow-500/10 rounded-full blur-3xl translate-y-1/2 translate-x-1/2"></div>
@@ -53,20 +53,20 @@ export function TransactionList({ transactions, walletAddress }: TransactionList
       }}></div>
 
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <Activity className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-xl text-white">Recent Transactions</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Last {transactions.length} verified transactions
+              <h2 className="font-bold text-base sm:text-xl text-white">Recent Activity</h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                {transactions.length} transactions
               </p>
             </div>
           </div>
-          <Badge className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30 font-bold backdrop-blur-sm">
-            {transactions.length} Transactions
+          <Badge className="px-2 py-1 sm:px-4 sm:py-2 bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30 font-bold backdrop-blur-sm text-xs sm:text-sm">
+            {transactions.length}
           </Badge>
         </div>
 
@@ -85,52 +85,46 @@ export function TransactionList({ transactions, walletAddress }: TransactionList
               return (
                 <div
                   key={tx.id}
-                  className={`flex items-center gap-4 p-4 bg-white/5 backdrop-blur-sm rounded-2xl border transition-all duration-200 group hover:scale-[1.01] ${
+                  className={`flex items-center gap-3 p-3 sm:p-4 bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl border transition-all duration-200 group ${
                     isReceived 
-                      ? 'border-emerald-500/20 hover:border-emerald-400/40 hover:bg-emerald-500/10' 
-                      : 'border-orange-500/20 hover:border-orange-400/40 hover:bg-orange-500/10'
+                      ? 'border-emerald-500/20 hover:border-emerald-400/40' 
+                      : 'border-orange-500/20 hover:border-orange-400/40'
                   }`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg ${
                     isReceived 
                       ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-emerald-500/30' 
                       : 'bg-gradient-to-br from-orange-500 to-orange-600 shadow-orange-500/30'
                   }`}>
                     {isReceived ? (
-                      <ArrowDownLeft className="w-6 h-6 text-white" />
+                      <ArrowDownLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     ) : (
-                      <ArrowUpRight className="w-6 h-6 text-white" />
+                      <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`font-bold ${
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-0.5 sm:mb-1">
+                      <span className={`font-bold text-sm sm:text-base ${
                         isReceived ? 'text-emerald-400' : 'text-orange-400'
                       }`}>
                         {isReceived ? 'Received' : 'Sent'}
                       </span>
-                      {tx.memo && (
-                        <Badge variant="outline" className="text-xs max-w-[150px] truncate bg-slate-800/50 border-slate-700/50 text-gray-400">
-                          {tx.memo}
-                        </Badge>
-                      )}
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-gray-400">
-                      <span className="flex items-center gap-1">
-                        {isReceived ? 'From:' : 'To:'}
-                        <code className="font-mono text-xs bg-slate-800/80 px-2 py-1 rounded-lg border border-slate-700/50 text-cyan-400">
+                    <div className="flex flex-col gap-0.5 text-gray-400">
+                      <span className="flex items-center gap-1 text-xs sm:text-sm truncate">
+                        <span className="text-gray-500 flex-shrink-0">{isReceived ? 'From' : 'To'}:</span>
+                        <code className="font-mono text-[10px] sm:text-xs text-cyan-400 truncate">
                           {formatAddress(isReceived ? tx.from : tx.to)}
                         </code>
                       </span>
-                      <span className="text-slate-600 hidden sm:inline">•</span>
-                      <span className="text-gray-500 text-xs">{formatDate(tx.timestamp)}</span>
+                      <span className="text-gray-500 text-[10px] sm:text-xs">{formatDate(tx.timestamp)}</span>
                     </div>
                   </div>
 
-                  <div className="text-right flex-shrink-0">
-                    <p className={`font-black text-lg ${
+                  <div className="text-right flex-shrink-0 pl-2">
+                    <p className={`font-black text-base sm:text-lg whitespace-nowrap ${
                       isReceived ? 'text-emerald-400' : 'text-gray-300'
                     }`} style={isReceived ? { textShadow: '0 0 10px rgba(16, 185, 129, 0.3)' } : {}}>
                       {isReceived ? '+' : '-'}{tx.amount.toFixed(2)} π

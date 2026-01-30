@@ -85,25 +85,18 @@ export function WalletChecker({ onCheck }: WalletCheckerProps) {
           <div 
             className="absolute inset-0 rounded-full animate-pulse-glow"
             style={{
-              background: 'radial-gradient(circle, rgba(0, 217, 255, 0.4) 0%, rgba(139, 92, 246, 0.2) 50%, transparent 70%)',
-              filter: 'blur(30px)',
-              transform: 'scale(1.6)',
+              background: 'radial-gradient(circle, rgba(0, 217, 255, 0.5) 0%, rgba(139, 92, 246, 0.3) 40%, transparent 70%)',
+              filter: 'blur(40px)',
+              transform: 'scale(2)',
             }}
           />
-          <div 
-            className="relative w-20 h-20 sm:w-28 sm:h-28 flex items-center justify-center rounded-2xl"
-            style={{
-              background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 22, 30, 0.95) 100%)',
-              boxShadow: '0 0 60px rgba(0, 217, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.05)',
-            }}
-          >
+          <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
             <img 
               src={logoImage} 
               alt="Reputa Score" 
-              className="w-14 h-14 sm:w-20 sm:h-20 object-contain animate-float"
+              className="w-24 h-24 sm:w-32 sm:h-32 object-contain animate-float"
               style={{ 
-                filter: 'drop-shadow(0 0 15px rgba(0, 217, 255, 0.6))',
-                mixBlendMode: 'screen',
+                filter: 'drop-shadow(0 0 25px rgba(0, 217, 255, 0.7)) drop-shadow(0 0 50px rgba(139, 92, 246, 0.4))',
               }}
             />
           </div>

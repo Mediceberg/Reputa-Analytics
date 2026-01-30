@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
+import { SideDrawer } from '../components/SideDrawer';
 import { TransactionTimeline } from '../components/charts/TransactionTimeline';
 import { PointsBreakdown } from '../components/charts/PointsBreakdown';
 import { RiskActivity } from '../components/charts/RiskActivity';
@@ -74,6 +75,7 @@ export function UnifiedDashboard({
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [networkSubPage, setNetworkSubPage] = useState<NetworkSubPage>(null);
+  const [isSideDrawerOpen, setIsSideDrawerOpen] = useState(false);
   const [userPoints, setUserPoints] = useState(() => {
     const defaultPoints = {
       total: walletData.reputaScore || 0,
@@ -1147,6 +1149,22 @@ export function UnifiedDashboard({
       <MobileBottomNav
         activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
         onItemClick={handleSidebarNavigation}
+        onMenuClick={() => setIsSideDrawerOpen(true)}
+      />
+
+      {/* Side Drawer for mobile */}
+      <SideDrawer
+        isOpen={isSideDrawerOpen}
+        onClose={() => setIsSideDrawerOpen(false)}
+        activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
+        onItemClick={(item) => {
+          handleSidebarNavigation(item);
+          setIsSideDrawerOpen(false);
+        }}
+        username={username}
+        walletAddress={walletData.address}
+        balance={walletData.balance}
+        onLogout={onReset}
       />
     </div>
   );

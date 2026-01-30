@@ -7,6 +7,16 @@ Reputa Score is a React + TypeScript application designed for the Pi Network, fo
 I prefer iterative development with a focus on delivering functional, tested components. Please use clear, concise language in all explanations. Before making any significant architectural changes or adding new major dependencies, please ask for confirmation. Ensure all new features are mobile-first, specifically optimized for the Pi Browser environment, and maintain consistency with the dark, futuristic design theme. Do not modify the existing scoring logic in `atomicScoring.ts` unless explicitly instructed, as it is the single source of truth for reputation calculation.
 
 ## Recent Changes (January 2026)
+
+### UI/UX Mobile Improvements (Latest)
+- **SideDrawer Component:** New hamburger menu navigation for mobile with wallet balance display, user info, and full navigation
+- **Simplified DailyCheckIn:** Compact 2-column layout, removed success overlay animation, ad bonus marked as "Coming Soon"
+- **Simplified ProfileSection:** Streamlined user card with 2-column stats, compact 4-column quick stats grid, cleaner score breakdown
+- **Mobile TransactionList:** Optimized for smaller screens with responsive padding and font sizes
+- **Enhanced Logo Display:** Larger logo (32x32) without dark box background, improved glow effects in WalletChecker
+- **Bottom Navigation:** Added "More" menu button to trigger SideDrawer on mobile
+
+### API Consolidation
 - **API Consolidation:** Reduced API folder from 14+ files to 6 files maximum:
   - `api/auth.ts` - Authentication endpoints
   - `api/payments.ts` - All payment operations (approve, complete, payout, send)

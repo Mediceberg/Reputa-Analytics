@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { User, Wallet, Activity, Calendar, Award, CheckCircle, Star, TrendingUp, Shield, Zap, Target, Flame } from 'lucide-react';
+import { User, Wallet, Activity, Calendar, Award, Star, TrendingUp, Shield, Zap, Target } from 'lucide-react';
 import { WalletData, AppMode } from '../protocol/types';
 import { 
   calculateAtomicReputation, 
@@ -11,8 +11,6 @@ import {
   getBackendScoreCap
 } from '../protocol/atomicScoring';
 import { DailyCheckIn } from './DailyCheckIn';
-import { MiningDaysWidget } from './MiningDaysWidget';
-import { PointsExplainer } from './PointsExplainer';
 import { useLanguage } from '../hooks/useLanguage';
 import { WalletActivityData } from '../services/piNetworkData';
 
@@ -28,7 +26,7 @@ interface ProfileSectionProps {
     activity: number;
     streak: number;
   };
-  onPointsEarned: (points: number, type: 'checkin' | 'ad') => void;
+  onPointsEarned: (points: number, type: 'checkin' | 'merge') => void;
   activityData?: WalletActivityData;
 }
 
@@ -91,262 +89,97 @@ export function ProfileSection({
   const levelName = LEVEL_NAMES[levelProgress.currentLevel];
 
   return (
-    <div className={`space-y-5 animate-in fade-in duration-300 ${isRTL ? 'rtl' : ''}`}>
+    <div className={`space-y-4 animate-in fade-in duration-300 ${isRTL ? 'rtl' : ''}`}>
       <div 
-        className="rounded-2xl p-6 relative overflow-hidden"
+        className="rounded-xl p-4 sm:p-5"
         style={{ 
           background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.95) 0%, rgba(20, 24, 32, 0.9) 100%)',
           border: `1px solid ${trustColors.border}`,
-          boxShadow: `0 0 40px ${trustColors.bg}`,
         }}
       >
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            background: `radial-gradient(circle at 80% 20%, ${trustColors.text}20 0%, transparent 50%)`,
-          }}
-        />
-
-        <div className="relative z-10">
-          <div className="flex flex-col sm:flex-row items-center gap-5 mb-6">
-            <div className="relative flex-shrink-0">
-              <div 
-                className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.15) 100%)`,
-                  border: `2px solid ${trustColors.border}`,
-                  boxShadow: `0 0 30px ${trustColors.bg}, inset 0 0 20px ${trustColors.bg}`,
-                }}
-              >
-                <User className="w-10 h-10" style={{ color: trustColors.text }} />
-              </div>
-              <div 
-                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center"
-                style={{
-                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                  border: '2px solid rgba(10, 11, 15, 0.9)',
-                  boxShadow: '0 0 10px rgba(16, 185, 129, 0.5)',
-                }}
-              >
-                <CheckCircle className="w-3.5 h-3.5 text-white" />
-              </div>
-            </div>
-
-            <div className="flex-1 text-center sm:text-left min-w-0">
-              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
-                <h2 className="text-xl font-bold text-white truncate">
-                  {username || 'Pioneer'}
-                </h2>
-                {isProUser && (
-                  <span 
-                    className="px-2 py-0.5 rounded text-[9px] font-black uppercase text-amber-400 bg-amber-500/20"
-                    style={{ border: '1px solid rgba(245, 158, 11, 0.4)' }}
-                  >
-                    VIP
-                  </span>
-                )}
-              </div>
-              <p className="text-xs font-mono mb-3" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>
-                {formatAddress(walletData.address)}
-              </p>
-              
-              <div 
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
-                style={{ 
-                  background: trustColors.bg, 
-                  border: `1px solid ${trustColors.border}`,
-                  boxShadow: `0 0 15px ${trustColors.bg}`,
-                }}
-              >
-                {LEVEL_ICONS[levelProgress.currentLevel]}
-                <span 
-                  className="text-xs font-bold uppercase"
-                  style={{ color: trustColors.text }}
-                >
-                  {isRTL ? levelName.ar : levelName.en}
-                </span>
-                <span 
-                  className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                  style={{ background: 'rgba(0,0,0,0.3)', color: trustColors.text }}
-                >
-                  Lv.{levelProgress.levelIndex + 1}
-                </span>
-              </div>
-            </div>
+        <div className="flex items-center gap-4 mb-4">
+          <div 
+            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: `linear-gradient(135deg, ${trustColors.bg} 0%, rgba(0, 217, 255, 0.15) 100%)`,
+              border: `1px solid ${trustColors.border}`,
+            }}
+          >
+            <User className="w-7 h-7" style={{ color: trustColors.text }} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div 
-              className="p-4 rounded-xl text-center"
-              style={{
-                background: `linear-gradient(145deg, ${trustColors.bg} 0%, rgba(0, 0, 0, 0.3) 100%)`,
-                border: `1px solid ${trustColors.border}`,
-              }}
-            >
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Target className="w-4 h-4" style={{ color: trustColors.text }} />
-                <span className="text-[10px] font-bold uppercase" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
-                  {isRTL ? 'نقاط السمعة' : 'Reputa Score'}
-                </span>
-              </div>
-              <p className="text-2xl font-black" style={{ color: trustColors.text }}>
-                {levelProgress.displayScore.toLocaleString()}
-              </p>
-            </div>
-
-            <div 
-              className="p-4 rounded-xl text-center"
-              style={{
-                background: 'linear-gradient(145deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0.3) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.3)',
-              }}
-            >
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Flame className="w-4 h-4 text-purple-400" />
-                <span className="text-[10px] font-bold uppercase" style={{ color: 'rgba(160, 164, 184, 0.7)' }}>
-                  {isRTL ? 'إجمالي النقاط' : 'Total Points'}
-                </span>
-              </div>
-              <p className="text-2xl font-black text-purple-400">
-                {userPoints.total.toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-2">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase" style={{ color: 'rgba(160, 164, 184, 0.6)' }}>
-                {isRTL ? 'المستوى' : 'Level'} {levelProgress.levelIndex + 1}/7
-              </span>
-              {levelProgress.nextLevel && (
-                <span className="text-[10px] font-medium" style={{ color: trustColors.text }}>
-                  {levelProgress.pointsToNextLevel.toLocaleString()} {isRTL ? 'نقطة لـ' : 'pts to'} {isRTL ? LEVEL_NAMES[levelProgress.nextLevel].ar : LEVEL_NAMES[levelProgress.nextLevel].en}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg font-bold text-white truncate">{username || 'Pioneer'}</h2>
+              {isProUser && (
+                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase text-amber-400 bg-amber-500/20">
+                  VIP
                 </span>
               )}
             </div>
-            
-            <div className="relative">
-              <div 
-                className="w-full h-3 rounded-full overflow-hidden"
-                style={{ background: 'rgba(255, 255, 255, 0.08)' }}
-              >
-                <div 
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ 
-                    width: `${levelProgress.progressInLevel}%`,
-                    background: `linear-gradient(90deg, ${trustColors.text} 0%, ${trustColors.border} 100%)`,
-                    boxShadow: `0 0 15px ${trustColors.text}`,
-                  }}
-                />
-              </div>
-              
-              <div className="absolute -top-0.5 left-0 right-0 flex justify-between pointer-events-none">
-                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                  <div
-                    key={i}
-                    className="w-1 h-4 rounded-full"
-                    style={{
-                      background: i <= levelProgress.levelIndex 
-                        ? trustColors.text 
-                        : 'rgba(255, 255, 255, 0.1)',
-                      boxShadow: i <= levelProgress.levelIndex ? `0 0 5px ${trustColors.text}` : 'none',
-                    }}
-                  />
-                ))}
-              </div>
+            <p className="text-[11px] font-mono text-gray-500 truncate">{formatAddress(walletData.address)}</p>
+            <div 
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg mt-1.5"
+              style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}
+            >
+              {LEVEL_ICONS[levelProgress.currentLevel]}
+              <span className="text-[10px] font-bold" style={{ color: trustColors.text }}>
+                {isRTL ? levelName.ar : levelName.en} • Lv.{levelProgress.levelIndex + 1}
+              </span>
             </div>
-            
-            <p className="text-[9px] mt-2 text-center" style={{ color: 'rgba(160, 164, 184, 0.5)' }}>
-              {isRTL 
-                ? `الحد الأقصى للنظام: ${scoreCap.toLocaleString()} نقطة`
-                : `System cap: ${scoreCap.toLocaleString()} pts`
-              }
-            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 rounded-lg text-center" style={{ background: `${trustColors.bg}`, border: `1px solid ${trustColors.border}` }}>
+            <p className="text-[9px] uppercase text-gray-400 mb-0.5">{isRTL ? 'السمعة' : 'Score'}</p>
+            <p className="text-xl font-black" style={{ color: trustColors.text }}>{levelProgress.displayScore.toLocaleString()}</p>
+          </div>
+          <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+            <p className="text-[9px] uppercase text-gray-400 mb-0.5">{isRTL ? 'الرصيد' : 'Balance'}</p>
+            <p className="text-xl font-black text-cyan-400">{(walletData.balance || 0).toFixed(2)} π</p>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5 text-[10px]">
+            <span className="text-gray-400">Level {levelProgress.levelIndex + 1}/7</span>
+            {levelProgress.nextLevel && (
+              <span style={{ color: trustColors.text }}>{levelProgress.pointsToNextLevel.toLocaleString()} to next</span>
+            )}
+          </div>
+          <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.08)' }}>
+            <div 
+              className="h-full rounded-full transition-all duration-700"
+              style={{ 
+                width: `${levelProgress.progressInLevel}%`,
+                background: `linear-gradient(90deg, ${trustColors.text} 0%, #00D9FF 100%)`,
+              }}
+            />
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard 
-          icon={<Wallet className="w-4 h-4 text-cyan-400" />}
-          label={isRTL ? 'الرصيد' : 'Balance'}
-          value={`${(walletData.balance || 0).toFixed(2)} π`}
-          color="cyan"
-        />
-        <StatCard 
-          icon={<Activity className="w-4 h-4 text-purple-400" />}
-          label={isRTL ? 'المعاملات' : 'Transactions'}
-          value={walletData.transactions?.length?.toString() || '0'}
-          color="purple"
-        />
-        <StatCard 
-          icon={<Calendar className="w-4 h-4 text-emerald-400" />}
-          label={isRTL ? 'عمر الحساب' : 'Account Age'}
-          value={`${walletData.accountAge || 0} ${isRTL ? 'يوم' : 'days'}`}
-          color="emerald"
-        />
-        <StatCard 
-          icon={<TrendingUp className="w-4 h-4 text-pink-400" />}
-          label={isRTL ? 'نشاط أسبوعي' : 'Weekly'}
-          value={`${atomicResult.piDex.regularActivity || 0}`}
-          color="pink"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div 
-          className="rounded-xl p-5"
-          style={{ 
-            background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 24, 32, 0.85) 100%)',
-            border: '1px solid rgba(0, 217, 255, 0.2)',
-          }}
-        >
-          <h3 className="text-sm font-bold uppercase tracking-wide mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-cyan-400" />
-            <span className="text-cyan-400">{isRTL ? 'ملخص النشاط' : 'Activity Summary'}</span>
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            <ActivityBox 
-              label={isRTL ? 'مستلم' : 'Received'} 
-              value={walletData.transactions?.filter(tx => tx.type === 'received').length || 0}
-              color="emerald"
-            />
-            <ActivityBox 
-              label={isRTL ? 'مرسل' : 'Sent'} 
-              value={walletData.transactions?.filter(tx => tx.type === 'sent').length || 0}
-              color="red"
-            />
-            <ActivityBox 
-              label={isRTL ? 'الحجم' : 'Volume'} 
-              value={`${(walletData.transactions?.reduce((acc, tx) => acc + tx.amount, 0) || 0).toFixed(1)}π`}
-              color="cyan"
-            />
-          </div>
+      <div className="grid grid-cols-4 gap-2">
+        <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.15)' }}>
+          <Wallet className="w-4 h-4 text-cyan-400 mx-auto mb-1" />
+          <p className="text-[9px] text-gray-500 mb-0.5">Tx</p>
+          <p className="text-sm font-bold text-white">{walletData.transactions?.length || 0}</p>
         </div>
-
-        <div 
-          className="rounded-xl p-5"
-          style={{ 
-            background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 24, 32, 0.85) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-          }}
-        >
-          <h3 className="text-sm font-bold uppercase tracking-wide mb-4 flex items-center gap-2">
-            <Target className="w-4 h-4 text-purple-400" />
-            <span className="text-purple-400">{isRTL ? 'تفاصيل السمعة' : 'Score Breakdown'}</span>
-          </h3>
-          <div className="space-y-2">
-            <ScoreRow label={isRTL ? 'عمر المحفظة' : 'Wallet Age'} value={atomicResult.walletAge.totalPoints} max={200} />
-            <ScoreRow label={isRTL ? 'التفاعل' : 'Interaction'} value={atomicResult.interaction.totalPoints} max={300} />
-            <ScoreRow label={isRTL ? 'معاملات Pi' : 'Pi Network'} value={atomicResult.piNetwork.totalPoints} max={250} />
-            <ScoreRow label={isRTL ? 'Pi Dex' : 'Pi Dex'} value={atomicResult.piDex.totalPoints} max={200} />
-            <ScoreRow label={isRTL ? 'Staking' : 'Staking'} value={atomicResult.staking.totalPoints} max={100} />
-            <ScoreRow 
-              label={isRTL ? 'عقوبات' : 'Penalties'} 
-              value={-(atomicResult.externalPenalty.totalPenalty + atomicResult.suspiciousPenalty.totalPenalty)} 
-              isNegative 
-            />
-          </div>
+        <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+          <Calendar className="w-4 h-4 text-purple-400 mx-auto mb-1" />
+          <p className="text-[9px] text-gray-500 mb-0.5">Age</p>
+          <p className="text-sm font-bold text-white">{walletData.accountAge || 0}d</p>
+        </div>
+        <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+          <Activity className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
+          <p className="text-[9px] text-gray-500 mb-0.5">Recv</p>
+          <p className="text-sm font-bold text-white">{walletData.transactions?.filter(tx => tx.type === 'received').length || 0}</p>
+        </div>
+        <div className="p-2.5 rounded-lg text-center" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+          <TrendingUp className="w-4 h-4 text-red-400 mx-auto mb-1" />
+          <p className="text-[9px] text-gray-500 mb-0.5">Sent</p>
+          <p className="text-sm font-bold text-white">{walletData.transactions?.filter(tx => tx.type === 'sent').length || 0}</p>
         </div>
       </div>
 
@@ -355,43 +188,23 @@ export function ProfileSection({
         isDemo={mode.mode === 'demo'}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <MiningDaysWidget 
-          miningDays={walletData.accountAge || 0}
-          isDemo={mode.mode === 'demo'}
-        />
-        <div 
-          className="rounded-xl p-4 flex items-center justify-between"
-          style={{ 
-            background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 24, 32, 0.85) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.2)',
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.15) 100%)',
-                border: '1px solid rgba(139, 92, 246, 0.4)',
-                boxShadow: '0 0 20px rgba(139, 92, 246, 0.2)',
-              }}
-            >
-              <Award className="w-6 h-6 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-0.5">
-                {isRTL ? 'نقاط المستخدم' : 'User Points'}
-              </p>
-              <p className="text-2xl font-black text-white">{userPoints.total.toLocaleString()}</p>
-            </div>
-          </div>
-          <PointsExplainer 
-            currentPoints={userPoints.total}
-            checkInPoints={userPoints.checkIn}
-            transactionPoints={userPoints.transactions}
-            activityPoints={userPoints.activity}
-            streakBonus={userPoints.streak}
-          />
+      <div 
+        className="rounded-xl p-4"
+        style={{ 
+          background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.9) 0%, rgba(20, 24, 32, 0.85) 100%)',
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+        }}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <Target className="w-4 h-4 text-purple-400" />
+          <h3 className="text-xs font-bold uppercase text-purple-400">{isRTL ? 'تفاصيل السمعة' : 'Score Breakdown'}</h3>
+        </div>
+        <div className="space-y-1.5">
+          <ScoreRow label={isRTL ? 'عمر المحفظة' : 'Wallet Age'} value={atomicResult.walletAge.totalPoints} max={200} />
+          <ScoreRow label={isRTL ? 'التفاعل' : 'Interaction'} value={atomicResult.interaction.totalPoints} max={300} />
+          <ScoreRow label={isRTL ? 'معاملات Pi' : 'Pi Network'} value={atomicResult.piNetwork.totalPoints} max={250} />
+          <ScoreRow label={isRTL ? 'Pi Dex' : 'Pi Dex'} value={atomicResult.piDex.totalPoints} max={200} />
+          <ScoreRow label={isRTL ? 'Staking' : 'Staking'} value={atomicResult.staking.totalPoints} max={100} />
         </div>
       </div>
     </div>
