@@ -4,7 +4,7 @@
  * Based on behavior, consistency, and economic activity
  */
 
-export type AtomicTrustLevel = 
+export type AtomicTrustLevel =  
   | 'Very Low Trust' 
   | 'Low Trust' 
   | 'Medium' 
