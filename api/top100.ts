@@ -12,7 +12,7 @@
  * - from/to: For range queries on snapshots
  */
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '@vercel/node'; 
 
 interface Top100Wallet {
   rank: number;
