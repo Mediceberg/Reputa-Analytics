@@ -6,7 +6,7 @@
  * Uses the Central Scoring Rules Engine for all calculations
  */
 
-import { 
+import {  
   calculateAtomicReputation, 
   WalletActivityData,
   AtomicReputationResult,
