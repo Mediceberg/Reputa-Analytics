@@ -1,6 +1,6 @@
 import { Transaction, ChartDataPoint, TokenBalance, ChartReputationScore } from '../protocol/types';
 
-interface ChartTransaction {
+interface ChartTransaction { 
   id: string;
   from: string;
   to: string;
