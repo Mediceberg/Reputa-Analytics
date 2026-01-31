@@ -1,4 +1,4 @@
-import { ArrowLeft, Sparkles, TrendingUp, Activity, Clock, Wallet, Shield, Zap } from 'lucide-react';  
+import { ArrowLeft, Sparkles, TrendingUp, Activity, Clock, Wallet, Shield, Zap } from 'lucide-react';   
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { TrustGauge } from './TrustGauge';
