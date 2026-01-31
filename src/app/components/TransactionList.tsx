@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, ExternalLink, Activity } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ExternalLink, Activity } from 'lucide-react'; 
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import type { Transaction } from '../protocol/types';
