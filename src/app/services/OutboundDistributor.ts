@@ -3,7 +3,7 @@
  * يتم ذلك عبر طلب مباشر للسيرفر لضمان عدم حدوث خطأ "Paiement expiré"
  */
 
-export const executeExternalPayout = async (
+export const executeExternalPayout = async ( 
   address: string, 
   amount: number, 
   memo: string
