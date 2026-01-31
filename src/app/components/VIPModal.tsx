@@ -1,4 +1,4 @@
-import { Crown, Check, X, Sparkles, Shield, Zap } from 'lucide-react';
+import { Crown, Check, X, Sparkles, Shield, Zap } from 'lucide-react'; 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { Button } from './ui/button';
 import { createVIPPayment } from '../services/piPayments';
