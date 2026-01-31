@@ -3,7 +3,7 @@
  * Main payment functions are in src/app/services/piPayments.ts
  */
 
-import type { PaymentData } from './types'; 
+import type { PaymentData } from './types';  
 
 /**
  * Check if Pi SDK is available
