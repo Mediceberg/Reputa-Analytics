@@ -3,7 +3,7 @@
  * Displays real-time reputation data from blockchain with activity history
  */
 
-import React from 'react';
+import React from 'react'; 
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Activity, 
