@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; 
 import { Globe, TestTube, Play, ChevronDown, Check, AlertCircle, Zap } from 'lucide-react';
 import { NetworkMode, MODE_IMPACTS } from '../protocol/types';
 import { useLanguage } from '../hooks/useLanguage';
