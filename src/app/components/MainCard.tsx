@@ -1,4 +1,4 @@
-import { User, Shield, Zap, Award, Star, TrendingUp, Share2 } from 'lucide-react';
+import { User, Shield, Zap, Award, Star, TrendingUp, Share2 } from 'lucide-react'; 
 import { AtomicTrustLevel, TRUST_LEVEL_COLORS } from '../protocol/atomicScoring';
 
 interface MainCardProps {
