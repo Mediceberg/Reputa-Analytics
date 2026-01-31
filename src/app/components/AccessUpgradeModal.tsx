@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; 
 import { X, Sparkles, Lock, Check, Shield, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import {
