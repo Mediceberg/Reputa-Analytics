@@ -4,7 +4,7 @@
  * No mock data - only authentic blockchain information
  */
 
-import type { WalletActivityData, AtomicReputationResult } from '../protocol/atomicScoring';
+import type { WalletActivityData, AtomicReputationResult } from '../protocol/atomicScoring'; 
 import { calculateAtomicReputation } from '../protocol/atomicScoring';
 
 const PI_TESTNET_API = 'https://api.testnet.minepi.com';
