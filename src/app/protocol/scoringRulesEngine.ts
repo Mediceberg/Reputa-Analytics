@@ -4,7 +4,7 @@
  * All scoring logic flows through this module
  */
 
-export interface ScoringRule {
+export interface ScoringRule { 
   id: string;
   category: 'activity' | 'continuity' | 'trust' | 'network' | 'penalty';
   name: string;
