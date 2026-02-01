@@ -524,8 +524,20 @@ function ReputaAppContent() {
               background: 'rgba(34, 158, 217, 0.15)',
               border: '1px solid rgba(34, 158, 217, 0.3)',
             }}
+            title="Telegram"
           >
             <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
+          </a>
+          <a 
+            href="mailto:reputa.score@gmail.com" 
+            className="p-2 sm:p-2.5 rounded-xl transition-all"
+            style={{
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+            }}
+            title="Support"
+          >
+            <LogIn className="w-4 h-4" style={{ color: '#EF4444' }} />
           </a>
         </div>
       </header>
@@ -566,22 +578,33 @@ function ReputaAppContent() {
         className="p-4 sm:p-8 text-center flex flex-col items-center gap-4 sm:gap-5 relative z-10"
         style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}
       >
-        <a 
-          href="https://t.me/+zxYP2x_4IWljOGM0" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full transition-all active:scale-95"
-          style={{
-            background: 'rgba(34, 158, 217, 0.1)',
-            border: '1px solid rgba(34, 158, 217, 0.3)',
-          }}
-        >
-          <Send className="w-4 h-4" style={{ color: '#229ED9' }} />
-          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style={{ color: 'rgba(34, 158, 217, 0.9)' }}>
-            Join Community
-          </span>
-        </a>
-        <div className="text-[9px] sm:text-[10px] font-bold tracking-[0.3em] sm:tracking-[0.4em] uppercase" style={{ color: 'rgba(100, 105, 130, 0.5)' }}>
+        <div className="flex flex-wrap justify-center gap-3">
+          <a 
+            href="https://t.me/+zxYP2x_4IWljOGM0" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95"
+            style={{
+              background: 'rgba(34, 158, 217, 0.1)',
+              border: '1px solid rgba(34, 158, 217, 0.3)',
+            }}
+          >
+            <Send className="w-3.5 h-3.5" style={{ color: '#229ED9' }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Telegram</span>
+          </a>
+          <a 
+            href="mailto:reputa.score@gmail.com" 
+            className="flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95"
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+            }}
+          >
+            <LogIn className="w-3.5 h-3.5" style={{ color: '#EF4444' }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Support</span>
+          </a>
+        </div>
+        <div className="text-[9px] font-bold tracking-[0.4em] uppercase opacity-30">
           Reputa Score v2
         </div>
       </footer>
