@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
@@ -6,16 +6,29 @@ import { Badge } from "../../components/ui/badge";
 const AdminConsole: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const mockUsers = [
-    { pi_username: 'user1', wallet: 'GD...7M3O', reputationScore: 850, level: 12, trustRank: 'Elite', balance: 1500, lastActiveAt: '2024-02-02' },
-    { pi_username: 'user2', wallet: 'GB...X8Y2', reputationScore: 420, level: 5, trustRank: 'Trusted', balance: 120, lastActiveAt: '2024-02-01' },
-  ];
+  const fetchUsers = async (pass: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/admin?action=getAllUsers&password=${pass}`);
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.users);
+      }
+    } catch (e) {
+      console.error('Failed to fetch users', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === 'admin123') { 
       setIsAuthenticated(true);
+      fetchUsers('admin123');
     } else {
       alert('Unauthorized');
     }
@@ -54,10 +67,19 @@ const AdminConsole: React.FC = () => {
           <h1 className="text-2xl font-black text-white uppercase tracking-tight">Admin Console</h1>
           <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em]">Reputa Score Protocol Management</p>
         </div>
-        <Badge variant="outline" className="text-cyan-400 border-cyan-400/30 bg-cyan-400/5 px-3 py-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mr-2 animate-pulse" />
-          Network: Mainnet
-        </Badge>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => fetchUsers(password)}
+            disabled={isLoading}
+            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-black uppercase transition-all"
+          >
+            {isLoading ? 'Syncing...' : 'Refresh Data'}
+          </button>
+          <Badge variant="outline" className="text-cyan-400 border-cyan-400/30 bg-cyan-400/5 px-3 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 mr-2 animate-pulse" />
+            Network: Mainnet
+          </Badge>
+        </div>
       </div>
 
       <Card className="bg-[#15171E] border-white/5 overflow-hidden">
@@ -68,29 +90,30 @@ const AdminConsole: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow className="border-white/5 hover:bg-transparent">
-                <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4">Pioneer</TableHead>
+                <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 px-4">Pioneer</TableHead>
                 <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4">Wallet</TableHead>
                 <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 text-center">Score</TableHead>
-                <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 text-center">Level</TableHead>
                 <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 text-center">Trust</TableHead>
-                <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 text-right">Balance</TableHead>
-                <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 text-right">Activity</TableHead>
+                <TableHead className="text-[10px] uppercase font-black text-slate-500 py-4 text-right pr-4">Last Activity</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockUsers.map((user) => (
-                <TableRow key={user.pi_username} className="border-white/5 hover:bg-white/5 transition-colors">
-                  <TableCell className="font-bold text-purple-400 py-4">{user.pi_username}</TableCell>
-                  <TableCell className="font-mono text-[10px] text-slate-400">{user.wallet}</TableCell>
+              {users.length === 0 && !isLoading && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-slate-500 text-xs uppercase tracking-widest font-bold">No pioneers found in registry</TableCell>
+                </TableRow>
+              )}
+              {users.map((user) => (
+                <TableRow key={user.uid} className="border-white/5 hover:bg-white/5 transition-colors">
+                  <TableCell className="font-bold text-purple-400 py-4 px-4">{user.username}</TableCell>
+                  <TableCell className="font-mono text-[10px] text-slate-400">{user.wallet.substring(0, 12)}...{user.wallet.substring(user.wallet.length - 4)}</TableCell>
                   <TableCell className="text-center font-black text-white">{user.reputationScore}</TableCell>
-                  <TableCell className="text-center font-bold text-slate-300">{user.level}</TableCell>
                   <TableCell className="text-center">
                     <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[9px] px-2">
-                      {user.trustRank}
+                      {user.trustLevel}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right font-black text-cyan-400">{user.balance} π</TableCell>
-                  <TableCell className="text-right text-[10px] text-slate-500">{user.lastActiveAt}</TableCell>
+                  <TableCell className="text-right text-[10px] text-slate-500 pr-4">{new Date(user.lastActiveAt).toLocaleString()}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -101,7 +124,7 @@ const AdminConsole: React.FC = () => {
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#15171E] border border-white/5 p-5 rounded-2xl">
           <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Total Pioneers</h3>
-          <p className="text-3xl font-black text-white">{mockUsers.length}</p>
+          <p className="text-3xl font-black text-white">{users.length}</p>
         </div>
         <div className="bg-[#15171E] border border-white/5 p-5 rounded-2xl">
           <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Active Protocol</h3>
