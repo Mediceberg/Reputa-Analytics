@@ -4,6 +4,7 @@ import { Send, MessageSquare, LogIn, Share2, Mail } from 'lucide-react';
 import { WalletChecker } from './components/WalletChecker';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { UnifiedDashboard } from './pages/UnifiedDashboard';
+import AdminConsole from './pages/admin/AdminConsole';
 import { ShareReputaCard } from './components/ShareReputaCard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
@@ -373,6 +374,10 @@ function ReputaAppContent() {
   }
 
   const isUnlocked = isVip || paymentCount >= 1 || walletData?.username === "Demo_Pioneer";
+
+  if (window.location.pathname === '/admin-console') {
+    return <AdminConsole />;
+  }
 
   if (walletData) {
     return (
