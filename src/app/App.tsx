@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';  
 import { Analytics } from '@vercel/analytics/react';
-import { Send, MessageSquare, LogIn, Share2 } from 'lucide-react'; 
+import { Send, MessageSquare, LogIn, Share2, Mail } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
 import { UnifiedDashboard } from './pages/UnifiedDashboard';
@@ -532,12 +532,12 @@ function ReputaAppContent() {
             href="mailto:reputa.score@gmail.com" 
             className="p-2 sm:p-2.5 rounded-xl transition-all"
             style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(234, 67, 53, 0.15)',
+              border: '1px solid rgba(234, 67, 53, 0.3)',
             }}
-            title="Support"
+            title="Gmail"
           >
-            <LogIn className="w-4 h-4" style={{ color: '#EF4444' }} />
+            <Mail className="w-4 h-4" style={{ color: '#EA4335' }} />
           </a>
         </div>
       </header>
@@ -596,12 +596,12 @@ function ReputaAppContent() {
             href="mailto:reputa.score@gmail.com" 
             className="flex items-center gap-2 px-4 py-2 rounded-full transition-all active:scale-95"
             style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              background: 'rgba(234, 67, 53, 0.1)',
+              border: '1px solid rgba(234, 67, 53, 0.3)',
             }}
           >
-            <LogIn className="w-3.5 h-3.5" style={{ color: '#EF4444' }} />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Support</span>
+            <Mail className="w-3.5 h-3.5" style={{ color: '#EA4335' }} />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white">Gmail</span>
           </a>
         </div>
         <div className="text-[9px] font-bold tracking-[0.4em] uppercase opacity-30">
