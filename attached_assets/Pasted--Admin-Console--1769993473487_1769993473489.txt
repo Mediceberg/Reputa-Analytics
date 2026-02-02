@@ -1,0 +1,95 @@
+[إضافة إلزامية – تنظيم البيانات و Admin Console]
+
+تنظيم البيانات داخل قاعدة البيانات:
+- يجب إنشاء بيانات المستخدمين داخل Vercel KV بطريقة تشبه الجداول الاحترافية (Structured Tables Logic).
+- يمنع التخزين العشوائي أو غير المهيكل.
+
+هيكلة البيانات يجب أن تعتمد على مفاتيح واضحة ومنفصلة:
+
+1) جدول المستخدمين (Users Table)
+Key: users:{pi_username}
+{
+  pi_username: string,
+  wallet: string,
+  network: "mainnet" | "testnet",
+  createdAt: timestamp,
+  lastActiveAt: timestamp,
+  reputationScore: number,
+  level: number,
+  trustRank: string
+}
+
+2) جدول بيانات المحفظة (Wallet Metrics)
+Key: wallet:{wallet_address}
+{
+  balance: number,
+  txCount: number,
+  walletAgeDays: number,
+  activityScore: number,
+  lastSyncedAt: timestamp
+}
+
+3) جدول النقاط اليومية (Daily Check-in)
+Key: daily:{pi_username}
+{
+  totalPoints: number,
+  streak: number,
+  lastLogin: timestamp,
+  history: [ { date, points } ]
+}
+
+4) جدول الأحداث (Events / History)
+Key: events:{pi_username}
+[
+  {
+    type: "wallet_scan" | "daily_login" | "activity" | "manual",
+    points: number,
+    source: "mainnet" | "testnet",
+    timestamp
+  }
+]
+
+جميع هذه الجداول تُقرأ وتُحدَّث فقط عبر StorageAdapter الموحّد.
+
+Admin Console (إجباري):
+- إنشاء صفحة مستقلة داخل التطبيق باسم:
+  /admin-console
+- هذه الصفحة غير متاحة للمستخدمين العاديين.
+
+حماية Admin Console:
+- الدخول يتم عبر كلمة سر (ADMIN_PASSWORD) محفوظة في Environment Variables.
+- أي محاولة دخول بدون كلمة السر يتم رفضها.
+
+وظائف Admin Console:
+- عرض المستخدمين في جداول مرتبة (Table View):
+  - pi_username
+  - wallet
+  - reputationScore
+  - level
+  - trustRank
+  - balance
+  - lastActiveAt
+- عرض سجل الأحداث لكل مستخدم (History Timeline).
+- عرض حالة الشبكة (Mainnet / Testnet / Demo).
+- لا يسمح بالتعديل اليدوي للنقاط (قراءة فقط).
+
+GitHub Integration:
+- إنشاء مجلد مخصص:
+  /admin
+- يحتوي على:
+  - واجهة Admin Console
+  - توثيق هيكلة البيانات (README.md)
+- الهدف:
+  - تمكين صاحب المشروع من رؤية البيانات بوضوح عبر GitHub
+  - فهم كيف تُخزن وتُحسب النقاط والبروتوكول
+
+قواعد صارمة:
+- ❌ يمنع تخزين بيانات المستخدم داخل Frontend فقط
+- ❌ يمنع اختلاف البنية بين مستخدم وآخر
+- ❌ يمنع عرض Admin Console بدون مصادقة
+
+النتيجة النهائية:
+- قاعدة بيانات منظمة ومنطقية
+- تاريخ كامل لكل مستخدم
+- لوحة تحكم احترافية تشبه أنظمة Web3 الحقيقية
+- جاهزية كاملة للتوسع والمراجعة والتدقيق
