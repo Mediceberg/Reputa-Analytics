@@ -113,18 +113,18 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
   }
 
   return (
-    <div className="glass-card p-6 border border-purple-500/20 flex flex-col">
-      <div className="flex items-center justify-between mb-6">
+    <div className="glass-card p-4 sm:p-6 border border-purple-500/20 flex flex-col h-full min-h-[400px]">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-amber-500/20 flex items-center justify-center border border-purple-500/30">
-            <Trophy className="w-5 h-5 text-amber-400" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-amber-500/20 flex items-center justify-center border border-purple-500/30">
+            <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-white">
-              {language === 'ar' ? 'أفضل 100' : 'TOP 100'}
+            <h3 className="text-[12px] sm:text-sm font-black uppercase tracking-widest text-white">
+              {language === 'ar' ? 'أفضل 100 تصنيف Reputa' : 'RANK TOP 100 REPUTA SCORE'}
             </h3>
-            <span className="text-[9px] font-bold uppercase tracking-widest text-purple-400">
-              {language === 'ar' ? 'نقاط السمعة' : 'REPUTA SCORE'}
+            <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-purple-400">
+              {language === 'ar' ? 'نخبة رواد الشبكة' : 'ELITE NETWORK PIONEERS'}
             </span>
           </div>
         </div>
@@ -139,40 +139,40 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
       </div>
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[10px] text-red-400">
           {error}
         </div>
       )}
 
-      <div className={`space-y-2 ${expanded ? 'max-h-[500px] overflow-y-auto pr-2 custom-scrollbar' : ''}`}>
-        {users.slice(0, displayLimit).map((user) => {
+      <div className={`space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar ${expanded ? 'max-h-[60vh]' : 'max-h-[350px]'}`}>
+        {users.length > 0 ? users.slice(0, displayLimit).map((user) => {
           const rankStyle = getRankBadge(user.rank);
           const trustColor = getTrustLevelColor(user.trustLevel);
           
           return (
             <div 
               key={user.uid}
-              className={`p-3 rounded-xl ${rankStyle.bg} border ${rankStyle.border} flex items-center justify-between group hover:scale-[1.01] transition-all cursor-pointer`}
+              className={`p-2.5 sm:p-3 rounded-xl ${rankStyle.bg} border ${rankStyle.border} flex items-center justify-between group active:scale-[0.98] transition-all cursor-pointer`}
             >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.rank <= 3 ? '' : 'bg-white/5'}`}>
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 ${user.rank <= 3 ? '' : 'bg-white/5'}`}>
                   {rankStyle.icon ? (
-                    <span className="text-lg">{rankStyle.icon}</span>
+                    <span className="text-base sm:text-lg">{rankStyle.icon}</span>
                   ) : (
-                    <span className={`text-xs font-black ${rankStyle.text}`}>#{user.rank}</span>
+                    <span className={`text-[10px] font-black ${rankStyle.text}`}>#{user.rank}</span>
                   )}
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-3 h-3" style={{ color: trustColor }} />
-                    <span className="text-[11px] font-mono font-bold text-white">
-                      {user.walletAddress || `Pioneer_${user.uid.substring(0, 6)}`}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Shield className="w-2.5 h-2.5 shrink-0" style={{ color: trustColor }} />
+                    <span className="text-[10px] sm:text-[11px] font-mono font-bold text-white truncate">
+                      {user.username || (user.walletAddress ? `${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}` : `Pioneer_${user.uid.substring(0, 4)}`)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span 
-                      className="text-[9px] font-bold uppercase tracking-widest"
+                      className="text-[8px] font-bold uppercase tracking-widest truncate"
                       style={{ color: trustColor }}
                     >
                       {user.trustLevel}
@@ -181,38 +181,42 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
                 </div>
               </div>
 
-              <div className="text-right flex items-center gap-2">
+              <div className="text-right flex items-center gap-1.5 shrink-0 ml-2">
                 <div>
-                  <p className="text-sm font-black text-white flex items-center gap-1">
+                  <p className="text-xs sm:text-sm font-black text-white flex items-center justify-end gap-1">
                     {user.reputationScore.toLocaleString()}
-                    <Star className="w-3 h-3 text-amber-400" />
+                    <Star className="w-2.5 h-2.5 text-amber-400" />
                   </p>
-                  <p className="text-[9px] text-gray-500">
-                    {language === 'ar' ? 'نقاط السمعة' : 'Reputa Score'}
+                  <p className="text-[8px] text-gray-500 font-bold uppercase">
+                    SCORE
                   </p>
                 </div>
               </div>
             </div>
           );
-        })}
+        }) : !loading && (
+          <div className="py-10 text-center text-gray-500 text-[10px] uppercase font-bold tracking-widest">
+            No data available
+          </div>
+        )}
       </div>
 
       <button 
         onClick={toggleExpand}
-        className="mt-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-center gap-2 transition-all group"
+        className="mt-4 py-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 flex items-center justify-center gap-2 transition-all group active:scale-95"
       >
         {expanded ? (
           <>
-            <ChevronUp className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white transition-colors">
-              {language === 'ar' ? 'عرض أقل' : 'Show Less'}
+            <ChevronUp className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">
+              {language === 'ar' ? 'عرض أقل' : 'SHOW LESS'}
             </span>
           </>
         ) : (
           <>
-            <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-white transition-colors">
-              {language === 'ar' ? 'عرض الكل 100' : 'SHOW ALL 100'}
+            <ChevronDown className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-purple-400">
+              {language === 'ar' ? 'عرض قائمة الـ 100' : 'EXPLORE TOP 100'}
             </span>
           </>
         )}

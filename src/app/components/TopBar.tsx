@@ -53,12 +53,14 @@ export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
 
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 lg:hidden safe-area-top"
+      className="fixed top-0 left-0 right-0 z-[100] lg:hidden safe-area-top"
       style={{
         background: 'linear-gradient(180deg, rgba(10, 11, 15, 0.98) 0%, rgba(15, 17, 23, 0.95) 100%)',
         borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
+        height: 'calc(56px + env(safe-area-inset-top, 0px))',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
       <div className="flex items-center justify-between px-4 h-14">

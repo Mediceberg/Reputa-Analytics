@@ -294,7 +294,9 @@ export function UnifiedDashboard({
         />
       </div>
 
-      <main className="flex-1 p-3 lg:p-6 overflow-auto relative z-10 mobile-main-content pt-16 lg:pt-3">
+      <main className="flex-1 p-3 lg:p-6 overflow-x-hidden relative z-10 mobile-main-content pt-16 lg:pt-3 pb-24 lg:pb-6">
+        {/* Mobile Spacer for Fixed Header */}
+        <div className="h-4 lg:hidden" />
         {/* Desktop Section Header - hidden on mobile */}
         <div className="hidden lg:flex items-center justify-between mb-4 sm:mb-5">
           <div className="flex items-center gap-2 sm:gap-3">

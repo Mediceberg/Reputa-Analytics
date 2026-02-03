@@ -24,13 +24,14 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
 
   return (
     <nav 
-      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 lg:hidden safe-area-bottom"
+      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-[100] lg:hidden safe-area-bottom"
       style={{
         background: 'linear-gradient(180deg, rgba(15, 17, 23, 0.98) 0%, rgba(10, 11, 15, 1) 100%)',
         borderTop: '1px solid rgba(139, 92, 246, 0.2)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         paddingBottom: 'env(safe-area-inset-bottom, 8px)',
+        height: 'calc(64px + env(safe-area-inset-bottom, 0px))',
       }}
     >
       <div className="flex items-center justify-around px-1 py-1.5">
