@@ -1,0 +1,385 @@
+/* Enhanced Modal & Overlay System for Pi Browser */
+/* Supports safe scrolling, proper sizing, and mobile-first design */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   OVERLAY & MODAL FOUNDATIONS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Dialog Overlay - dark background */
+[data-slot="dialog-overlay"],
+[data-slot="sheet-overlay"],
+[data-slot="alert-dialog-overlay"],
+[data-slot="popover-overlay"],
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Dialog Content - centered modal */
+[data-slot="dialog-content"],
+[role="dialog"] {
+  position: fixed;
+  z-index: 50;
+  max-height: 90vh;
+  min-height: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+  
+  /* Scrollbar styling */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar,
+[role="dialog"]::-webkit-scrollbar {
+  width: 6px;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-track,
+[role="dialog"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-thumb,
+[role="dialog"]::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 3px;
+}
+
+[data-slot="dialog-content"]::-webkit-scrollbar-thumb:hover,
+[role="dialog"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODAL SIZING & POSITIONING
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile-first modal sizing */
+@media (max-width: 640px) {
+  [data-slot="dialog-content"],
+  [role="dialog"] {
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+    top: 50% !important;
+    transform: translateX(-50%) translateY(-50%) !important;
+    border-radius: 24px !important;
+  }
+}
+
+/* Tablet & Desktop sizing */
+@media (min-width: 641px) {
+  [data-slot="dialog-content"],
+  [role="dialog"] {
+    max-width: 600px;
+    top: 50%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50%);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SHEET (SIDE DRAWER) ENHANCEMENTS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-slot="sheet-content"] {
+  max-height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Sheet positioning for mobile */
+@media (max-width: 640px) {
+  [data-vaul-drawer-direction="bottom"] {
+    border-radius: 24px 24px 0 0 !important;
+    max-height: 85vh !important;
+  }
+
+  [data-vaul-drawer-direction="left"],
+  [data-vaul-drawer-direction="right"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLOSE BUTTON IMPROVEMENTS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Dialog close button */
+[data-slot="dialog-close"],
+.dialog-close,
+[data-slot="sheet-close"] {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 51;
+  
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: 12px;
+  
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+  
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-slot="dialog-close"]:hover,
+.dialog-close:hover,
+[data-slot="sheet-close"]:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+  transform: scale(1.05);
+}
+
+[data-slot="dialog-close"]:active,
+.dialog-close:active,
+[data-slot="sheet-close"]:active {
+  transform: scale(0.95);
+}
+
+/* Safe area positioning for notched devices */
+@supports (padding: max(0px)) {
+  [data-slot="dialog-close"],
+  .dialog-close {
+    top: max(16px, env(safe-area-inset-top, 16px));
+    right: max(16px, env(safe-area-inset-right, 16px));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAFE AREA INSET SUPPORT
+═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-slot="dialog-content"],
+[role="dialog"],
+[data-slot="sheet-content"] {
+  padding-top: max(0px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(0px, env(safe-area-inset-left, 0px));
+  padding-right: max(0px, env(safe-area-inset-right, 0px));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Apply animations */
+[data-state="open"] {
+  animation: slideUp 0.3s ease-out;
+}
+
+[data-state="closed"] {
+  animation: fadeIn 0.2s ease-out reverse;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREVENT BODY SCROLL WHEN MODAL IS OPEN
+═══════════════════════════════════════════════════════════════════════════════ */
+
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE TEXT IN MODALS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-slot="dialog-content"] h1,
+[data-slot="dialog-content"] h2,
+[data-slot="dialog-content"] h3,
+[role="dialog"] h1,
+[role="dialog"] h2,
+[role="dialog"] h3 {
+  word-break: break-word;
+  hyphens: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BUTTON GROUP IN MODALS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-slot="dialog-footer"],
+.dialog-footer {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (min-width: 640px) {
+  [data-slot="dialog-footer"],
+  .dialog-footer {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+[data-slot="dialog-footer"] button,
+.dialog-footer button {
+  flex: 1;
+  min-height: 44px;
+}
+
+@media (min-width: 640px) {
+  [data-slot="dialog-footer"] button,
+  .dialog-footer button {
+    flex: auto;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   POPOVER POSITIONING
+═══════════════════════════════════════════════════════════════════════════════ */
+
+[data-slot="popover-content"] {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ERROR & SUCCESS DIALOGS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+.modal-error,
+.modal-success,
+.modal-warning {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.modal-success {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.modal-warning {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOADING STATE IN MODALS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+[aria-busy="true"] {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+[aria-busy="true"]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(139, 92, 246, 0.2);
+  border-top-color: #8B5CF6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACCESSIBILITY IMPROVEMENTS
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Focus visible states */
+[data-slot="dialog-close"]:focus-visible,
+.dialog-close:focus-visible,
+[role="dialog"] button:focus-visible {
+  outline: 2px solid #8B5CF6;
+  outline-offset: 2px;
+}
+
+/* Keyboard navigation */
+[role="dialog"]:focus-within {
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PI BROWSER SPECIFIC FIXES
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/* WebView detection */
+@supports (-webkit-app-region: drag) {
+  [data-slot="dialog-content"],
+  [role="dialog"] {
+    /* Extra padding for WebView */
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENSURE MODALS ARE NEVER TRAPPED
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Always show close button */
+[data-slot="dialog-close"],
+.dialog-close {
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Prevent modal from being too tall */
+[data-slot="dialog-content"],
+[role="dialog"] {
+  max-height: calc(100vh - 32px) !important;
+  min-height: auto !important;
+}

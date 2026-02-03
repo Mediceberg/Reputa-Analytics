@@ -6,6 +6,7 @@ import './styles/index.css';
 import './styles/fonts.css';
 import './styles/tailwind.css';
 import './styles/theme.css';
+import './styles/modals.css';
 
 /**
  * ErrorBoundary: مكون لمعالجة الأخطاء البرمجية المفاجئة في بيئة الإنتاج.
