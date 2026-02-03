@@ -204,7 +204,7 @@ export function PiDexSection({
         </div>
       </div>
 
-      <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar">
+      <div className="space-y-2 min-h-[200px] overflow-y-auto custom-scrollbar">
         <p className="text-[10px] text-white/40 uppercase tracking-wider font-bold mb-2">Token Details</p>
         
         {nativeToken && (

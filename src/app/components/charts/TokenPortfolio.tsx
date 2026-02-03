@@ -14,7 +14,7 @@ export function TokenPortfolio({ data }: TokenPortfolioProps) {
   const total = data.reduce((acc, curr) => acc + curr.value, 0);
 
   return (
-    <div className="glass-card p-6 flex flex-col h-[500px] border border-white/10">
+    <div className="glass-card p-6 flex flex-col min-h-[500px] border border-white/10">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">

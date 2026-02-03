@@ -147,7 +147,7 @@ function CategoryCard({
             transition={{ duration: 0.2 }}
             className="border-t border-white/10"
           >
-            <div className="p-4 space-y-2 max-h-48 overflow-y-auto">
+            <div className="p-4 space-y-2 min-h-48 overflow-y-auto">
               {items.length === 0 ? (
                 <p className="text-gray-500 text-sm text-center py-2">
                   {language === 'ar' ? 'لا توجد نقاط في هذه الفئة' : 'No points in this category'}
@@ -322,7 +322,7 @@ export function AtomicScoreBreakdown({ result, language = 'en' }: AtomicScoreBre
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-lg rounded-2xl p-6 max-h-[80vh] overflow-y-auto"
+              className="w-full max-w-lg rounded-2xl p-6 min-h-[80vh] overflow-y-auto"
               style={{
                 background: 'linear-gradient(135deg, rgba(30, 33, 40, 0.98) 0%, rgba(20, 22, 28, 0.98) 100%)',
                 border: '1px solid rgba(0, 217, 255, 0.3)',

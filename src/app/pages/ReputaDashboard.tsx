@@ -94,7 +94,7 @@ export function ReputaDashboard({ onClose, currentUser, walletAddress }: ReputaD
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
       </div>
 
-      <Card className="max-w-6xl w-full max-h-[90vh] overflow-y-auto p-6 bg-gradient-to-br from-slate-900/98 via-slate-800/98 to-slate-900/98 border-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/20 relative backdrop-blur-xl">
+      <Card className="max-w-6xl w-full min-h-[90vh] overflow-y-auto p-6 bg-gradient-to-br from-slate-900/98 via-slate-800/98 to-slate-900/98 border-2 border-cyan-500/30 shadow-2xl shadow-cyan-500/20 relative backdrop-blur-xl">
         {/* Grid Pattern */}
         <div className="absolute inset-0 opacity-5 pointer-events-none" style={{
           backgroundImage: `linear-gradient(rgba(0, 217, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 217, 255, 0.1) 1px, transparent 1px)`,
