@@ -274,7 +274,7 @@ export function UnifiedDashboard({
   ];
 
   return (
-    <div className="min-h-screen futuristic-bg flex">
+    <div className="w-full min-h-screen futuristic-bg flex flex-col">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
       
       {/* Mobile Top Bar with Menu */}
@@ -294,7 +294,7 @@ export function UnifiedDashboard({
         />
       </div>
 
-      <main className="flex-1 p-3 lg:p-6 overflow-x-hidden relative z-10 mobile-main-content pt-16 lg:pt-3 pb-24 lg:pb-6">
+      <main className="flex-1 p-3 lg:p-6 overflow-x-hidden overflow-y-auto relative z-10 mobile-main-content pt-16 lg:pt-3 pb-24 lg:pb-6 w-full">
         {/* Mobile Spacer for Fixed Header */}
         <div className="h-4 lg:hidden" />
         {/* Desktop Section Header - hidden on mobile */}

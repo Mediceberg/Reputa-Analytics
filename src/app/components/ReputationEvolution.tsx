@@ -206,7 +206,7 @@ export const ReputationEvolution: React.FC<ReputationEvolutionProps> = ({
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">Activity History</h4>
           </div>
 
-          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+          <div className="space-y-2 min-h-60 overflow-y-auto custom-scrollbar">
             <AnimatePresence>
               {blockchainEvents.slice(0, 20).map((event, index) => (
                 <motion.div

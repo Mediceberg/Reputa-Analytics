@@ -113,7 +113,7 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
   }
 
   return (
-    <div className="glass-card p-4 sm:p-6 border border-purple-500/20 flex flex-col h-full min-h-[400px]">
+    <div className="glass-card p-4 sm:p-6 border border-purple-500/20 flex flex-col min-h-[400px]">
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-amber-500/20 flex items-center justify-center border border-purple-500/30">
@@ -144,7 +144,7 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
         </div>
       )}
 
-      <div className={`space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar ${expanded ? 'max-h-[60vh]' : 'max-h-[350px]'}`}>
+      <div className={`space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar ${expanded ? 'min-h-[60vh]' : 'min-h-[350px]'}`}>
         {users.length > 0 ? users.slice(0, displayLimit).map((user) => {
           const rankStyle = getRankBadge(user.rank);
           const trustColor = getTrustLevelColor(user.trustLevel);

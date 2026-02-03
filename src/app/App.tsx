@@ -334,7 +334,7 @@ function ReputaAppContent() {
   }
 
   return (
-    <div className="min-h-screen futuristic-bg flex flex-col font-sans relative">
+    <div className="w-full min-h-screen futuristic-bg flex flex-col font-sans relative">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
       <header className="px-3 py-3 sm:p-4 backdrop-blur-xl sticky top-0 z-50 flex justify-between items-center safe-area-top" style={{ background: 'rgba(10, 11, 15, 0.9)', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -363,7 +363,7 @@ function ReputaAppContent() {
           <a href="mailto:reputa.score@gmail.com" className="p-2 rounded-xl border border-red-500/30 bg-red-500/15"><Mail className="w-4 h-4 text-red-400" /></a>
         </div>
       </header>
-      <main className="container mx-auto px-3 py-6 flex-1 relative z-10">
+      <main className="flex-1 container mx-auto px-3 py-6 relative z-10 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="relative">

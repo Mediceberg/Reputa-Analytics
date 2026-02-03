@@ -31,14 +31,27 @@
 
     <style>
       /* منع التمرير الأفقي لضمان استقرار واجهة Locofy */
+      html {
+        overflow-y: auto;
+        width: 100%;
+        height: 100%;
+      }
+
       body, html {
         overflow-x: hidden;
         margin: 0;
         padding: 0;
         -webkit-tap-highlight-color: transparent;
+        width: 100%;
+        height: 100%;
       }
+
       #root {
-        min-height: 100vh;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
     </style>
   </head>

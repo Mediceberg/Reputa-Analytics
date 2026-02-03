@@ -47,13 +47,33 @@
 }
 
 html, body {
+  width: 100%;
+  height: 100%;
   overflow-x: hidden;
-  overscroll-behavior-y: contain; /* Disable pull-to-refresh pull-down elastic effect */
-  -webkit-tap-highlight-color: transparent; /* Disable tap highlight on iOS */
-  user-select: none; /* Disable text selection for app feel */
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation; /* Disable double-tap to zoom */
+  touch-action: manipulation;
   cursor: default;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-y: auto;
+}
+
+body {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Re-enable selection for inputs and textareas */
@@ -75,6 +95,9 @@ button:active {
   min-height: -webkit-fill-available;
   position: relative;
   overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .futuristic-bg::before {

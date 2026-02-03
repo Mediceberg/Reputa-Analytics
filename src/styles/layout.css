@@ -1,0 +1,254 @@
+/* Unified Layout System for Pi Browser and Web */
+/* This file ensures consistent scrolling and layout across all pages */
+
+/* Root container - always allow scrolling */
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main app container */
+.futuristic-bg {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+}
+
+/* Main content areas - should scroll internally */
+main[class*="flex-1"] {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure all pages fill available space */
+.mobile-main-content {
+  min-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modal/Dialog content should allow scrolling */
+[role="dialog"],
+.dialog-content {
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Cards and sections - use min-height for flexibility */
+.glass-card,
+.card,
+.section {
+  overflow: visible;
+}
+
+/* Lists and scrollable content containers */
+.scrollable-list,
+.overflow-y-auto {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar styling */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.6);
+}
+
+/* Prevent content clipping */
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.content-wrapper > * {
+  flex-shrink: 0;
+}
+
+/* Fixed headers and footers - no scrolling */
+header.sticky,
+[class*="top-bar"],
+[class*="topbar"] {
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+footer.sticky,
+[class*="bottom-nav"],
+[class*="bottom-bar"] {
+  position: sticky;
+  bottom: 0;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+/* Ensure modals and overlays work correctly */
+.dialog,
+[role="dialog"] {
+  position: fixed;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+/* Safari iOS compatibility */
+@supports (-webkit-touch-callout: none) {
+  .futuristic-bg {
+    min-height: -webkit-fill-available;
+  }
+
+  main[class*="flex-1"] {
+    min-height: -webkit-fill-available;
+  }
+
+  .mobile-main-content {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Prevent layout shift when scrollbar appears/disappears */
+html {
+  overflow-y: scroll;
+}
+
+/* Ensure body doesn't have default margins */
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Safe area support for notched devices */
+.safe-area-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 1px);
+}
+
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 1px);
+}
+
+.safe-area-left {
+  padding-left: max(env(safe-area-inset-left, 0px), 1px);
+}
+
+.safe-area-right {
+  padding-right: max(env(safe-area-inset-right, 0px), 1px);
+}
+
+/* Responsive overflow handling */
+@media (max-width: 768px) {
+  /* Mobile - prioritize scrolling */
+  main[class*="flex-1"] {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-main-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ensure bottom nav doesn't get clipped */
+  [class*="bottom-nav"],
+  [class*="mobile-bottom"] {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-shrink: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Desktop - standard layout */
+  main[class*="flex-1"] {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .desktop-sidebar {
+    flex-shrink: 0;
+    overflow-y: auto;
+    max-height: 100vh;
+  }
+}
+
+/* Drawer/Side menu specific */
+[class*="side-drawer"],
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  overflow: hidden;
+}
+
+[class*="side-drawer"] > div,
+.drawer > div {
+  overflow-y: auto;
+  max-height: 100vh;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevents double scrollbars */
+.no-scroll {
+  overflow: hidden;
+}
+
+/* Ensures content doesn't get cut off at bottom on mobile */
+.pb-24 {
+  padding-bottom: max(6rem, env(safe-area-inset-bottom, 6rem));
+}
+
+.pb-20 {
+  padding-bottom: max(5rem, env(safe-area-inset-bottom, 5rem));
+}
+
+/* Fix for absolute positioned elements inside scrollable containers */
+.relative-container {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated transitions shouldn't affect layout */
+.animate-in,
+.animate-out {
+  overflow: visible !important;
+}
