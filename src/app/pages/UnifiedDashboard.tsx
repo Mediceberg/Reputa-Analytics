@@ -47,7 +47,7 @@ import {
   Activity, Clock, Zap, Sparkles, BarChart3, FileText,
   PieChart, LineChart, AlertTriangle, Coins, RefreshCw, Lock,
   Languages, ChevronDown, Calendar, CheckCircle, Award, Star,
-  Settings, MessageSquare, HelpCircle, FileText as FileTextIcon
+  Settings, MessageSquare, HelpCircle, FileText as FileTextIcon, TestTube, AlertCircle
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
@@ -809,7 +809,7 @@ export function UnifiedDashboard({
 
         {activeSection === 'settings' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Network Mode Selection */}
+            {/* Network Mode Selection - Only Mainnet & Testnet */}
             <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
               <div className="flex items-center gap-3 mb-4">
                 <Globe className="w-6 h-6 text-cyan-400" />
@@ -818,16 +818,46 @@ export function UnifiedDashboard({
                     {language === 'ar' ? 'وضع الشبكة' : 'Network Mode'}
                   </h2>
                   <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                    {language === 'ar' ? 'اختر وضع التشغيل للسمعة' : 'Select operating mode for reputation'}
+                    {language === 'ar' ? 'التبديل بين الشبكة الرئيسية و شبكة الاختبار' : 'Switch between Mainnet and Testnet'}
                   </p>
                 </div>
               </div>
               
-              <ModeIndicator
-                currentMode={mode.mode}
-                connected={mode.connected}
-                onModeChange={handleModeChange}
-              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleModeChange('mainnet')}
+                  className={`flex-1 p-4 rounded-xl transition-all duration-300 ${
+                    mode.mode === 'mainnet'
+                      ? 'border-2 border-green-500 bg-green-500/10'
+                      : 'border-2 border-gray-600 bg-gray-800/20 hover:border-green-400'
+                  }`}
+                >
+                  <Globe className={`w-5 h-5 mx-auto mb-2 ${mode.mode === 'mainnet' ? 'text-green-400' : 'text-gray-400'}`} />
+                  <p className={`text-sm font-bold uppercase ${mode.mode === 'mainnet' ? 'text-green-400' : 'text-gray-400'}`}>
+                    {language === 'ar' ? 'الشبكة الرئيسية' : 'Mainnet'}
+                  </p>
+                  <p className={`text-[10px] ${mode.mode === 'mainnet' ? 'text-green-300' : 'text-gray-500'}`}>
+                    {language === 'ar' ? '100% تأثير' : '100% Impact'}
+                  </p>
+                </button>
+                
+                <button
+                  onClick={() => handleModeChange('testnet')}
+                  className={`flex-1 p-4 rounded-xl transition-all duration-300 ${
+                    mode.mode === 'testnet'
+                      ? 'border-2 border-amber-500 bg-amber-500/10'
+                      : 'border-2 border-gray-600 bg-gray-800/20 hover:border-amber-400'
+                  }`}
+                >
+                  <TestTube className={`w-5 h-5 mx-auto mb-2 ${mode.mode === 'testnet' ? 'text-amber-400' : 'text-gray-400'}`} />
+                  <p className={`text-sm font-bold uppercase ${mode.mode === 'testnet' ? 'text-amber-400' : 'text-gray-400'}`}>
+                    {language === 'ar' ? 'شبكة الاختبار' : 'Testnet'}
+                  </p>
+                  <p className={`text-[10px] ${mode.mode === 'testnet' ? 'text-amber-300' : 'text-gray-500'}`}>
+                    {language === 'ar' ? '25% تأثير' : '25% Impact'}
+                  </p>
+                </button>
+              </div>
               
               <div className="mt-4 p-3 rounded-lg" style={{ 
                 background: MODE_IMPACTS[mode.mode].bgColor,
@@ -837,20 +867,16 @@ export function UnifiedDashboard({
                   <Shield className="w-4 h-4 mt-0.5" style={{ color: MODE_IMPACTS[mode.mode].color }} />
                   <div>
                     <p className="text-xs font-semibold" style={{ color: MODE_IMPACTS[mode.mode].color }}>
-                      {language === 'ar' ? 'تأثير السمعة' : 'Reputation Impact'}
+                      {language === 'ar' ? 'معلومات الوضع' : 'Mode Information'}
                     </p>
                     <p className="text-[10px] text-gray-400 mt-1">
                       {mode.mode === 'mainnet' && (language === 'ar' 
-                        ? 'سمعتك تُحسب بالكامل من بيانات الشبكة الرئيسية الحقيقية'
-                        : 'Your reputation is fully calculated from real mainnet data'
+                        ? 'سمعتك تُحسب بالكامل من بيانات الشبكة الرئيسية الحقيقية. هذا هو الوضع الفعلي والعامل.'
+                        : 'Your reputation is fully calculated from real mainnet blockchain data. This is the live and operational mode.'
                       )}
                       {mode.mode === 'testnet' && (language === 'ar'
-                        ? 'نشاط Testnet يضيف 25% فقط كنقاط مكملة'
-                        : 'Testnet activity adds only 25% as supplementary points'
-                      )}
-                      {mode.mode === 'demo' && (language === 'ar'
-                        ? 'هذا وضع تجريبي - لا يؤثر على سمعتك الحقيقية'
-                        : 'This is demo mode - no impact on your real reputation'
+                        ? 'نشاط شبكة الاختبار يضيف فقط 25% كنقاط مكملة للتجربة والاختبار الآمن.'
+                        : 'Testnet activity adds only 25% as supplementary points for safe testing and experimentation.'
                       )}
                     </p>
                   </div>
@@ -858,42 +884,205 @@ export function UnifiedDashboard({
               </div>
             </div>
             
-            {/* Other Settings */}
+            {/* User Preferences Settings */}
             <div className="glass-card p-6" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }}>
               <div className="flex items-center gap-3 mb-6">
                 <Settings className="w-6 h-6 text-purple-400" />
                 <h2 className="text-lg font-black uppercase tracking-wide text-white">
-                  {language === 'ar' ? 'الإعدادات' : 'Settings'}
+                  {language === 'ar' ? 'تفضيلات المستخدم' : 'User Preferences'}
                 </h2>
               </div>
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+                {/* Dark Mode */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-colors">
                   <div>
                     <p className="text-sm font-bold text-white uppercase tracking-wide">
                       {language === 'ar' ? 'الوضع الداكن' : 'Dark Mode'}
                     </p>
                     <p className="text-[10px] text-gray-400">
-                      {language === 'ar' ? 'مفعّل حسب إعدادات النظام' : 'System preference enabled'}
+                      {language === 'ar' ? 'مفعّل دائماً حسب إعدادات النظام' : 'Always enabled based on system settings'}
                     </p>
                   </div>
-                  <div className="w-12 h-6 bg-purple-600 rounded-full relative">
-                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative shadow-lg shadow-purple-600/30">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
+
+                {/* Push Notifications */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-colors">
                   <div>
                     <p className="text-sm font-bold text-white uppercase tracking-wide">
-                      {language === 'ar' ? 'الإشعارات' : 'Push Notifications'}
+                      {language === 'ar' ? 'إشعارات النشاط' : 'Activity Notifications'}
                     </p>
                     <p className="text-[10px] text-gray-400">
-                      {language === 'ar' ? 'استلام تنبيهات للنشاط المهم' : 'Receive alerts for important activity'}
+                      {language === 'ar' ? 'استلام تنبيهات للنشاط المهم والتحديثات' : 'Get alerts for important activity and updates'}
                     </p>
                   </div>
-                  <div className="w-12 h-6 bg-gray-700 rounded-full relative">
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full" />
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative shadow-lg shadow-purple-600/30">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+
+                {/* Sound Notifications */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'تنبيهات الصوت' : 'Sound Notifications'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'تشغيل صوت عند الإشعارات المهمة' : 'Play sound for important notifications'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-gray-700 rounded-full relative shadow-lg shadow-gray-700/30">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+
+                {/* Email Notifications */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-purple-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'إشعارات البريد الإلكتروني' : 'Email Notifications'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'استقبال تقارير أسبوعية وملخصات السمعة' : 'Receive weekly reports and reputation summaries'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-gray-700 rounded-full relative shadow-lg shadow-gray-700/30">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Privacy & Security Settings */}
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(255, 87, 34, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <Shield className="w-6 h-6 text-orange-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">
+                  {language === 'ar' ? 'الخصوصية والأمان' : 'Privacy & Security'}
+                </h2>
+              </div>
+              <div className="space-y-4">
+                {/* Show Wallet Address */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-orange-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'إظهار عنوان المحفظة' : 'Show Wallet Address'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'عرض عنوان المحفظة في الملف الشخصي العام' : 'Display wallet address on public profile'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative shadow-lg shadow-purple-600/30">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+
+                {/* Profile Visibility */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-orange-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'ظهور الملف الشخصي' : 'Profile Visibility'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'السماح للآخرين برؤية ملفك الشخصي' : 'Allow others to view your profile'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative shadow-lg shadow-purple-600/30">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+
+                {/* Two-Factor Authentication */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-orange-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'المصادقة الثنائية' : '2FA Security'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'تفعيل حماية إضافية لحسابك' : 'Add extra layer of security to your account'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-gray-700 rounded-full relative shadow-lg shadow-gray-700/30">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced Settings */}
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <Zap className="w-6 h-6 text-blue-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">
+                  {language === 'ar' ? 'الإعدادات المتقدمة' : 'Advanced Settings'}
+                </h2>
+              </div>
+              <div className="space-y-4">
+                {/* Auto-Sync Blockchain */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'مزامنة تلقائية' : 'Auto-Sync Blockchain'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'مزامنة بيانات البلوكشين تلقائياً كل ساعة' : 'Automatically sync blockchain data hourly'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative shadow-lg shadow-purple-600/30">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+
+                {/* Cache Data */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'تخزين مؤقت محلي' : 'Local Caching'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'تخزين البيانات محلياً لسرعة أكبر' : 'Cache data locally for faster loading'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-purple-600 rounded-full relative shadow-lg shadow-purple-600/30">
+                    <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+
+                {/* Analytics */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-blue-500/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase tracking-wide">
+                      {language === 'ar' ? 'تحليلات الاستخدام' : 'Usage Analytics'}
+                    </p>
+                    <p className="text-[10px] text-gray-400">
+                      {language === 'ar' ? 'السماح بجمع بيانات التحليلات المجهولة' : 'Allow anonymous analytics data collection'}
+                    </p>
+                  </div>
+                  <div className="w-12 h-6 bg-gray-700 rounded-full relative shadow-lg shadow-gray-700/30">
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Danger Zone */}
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <AlertCircle className="w-6 h-6 text-red-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">
+                  {language === 'ar' ? 'منطقة الخطر' : 'Danger Zone'}
+                </h2>
+              </div>
+              <button className="w-full p-4 rounded-xl bg-red-600/20 border-2 border-red-600/50 hover:bg-red-600/30 hover:border-red-500 transition-all group">
+                <p className="text-sm font-bold text-red-400 uppercase tracking-wide group-hover:text-red-300">
+                  {language === 'ar' ? 'حذف حسابي' : 'Delete My Account'}
+                </p>
+                <p className="text-[10px] text-red-400/70 group-hover:text-red-300/70">
+                  {language === 'ar' ? 'هذا الإجراء دائم ولا يمكن التراجع عنه' : 'This action is permanent and cannot be reversed'}
+                </p>
+              </button>
             </div>
           </div>
         )}

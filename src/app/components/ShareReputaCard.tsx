@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';  
-import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle, AlertCircle } from 'lucide-react';
+import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle, AlertCircle, Globe, TestTube } from 'lucide-react';
 
 interface ShareReputaCardProps {
   username: string;
@@ -8,6 +8,8 @@ interface ShareReputaCardProps {
   trustRank: string;
   walletAddress?: string;
   onClose: () => void;
+  onNetworkToggle?: (network: 'mainnet' | 'testnet') => void;
+  currentNetwork?: 'mainnet' | 'testnet';
 }
 
 const levelNames = [
@@ -43,13 +45,22 @@ export const ShareReputaCard: React.FC<ShareReputaCardProps> = ({
   level,
   trustRank,
   walletAddress,
-  onClose
+  onClose,
+  onNetworkToggle,
+  currentNetwork = 'mainnet'
 }) => {
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [network, setNetwork] = useState<'mainnet' | 'testnet'>(currentNetwork);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handleNetworkToggle = () => {
+    const newNetwork = network === 'mainnet' ? 'testnet' : 'mainnet';
+    setNetwork(newNetwork);
+    onNetworkToggle?.(newNetwork);
+  };
 
   const displayLevel = Math.min(Math.max(level, 1), 7);
   const levelName = levelNames[displayLevel - 1] || 'Pioneer';
@@ -386,9 +397,41 @@ reputa-score.vercel.app`;
               </div>
               <span className="text-white font-bold text-lg">Reputa Score</span>
             </div>
-            <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: 'rgba(0, 217, 255, 0.2)', color: '#00D9FF', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
-              Pi Network
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleNetworkToggle}
+                className="p-2 rounded-lg transition-all duration-300 hover:scale-110"
+                style={{
+                  background: network === 'mainnet' 
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.1) 100%)'
+                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                  border: network === 'mainnet'
+                    ? '1px solid rgba(16, 185, 129, 0.5)'
+                    : '1px solid rgba(245, 158, 11, 0.5)',
+                  boxShadow: network === 'mainnet'
+                    ? '0 0 15px rgba(16, 185, 129, 0.2)'
+                    : '0 0 15px rgba(245, 158, 11, 0.2)'
+                }}
+                title={`Switch to ${network === 'mainnet' ? 'Testnet' : 'Mainnet'}`}
+              >
+                {network === 'mainnet' ? (
+                  <Globe className="w-5 h-5 text-green-400" />
+                ) : (
+                  <TestTube className="w-5 h-5 text-amber-400" />
+                )}
+              </button>
+              <span className="text-xs px-2.5 py-1.5 rounded-full font-medium" style={{ 
+                background: network === 'mainnet'
+                  ? 'rgba(16, 185, 129, 0.2)'
+                  : 'rgba(245, 158, 11, 0.2)',
+                color: network === 'mainnet' ? '#10B981' : '#F59E0B',
+                border: network === 'mainnet'
+                  ? '1px solid rgba(16, 185, 129, 0.3)'
+                  : '1px solid rgba(245, 158, 11, 0.3)'
+              }}>
+                {network === 'mainnet' ? 'Mainnet' : 'Testnet'}
+              </span>
+            </div>
           </div>
 
           {/* Username & Wallet */}
