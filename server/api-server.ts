@@ -330,13 +330,13 @@ app.post('/api/reputation', async (req, res) => {
     data.scoreEvents = data.scoreEvents.slice(0, 100);
 
     await saveReputationData(data);
-    console.log(`[WALLET SCAN] User ${uid}, Wallet: ${walletAddress}, Delta: ${deltaPoints}`);
+    console.log(`[WALLET SCAN] User ${uid}, Wallet: ${walletAddress}, Delta: ${delta}`);
 
     return res.json({
       success: true,
       data: {
-        deltaPoints,
-        deltaDetails,
+        deltaPoints: delta,
+        deltaDetails: details,
         totalReputationScore: data.totalReputationScore,
         reputationLevel: data.reputationLevel,
         blockchainScore: data.blockchainScore,

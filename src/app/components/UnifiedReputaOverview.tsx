@@ -100,7 +100,7 @@ function CategoryProgressBar({
   label: string; 
   value: number; 
   maxValue: number; 
-  icon: React.ComponentType<{ className?: string }>; 
+  icon: React.ComponentType<any>; 
   color: string;
 }) {
   const percentage = Math.min(100, Math.max(0, (value / maxValue) * 100));
@@ -138,7 +138,7 @@ function QuickStatCard({
   value, 
   color 
 }: { 
-  icon: React.ComponentType<{ className?: string }>; 
+  icon: React.ComponentType<any>; 
   label: string; 
   value: string | number; 
   color: string;
@@ -397,10 +397,10 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
                 <div
                   key={index}
                   className={`p-4 rounded-xl transition-all ${isCurrentTier ? 'ring-2' : 'opacity-60'}`}
-                  style={{
+                    style={{
                     background: isCurrentTier ? `${tierColors.text}10` : 'rgba(255,255,255,0.02)',
                     border: `1px solid ${isCurrentTier ? tierColors.border : 'rgba(255,255,255,0.1)'}`,
-                    ringColor: isCurrentTier ? tierColors.text : undefined,
+                    boxShadow: isCurrentTier ? `0 0 10px ${tierColors.text}55` : undefined,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">

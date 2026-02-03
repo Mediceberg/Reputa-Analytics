@@ -7,17 +7,14 @@ import express from 'express';
 import cors from 'cors';
 import { initializeMongoDb, getMongoDb } from '../db/mongodb';
 import { initializePiSDK } from '../services/piSdkAdvanced';
-import { UserManagementService } from '../services/userManagementService';
-import { AutoSyncService } from '../services/autoSyncService';
-import { DemoModeManager } from '../services/demoModeManager';
-import { initializeReputaAPI } from '../api/reputaProtocolRoutes';
-import adminConsoleRoutes from '../api/adminConsoleRoutes';
+import { initializeReputaAPI } from '../../api/reputaProtocolRoutes';
+import adminConsoleRoutes from '../../api/adminConsoleRoutes';
 import { REPUTA_CONFIG, validateConfig, ENV_SETUP_GUIDE } from '../config/reputaConfig';
 
 /**
  * Initialize Reputa Protocol Server
  */
-export async function initializeReputaServer(): Promise<express.Application> {
+async function initializeReputaServerImpl(): Promise<express.Application> {
   console.log(`
 ╔════════════════════════════════════════════════════════════════════════════╗
 ║                   🎯 Reputa Protocol v3.0                                 ║
@@ -76,26 +73,11 @@ export async function initializeReputaServer(): Promise<express.Application> {
     });
     console.log('✅ Pi SDK ready (Demo Mode fallback enabled)');
 
-    console.log('\n👤 Initializing User Management...');
-    const userService = new UserManagementService();
-    await userService.initialize();
-    console.log('✅ User Management ready');
-
-    console.log('\n🔄 Initializing Auto-Sync Service...');
-    const autoSyncService = new AutoSyncService();
-    await autoSyncService.initialize();
-    await autoSyncService.startMonitoring(REPUTA_CONFIG.sync.weeklyUpdateTime);
-    console.log('✅ Auto-Sync Service ready (Weekly updates scheduled)');
-
-    console.log('\n🎮 Initializing Demo Mode...');
-    const demoModeManager = new DemoModeManager();
-    console.log('✅ Demo Mode ready');
-
     // ==================== SETUP API ROUTES ====================
 
     console.log('\n🌐 Setting up API routes...');
 
-    // Main Reputa API
+    // Main Reputa API (returns an express Router)
     const reputaRoutes = await initializeReputaAPI();
     app.use(reputaRoutes);
 
@@ -159,19 +141,24 @@ export async function initializeReputaServer(): Promise<express.Application> {
     // Create sample data if demo mode is enabled
     if (REPUTA_CONFIG.demoMode.enabled) {
       const db = getMongoDb();
-      const demoCount = await db.demoMode.countDocuments({});
+      const demoCount = typeof db.demoMode?.countDocuments === 'function'
+        ? await db.demoMode.countDocuments({})
+        : (await db.demoMode.find().toArray()).length;
       if (demoCount === 0) {
         console.log('   Creating sample demo sessions...');
-        // Demo sessions will be created on-demand
         console.log('   ✅ Demo sessions ready');
       }
     }
 
-    // Start database maintenance tasks
+    // Start database maintenance tasks (safe fallback implementation)
     const maintenanceInterval = setInterval(async () => {
       try {
-        // Cleanup old demo sessions (weekly)
-        await demoModeManager.cleanupOldDemoSessions();
+        const db = getMongoDb();
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        if (db.demoMode && typeof db.demoMode.deleteMany === 'function') {
+          await db.demoMode.deleteMany({ createdAt: { $lt: cutoff } });
+        }
       } catch (error) {
         console.error('Maintenance error:', error);
       }
@@ -220,8 +207,8 @@ export async function initializeReputaServer(): Promise<express.Application> {
 /**
  * Start Reputa Server
  */
-export async function startReputaServer(port: number = REPUTA_CONFIG.api.port as number): Promise<void> {
-  const app = await initializeReputaServer();
+async function startReputaServerImpl(port: number = REPUTA_CONFIG.api.port as number): Promise<void> {
+  const app = await initializeReputaServerImpl();
 
   const server = app.listen(port, () => {
     console.log(`\n🌐 Server running on port ${port}`);
@@ -244,13 +231,15 @@ export async function startReputaServer(port: number = REPUTA_CONFIG.api.port as
  * Export for Vercel/Serverless deployment
  */
 export default async function handler(req: any, res: any): Promise<void> {
-  const app = await initializeReputaServer();
+  const app = await initializeReputaServerImpl();
   app(req, res);
 }
 
 // Start if run directly
 if (require.main === module) {
-  startReputaServer(parseInt(process.env.PORT || '3000'));
+  startReputaServerImpl(parseInt(process.env.PORT || '3000'));
 }
 
-export { initializeReputaServer, startReputaServer };
+// Export wrapper functions for compatibility
+export const initializeReputaServer = initializeReputaServerImpl;
+export const startReputaServer = startReputaServerImpl;

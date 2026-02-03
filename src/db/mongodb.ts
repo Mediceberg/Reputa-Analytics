@@ -1,30 +1,80 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+// Try to require the official mongodb driver. If not available (dev container without
+// dependencies), fall back to a lightweight in-memory stub so the app can still run
+// without runtime import errors.
+// Types from mongodb for compile-time checks
+import type { Db, Collection } from 'mongodb';
 
+let MongoClient: any;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  MongoClient = require('mongodb').MongoClient;
+} catch (e) {
+  MongoClient = null;
+}
+
+type AnyCollection = any;
 interface ReputaDatabase {
-  db: Db;
-  users: Collection;
-  wallets: Collection;
-  pointsLog: Collection;
-  dailyCheckin: Collection;
-  referrals: Collection;
-  transactions: Collection;
-  blockchainSync: Collection;
-  demoMode: Collection;
-  adminLogs: Collection;
+  db: any;
+  users: AnyCollection;
+  wallets: AnyCollection;
+  pointsLog: AnyCollection;
+  dailyCheckin: AnyCollection;
+  referrals: AnyCollection;
+  transactions: AnyCollection;
+  blockchainSync: AnyCollection;
+  demoMode: AnyCollection;
+  adminLogs: AnyCollection;
 }
 
 let mongoDb: ReputaDatabase | null = null;
 
 /**
- * Initialize MongoDB Connection and Collections
+ * Initialize MongoDB Connection and Collections (or create in-memory stub)
  */
 export async function initializeMongoDb(): Promise<ReputaDatabase> {
-  if (mongoDb) {
-    return mongoDb;
-  }
+  if (mongoDb) return mongoDb;
 
   const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
   const dbName = process.env.MONGODB_DB_NAME || 'reputa-analytics';
+
+  if (!MongoClient) {
+    // Create simple in-memory collections as fallback (Maps with helper methods)
+    const makeCollection = () => {
+      const m = new Map<string, any>();
+      // attach noop async methods used by code
+      (m as any).createIndex = async () => {};
+      (m as any).insertOne = async (doc: any) => { m.set(String(doc._id || Date.now()), doc); return { insertedId: doc._id || Date.now() }; };
+      (m as any).findOne = async (query: any) => {
+        for (const v of m.values()) {
+          let match = true;
+          for (const k of Object.keys(query || {})) {
+            if ((v as any)[k] !== query[k]) { match = false; break; }
+          }
+          if (match) return v;
+        }
+        return null;
+      };
+      (m as any).updateOne = async (q: any, u: any, opts?: any) => { return { modifiedCount: 0 }; };
+      (m as any).find = () => ({ toArray: async () => Array.from(m.values()) });
+      return m as AnyCollection;
+    };
+
+    mongoDb = {
+      db: { isInMemory: true, uri: mongoUri, name: dbName },
+      users: makeCollection(),
+      wallets: makeCollection(),
+      pointsLog: makeCollection(),
+      dailyCheckin: makeCollection(),
+      referrals: makeCollection(),
+      transactions: makeCollection(),
+      blockchainSync: makeCollection(),
+      demoMode: makeCollection(),
+      adminLogs: makeCollection(),
+    };
+
+    console.warn('⚠️ MongoDB driver not available - running with in-memory stub database');
+    return mongoDb;
+  }
 
   try {
     const client = new MongoClient(mongoUri);

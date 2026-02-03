@@ -3,12 +3,24 @@ import { Analytics } from '@vercel/analytics/react';
 import { Send, MessageSquare, LogIn, Share2, Mail } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
-import { UnifiedDashboard } from './pages/UnifiedDashboard';
-import AdminConsole from './pages/admin/AdminConsole';
+import React, { Suspense } from 'react';
+
+// Lazy-load heavy pages to improve initial bundle size
+const UnifiedDashboard = React.lazy(async () => {
+  const mod = await import('./pages/UnifiedDashboard');
+  return { default: mod.UnifiedDashboard } as any;
+});
+
+const AdminConsole = React.lazy(async () => {
+  const mod = await import('./pages/admin/AdminConsole');
+  // AdminConsole is default export in file
+  return { default: mod.default || mod } as any;
+});
 import { ShareReputaCard } from './components/ShareReputaCard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
+import { initializeUnifiedReputationOnLogin, getCachedReputation } from './services/reputationInitializer';
 import logoImage from '../assets/logo-new.png';
 
 function FeedbackSection({ username }: { username: string }) {
@@ -107,6 +119,19 @@ function ReputaAppContent() {
         localStorage.setItem('piUserId', user.uid);
         localStorage.setItem('piUsername', user.username);
         if (user.wallet_address) localStorage.setItem('piWalletAddress', user.wallet_address);
+        
+        // Initialize unified reputation system
+        try {
+          await initializeUnifiedReputationOnLogin(
+            user.uid,
+            user.wallet_address || 'pending',
+            user.username
+          );
+          console.log('✅ Unified reputation system initialized');
+        } catch (error) {
+          console.error('Failed to initialize reputation system:', error);
+          // Continue anyway - reputation will be initialized later
+        }
         
         syncToAdmin(user.username, user.wallet_address || "Pending...");
         const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
@@ -293,7 +318,11 @@ function ReputaAppContent() {
 
   // --- Logic for rendering based on path and data ---
   if (currentPath === '/admin-console') {
-    return <AdminConsole />;
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading admin...</div>}>
+        <AdminConsole />
+      </Suspense>
+    );
   }
 
   if (isInitializing) {
@@ -315,13 +344,15 @@ function ReputaAppContent() {
   if (walletData) {
     return (
       <>
-        <UnifiedDashboard 
-          walletData={walletData}
-          isProUser={isUnlocked}
-          onReset={() => setWalletData(null)}
-          onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
-          username={currentUser?.username}
-        />
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading dashboard...</div>}>
+          <UnifiedDashboard 
+            walletData={walletData}
+            isProUser={isUnlocked}
+            onReset={() => setWalletData(null)}
+            onUpgradePrompt={() => setIsUpgradeModalOpen(true)}
+            username={currentUser?.username}
+          />
+        </Suspense>
         <AccessUpgradeModal 
           isOpen={isUpgradeModalOpen} 
           onClose={() => setIsUpgradeModalOpen(false)} 

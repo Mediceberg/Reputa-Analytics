@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'  
 import path from 'path'
+// @ts-ignore - optional plugin, may not have types available in some environments
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';  
-import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle, AlertCircle } from 'lucide-react';
+import { Share2, Copy, X, Shield, Star, Trophy, Check, Download, Image, Send, MessageCircle, AlertCircle, Globe, TestTube } from 'lucide-react';
 
 interface ShareReputaCardProps {
   username: string;
@@ -8,6 +8,8 @@ interface ShareReputaCardProps {
   trustRank: string;
   walletAddress?: string;
   onClose: () => void;
+  onNetworkToggle?: (network: 'mainnet' | 'testnet') => void;
+  currentNetwork?: 'mainnet' | 'testnet';
 }
 
 const levelNames = [
@@ -43,13 +45,22 @@ export const ShareReputaCard: React.FC<ShareReputaCardProps> = ({
   level,
   trustRank,
   walletAddress,
-  onClose
+  onClose,
+  onNetworkToggle,
+  currentNetwork = 'mainnet'
 }) => {
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [network, setNetwork] = useState<'mainnet' | 'testnet'>(currentNetwork);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handleNetworkToggle = () => {
+    const newNetwork = network === 'mainnet' ? 'testnet' : 'mainnet';
+    setNetwork(newNetwork);
+    onNetworkToggle?.(newNetwork);
+  };
 
   const displayLevel = Math.min(Math.max(level, 1), 7);
   const levelName = levelNames[displayLevel - 1] || 'Pioneer';
@@ -91,9 +102,9 @@ reputa-score.vercel.app`;
         return;
       }
 
-      // Set canvas dimensions (1080x1350 for mobile optimal)
-      canvas.width = 1080;
-      canvas.height = 1350;
+      // Set canvas dimensions (540x600 optimized for mobile and sharing)
+      canvas.width = 540;
+      canvas.height = 600;
 
       // Fill background
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -104,12 +115,12 @@ reputa-score.vercel.app`;
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Add decorative elements
+      // Add decorative elements (reduced)
       ctx.strokeStyle = 'rgba(139, 92, 246, 0.1)';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 1;
       
-      for (let i = 0; i < 15; i++) {
-        const x = (i * canvas.width) / 15;
+      for (let i = 0; i < 8; i++) {
+        const x = (i * canvas.width) / 8;
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, canvas.height);
@@ -118,86 +129,86 @@ reputa-score.vercel.app`;
 
       // Header
       ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.textAlign = 'center';
-      ctx.fillText('Reputa Score', canvas.width / 2, 80);
+      ctx.fillText('Reputa Score', canvas.width / 2, 40);
 
-      ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.fillText('Pi Network', canvas.width / 2, 130);
+      ctx.fillText('Pi Network', canvas.width / 2, 60);
 
       // Username
-      ctx.font = 'bold 60px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(`@${username}`, canvas.width / 2, 240);
+      ctx.fillText(`@${username}`, canvas.width / 2, 100);
 
       // Wallet address if available
       if (walletAddress) {
-        ctx.font = '20px monospace';
+        ctx.font = '10px monospace';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
         const shortAddr = `${walletAddress.substring(0, 8)}...${walletAddress.slice(-6)}`;
-        ctx.fillText(shortAddr, canvas.width / 2, 280);
+        ctx.fillText(shortAddr, canvas.width / 2, 120);
       }
 
       // Score box
       ctx.fillStyle = 'rgba(139, 92, 246, 0.15)';
-      ctx.fillRect(80, 320, canvas.width - 160, 200);
+      ctx.fillRect(30, 140, canvas.width - 60, 120);
       ctx.strokeStyle = 'rgba(139, 92, 246, 0.3)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(80, 320, canvas.width - 160, 200);
+      ctx.strokeRect(30, 140, canvas.width - 60, 120);
 
-      ctx.font = 'bold 120px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = '#8B5CF6';
       ctx.textAlign = 'center';
-      ctx.fillText(score.toLocaleString(), canvas.width / 2, 420);
+      ctx.fillText(score.toLocaleString(), canvas.width / 2, 210);
 
-      ctx.font = '32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.fillText('Reputation Points', canvas.width / 2, 480);
+      ctx.fillText('Reputation Points', canvas.width / 2, 245);
 
       // Level and Trust Rank
-      const boxWidth = (canvas.width - 160) / 2 - 10;
+      const boxWidth = (canvas.width - 60) / 2 - 5;
       
       // Level box
       ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fillRect(80, 560, boxWidth, 150);
+      ctx.fillRect(30, 280, boxWidth, 100);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(80, 560, boxWidth, 150);
+      ctx.strokeRect(30, 280, boxWidth, 100);
 
-      ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = levelColor;
       ctx.textAlign = 'center';
-      ctx.fillText(`Lv.${displayLevel}`, 80 + boxWidth / 2, 650);
+      ctx.fillText(`Lv.${displayLevel}`, 30 + boxWidth / 2, 340);
 
-      ctx.font = '28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = '14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = levelColor;
-      ctx.fillText(levelName, 80 + boxWidth / 2, 710);
+      ctx.fillText(levelName, 30 + boxWidth / 2, 365);
 
       // Trust Rank box
       ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fillRect(100 + boxWidth, 560, boxWidth, 150);
+      ctx.fillRect(35 + boxWidth, 280, boxWidth, 100);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(100 + boxWidth, 560, boxWidth, 150);
+      ctx.strokeRect(35 + boxWidth, 280, boxWidth, 100);
 
-      ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = '#00D9FF';
       ctx.textAlign = 'center';
-      ctx.fillText(trustRank, 100 + boxWidth + boxWidth / 2, 650);
+      ctx.fillText(trustRank, 35 + boxWidth + boxWidth / 2, 330);
 
-      ctx.font = '28px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.fillText('Trust Rank', 100 + boxWidth + boxWidth / 2, 710);
+      ctx.fillText('Trust Rank', 35 + boxWidth + boxWidth / 2, 355);
 
       // Footer
-      ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.textAlign = 'center';
-      ctx.fillText('reputa-score.vercel.app', canvas.width / 2, canvas.height - 80);
+      ctx.fillText('reputa-score.vercel.app', canvas.width / 2, canvas.height - 25);
 
-      ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
-      ctx.fillText('Powered by Pi Network', canvas.width / 2, canvas.height - 30);
+      ctx.font = '10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto';
+      ctx.fillText('Powered by Pi Network', canvas.width / 2, canvas.height - 10);
 
       // Convert to blob
       canvas.toBlob(
@@ -386,9 +397,41 @@ reputa-score.vercel.app`;
               </div>
               <span className="text-white font-bold text-lg">Reputa Score</span>
             </div>
-            <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: 'rgba(0, 217, 255, 0.2)', color: '#00D9FF', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
-              Pi Network
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleNetworkToggle}
+                className="p-2 rounded-lg transition-all duration-300 hover:scale-110"
+                style={{
+                  background: network === 'mainnet' 
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.1) 100%)'
+                    : 'linear-gradient(135deg, rgba(245, 158, 11, 0.3) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                  border: network === 'mainnet'
+                    ? '1px solid rgba(16, 185, 129, 0.5)'
+                    : '1px solid rgba(245, 158, 11, 0.5)',
+                  boxShadow: network === 'mainnet'
+                    ? '0 0 15px rgba(16, 185, 129, 0.2)'
+                    : '0 0 15px rgba(245, 158, 11, 0.2)'
+                }}
+                title={`Switch to ${network === 'mainnet' ? 'Testnet' : 'Mainnet'}`}
+              >
+                {network === 'mainnet' ? (
+                  <Globe className="w-5 h-5 text-green-400" />
+                ) : (
+                  <TestTube className="w-5 h-5 text-amber-400" />
+                )}
+              </button>
+              <span className="text-xs px-2.5 py-1.5 rounded-full font-medium" style={{ 
+                background: network === 'mainnet'
+                  ? 'rgba(16, 185, 129, 0.2)'
+                  : 'rgba(245, 158, 11, 0.2)',
+                color: network === 'mainnet' ? '#10B981' : '#F59E0B',
+                border: network === 'mainnet'
+                  ? '1px solid rgba(16, 185, 129, 0.3)'
+                  : '1px solid rgba(245, 158, 11, 0.3)'
+              }}>
+                {network === 'mainnet' ? 'Mainnet' : 'Testnet'}
+              </span>
+            </div>
           </div>
 
           {/* Username & Wallet */}

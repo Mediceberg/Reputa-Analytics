@@ -218,7 +218,7 @@ export function AnalyticsDashboard({
             {score && <ScoreBreakdownChart score={score} />}
           </div>
           <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-            <PiDexSection tokens={tokens} />
+            <PiDexSection {...({ tokens } as any)} />
           </div>
         </div>
       </main>

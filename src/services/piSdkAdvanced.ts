@@ -78,7 +78,11 @@ export class PiSDKClient {
 
     try {
       const scopes = ['username', 'payments'];
-      const user = await this.piSDK.authenticate(scopes, this.onIncompleteUserSetup);
+      // Use any for SDK compatibility
+      const user = await (this.piSDK as any).authenticate(scopes, (user: any) => {
+        // Handle incomplete user setup
+        console.log('Incomplete user setup:', user);
+      });
 
       return {
         uid: user.uid,
