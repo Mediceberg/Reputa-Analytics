@@ -131,6 +131,9 @@ async function createUsersCollection(db: Db): Promise<Collection> {
             level: { bsonType: 'string', enum: ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'] },
             isVip: { bsonType: 'bool', description: 'VIP membership status' },
             isDemoMode: { bsonType: 'bool', description: 'Whether user is in demo mode' },
+            referralCode: { bsonType: 'string', description: 'Unique referral code for user' },
+            pointsBalance: { bsonType: 'int', description: 'Claimable points from referrals (default 0)', default: 0 },
+            claimablePoints: { bsonType: 'int', description: 'Points ready to be claimed (default 0)', default: 0 },
             lastSyncTime: { bsonType: 'date' },
             createdAt: { bsonType: 'date' },
             updatedAt: { bsonType: 'date' },
@@ -149,6 +152,7 @@ async function createUsersCollection(db: Db): Promise<Collection> {
   await collection.createIndex({ pioneerId: 1 }, { unique: true });
   await collection.createIndex({ email: 1 });
   await collection.createIndex({ primaryWallet: 1 });
+  await collection.createIndex({ referralCode: 1 });
   await collection.createIndex({ reputationScore: -1 });
   await collection.createIndex({ createdAt: -1 });
   await collection.createIndex({ isDemoMode: 1 });
@@ -322,21 +326,21 @@ async function createReferralsCollection(db: Db): Promise<Collection> {
       validator: {
         $jsonSchema: {
           bsonType: 'object',
-          required: ['referrerId', 'referredPioneerId'],
+          required: ['referrerWallet', 'referredWallet'],
           properties: {
             _id: { bsonType: 'objectId' },
-            referrerId: { bsonType: 'string', description: 'Pioneer ID of referrer' },
-            referredPioneerId: { bsonType: 'string', description: 'Pioneer ID of referred user' },
-            referredEmail: { bsonType: 'string' },
+            referrerWallet: { bsonType: 'string', description: 'Wallet address of referrer' },
+            referredWallet: { bsonType: 'string', description: 'Wallet address of referred user' },
             status: {
               bsonType: 'string',
-              enum: ['pending', 'confirmed', 'completed'],
-              description: 'Referral status',
+              enum: ['pending', 'confirmed', 'claimed'],
+              description: 'Referral status: pending -> confirmed -> claimed',
             },
-            pointsAwarded: { bsonType: 'int', description: '10 points per confirmed referral' },
-            confirmedAt: { bsonType: 'date' },
-            isDemoMode: { bsonType: 'bool' },
+            rewardPoints: { bsonType: 'int', description: '30 points per confirmed referral', default: 30 },
             createdAt: { bsonType: 'date' },
+            confirmedAt: { bsonType: 'date', description: 'Date when referral was confirmed' },
+            claimedAt: { bsonType: 'date', description: 'Date when points were claimed' },
+            isDemoMode: { bsonType: 'bool' },
             updatedAt: { bsonType: 'date' },
           },
         },
@@ -350,10 +354,11 @@ async function createReferralsCollection(db: Db): Promise<Collection> {
   const collection = db.collection(collectionName);
 
   // Create indexes
-  await collection.createIndex({ referrerId: 1, status: 1 });
-  await collection.createIndex({ referredPioneerId: 1 });
+  await collection.createIndex({ referrerWallet: 1, status: 1 });
+  await collection.createIndex({ referredWallet: 1 }, { unique: true });
   await collection.createIndex({ status: 1 });
   await collection.createIndex({ confirmedAt: -1 });
+  await collection.createIndex({ createdAt: -1 });
 
   return collection;
 }

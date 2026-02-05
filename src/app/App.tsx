@@ -21,6 +21,7 @@ import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
 import { initializeUnifiedReputationOnLogin, getCachedReputation } from './services/reputationInitializer';
+import { initializeReferralOnLogin, captureReferralCodeFromUrl, dispatchWalletAnalysisCompleteEvent } from './services/referralService';
 import logoImage from '../assets/logo-new.png';
 
 function FeedbackSection({ username }: { username: string }) {
@@ -288,6 +289,14 @@ function ReputaAppContent() {
               const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
               setIsVip(res.isVip);
               setPaymentCount(res.count || 0);
+
+              // Initialize referral system
+              if (user.wallet_address) {
+                // Capture ref code from URL first
+                captureReferralCodeFromUrl();
+                // Then initialize referral system
+                await initializeReferralOnLogin(user.wallet_address);
+              }
             }
           }
         }
@@ -302,6 +311,8 @@ function ReputaAppContent() {
     if (isDemo) {
       setTimeout(() => {
         setWalletData({ address: "GDU22WEH7M3O...DEMO", username: "Demo_Pioneer", reputaScore: 632, trustLevel: "Elite", recentActivity: [] });
+        // Dispatch wallet analysis complete event for demo
+        dispatchWalletAnalysisCompleteEvent();
         setIsLoading(false);
       }, 400); 
       return;
@@ -312,6 +323,9 @@ function ReputaAppContent() {
         setWalletData({ ...data, trustLevel: (data.reputaScore ?? 0) >= 600 ? 'Elite' : 'Verified' });
         syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
+        
+        // Dispatch event to confirm referral after wallet analysis
+        dispatchWalletAnalysisCompleteEvent();
       }
     } catch (error) { alert("Blockchain sync error."); } finally { setIsLoading(false); }
   };
