@@ -331,36 +331,38 @@ reputa-score.vercel.app`;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ 
         background: 'rgba(0, 0, 0, 0.95)',
         paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
         paddingLeft: 'max(16px, env(safe-area-inset-left, 16px))',
-        paddingRight: 'max(16px, env(safe-area-inset-right, 16px))'
+        paddingRight: 'max(16px, env(safe-area-inset-right, 16px))',
+        overflowY: 'auto',
+        maxHeight: '100vh'
       }}
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-sm animate-in zoom-in duration-300"
+        className="relative w-full max-w-xs animate-in zoom-in duration-300 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button - Always Visible */}
         <button
           onClick={onClose}
-          className="absolute -top-10 right-0 z-10 w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"
+          className="absolute -top-9 right-0 z-10 w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-all active:scale-95"
           style={{ 
             background: 'rgba(255, 255, 255, 0.1)',
             border: '1px solid rgba(255, 255, 255, 0.2)'
           }}
           aria-label="اغلق"
         >
-          <X className="w-5 h-5 text-white" />
+          <X className="w-4 h-4 text-white" />
         </button>
 
         {/* Main Card */}
         <div
-          className="rounded-3xl p-6 overflow-hidden relative"
+          className="rounded-3xl p-5 overflow-hidden relative"
           style={{
             background: 'linear-gradient(145deg, #0F0A1F 0%, #1A0F2E 30%, #0F1A2E 60%, #050810 100%)',
             border: '2px solid rgba(139, 92, 246, 0.4)',
@@ -387,15 +389,15 @@ reputa-score.vercel.app`;
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, transparent 70%)' }} />
 
           {/* Header */}
-          <div className="flex items-center justify-between mb-5 relative z-10">
+          <div className="flex items-center justify-between mb-4 relative z-10">
             <div className="flex items-center gap-2">
               <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
                 style={{ background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)', boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)' }}
               >
-                <Shield className="w-6 h-6 text-white" />
+                <Shield className="w-5 h-5 text-white" />
               </div>
-              <span className="text-white font-bold text-lg">Reputa Score</span>
+              <span className="text-white font-bold text-base">Reputa Score</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -435,18 +437,18 @@ reputa-score.vercel.app`;
           </div>
 
           {/* Username & Wallet */}
-          <div className="text-center mb-5 relative z-10">
+          <div className="text-center mb-4 relative z-10">
             <div 
-              className="w-20 h-20 mx-auto mb-3 rounded-full flex items-center justify-center"
+              className="w-18 h-18 mx-auto mb-2 rounded-full flex items-center justify-center"
               style={{ 
                 background: `linear-gradient(135deg, ${levelColor}50 0%, ${levelColor}20 100%)`, 
                 border: `3px solid ${levelColor}`,
                 boxShadow: `0 0 30px ${levelColor}40`
               }}
             >
-              <Trophy className="w-10 h-10" style={{ color: levelColor }} />
+              <Trophy className="w-9 h-9" style={{ color: levelColor }} />
             </div>
-            <h2 className="text-white font-bold text-2xl mb-1">@{username}</h2>
+            <h2 className="text-white font-bold text-xl mb-1">@{username}</h2>
             {walletAddress && (
               <p className="text-xs font-mono" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                 {walletAddress.substring(0, 8)}...{walletAddress.slice(-6)}
@@ -456,7 +458,7 @@ reputa-score.vercel.app`;
 
           {/* Score Display */}
           <div 
-            className="rounded-2xl p-5 mb-5 text-center relative z-10"
+            className="rounded-2xl p-4 mb-4 text-center relative z-10"
             style={{ 
               background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.1) 100%)', 
               border: '1px solid rgba(139, 92, 246, 0.3)',
@@ -464,7 +466,7 @@ reputa-score.vercel.app`;
             }}
           >
             <div 
-              className="text-5xl font-black mb-2"
+              className="text-4xl font-black mb-1.5"
               style={{ 
                 background: 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
                 WebkitBackgroundClip: 'text',
@@ -474,13 +476,13 @@ reputa-score.vercel.app`;
             >
               {score.toLocaleString()}
             </div>
-            <div className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>نقاط السمعة</div>
+            <div className="text-xs font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>نقاط السمعة</div>
           </div>
 
           {/* Level & Trust Rank */}
-          <div className="grid grid-cols-2 gap-3 mb-5 relative z-10">
+          <div className="grid grid-cols-2 gap-2 mb-4 relative z-10">
             <div 
-              className="rounded-xl p-4 text-center"
+              className="rounded-xl p-3 text-center"
               style={{ 
                 background: 'rgba(255, 255, 255, 0.05)', 
                 border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -488,26 +490,26 @@ reputa-score.vercel.app`;
               }}
             >
               <div className="flex items-center justify-center gap-1 mb-1">
-                <Star className="w-5 h-5" style={{ color: levelColor }} />
-                <span className="text-xl font-bold text-white">Lv.{displayLevel}</span>
+                <Star className="w-4 h-4" style={{ color: levelColor }} />
+                <span className="text-lg font-bold text-white">Lv.{displayLevel}</span>
               </div>
-              <div className="text-sm font-medium" style={{ color: levelColor }}>{levelName}</div>
+              <div className="text-xs font-medium" style={{ color: levelColor }}>{levelName}</div>
             </div>
             <div 
-              className="rounded-xl p-4 text-center"
+              className="rounded-xl p-3 text-center"
               style={{ 
                 background: 'rgba(255, 255, 255, 0.05)', 
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(10px)'
               }}
             >
-              <div className="text-xl font-bold text-white mb-1">{trustRank}</div>
-              <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>تصنيف الثقة</div>
+              <div className="text-lg font-bold text-white mb-1">{trustRank}</div>
+              <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>تصنيف الثقة</div>
             </div>
           </div>
 
           {/* Website Footer */}
-          <div className="text-center pt-4 relative z-10" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <div className="text-center pt-3 relative z-10" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
             <p className="text-xs font-medium" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
               reputa-score.vercel.app
             </p>
@@ -517,7 +519,7 @@ reputa-score.vercel.app`;
         {/* Status Messages */}
         {(shareSuccess || shareError) && (
           <div 
-            className="mt-3 p-3 rounded-xl text-center text-sm font-medium animate-in fade-in"
+            className="mt-2 p-2 rounded-xl text-center text-xs font-medium animate-in fade-in"
             style={{
               background: shareSuccess ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
               border: shareSuccess ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
@@ -529,11 +531,11 @@ reputa-score.vercel.app`;
         )}
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-3 gap-2 mt-4 relative z-10">
+        <div className="grid grid-cols-3 gap-2 mt-3 relative z-10">
           {/* Copy Button */}
           <button
             onClick={handleCopy}
-            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50"
             style={{
               background: copied ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.1)',
               border: copied ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(255, 255, 255, 0.2)',
@@ -541,7 +543,7 @@ reputa-score.vercel.app`;
             }}
             title="انسخ النص للحافظة"
           >
-            {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             <span className="text-xs">{copied ? 'تم النسخ' : 'نسخ'}</span>
           </button>
 
@@ -549,7 +551,7 @@ reputa-score.vercel.app`;
           <button
             onClick={handleDownload}
             disabled={isGenerating}
-            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50"
             style={{
               background: 'rgba(0, 217, 255, 0.15)',
               border: '1px solid rgba(0, 217, 255, 0.3)',
@@ -558,7 +560,7 @@ reputa-score.vercel.app`;
             }}
             title="حفظ الصورة"
           >
-            <Download className="w-5 h-5" />
+            <Download className="w-4 h-4" />
             <span className="text-xs">حفظ</span>
           </button>
 
@@ -566,7 +568,7 @@ reputa-score.vercel.app`;
           <button
             onClick={handleShareImage}
             disabled={isGenerating}
-            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50"
             style={{
               background: shareSuccess ? 'rgba(16, 185, 129, 0.3)' : 'linear-gradient(135deg, #8B5CF6 0%, #00D9FF 100%)',
               color: 'white',
@@ -574,29 +576,30 @@ reputa-score.vercel.app`;
             }}
             title="شارك الصورة"
           >
-            {shareSuccess ? <Check className="w-5 h-5" /> : <Share2 className="w-5 h-5" />}
+            {shareSuccess ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
             <span className="text-xs">{shareSuccess ? 'تمام!' : 'شارك'}</span>
           </button>
         </div>
 
         {/* Social Media Share */}
-        <div className="mt-3 pt-3 relative z-10" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <p className="text-xs text-center mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <div className="mt-2 pt-2 relative z-10" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <p className="text-xs text-center mb-1.5" style={{ color: 'rgba(255,255,255,0.5)' }}>
             شارك على وسائل التواصل
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             {/* Twitter/X */}
             <button
               onClick={() => handleSocialShare('twitter')}
-              className="flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium transition-all active:scale-95"
+              className="flex items-center justify-center gap-1 py-1.5 rounded-lg font-medium transition-all active:scale-95"
               style={{
                 background: 'rgba(29, 155, 240, 0.15)',
                 border: '1px solid rgba(29, 155, 240, 0.3)',
                 color: '#1DA1F2',
+                fontSize: '11px'
               }}
               title="شارك على X"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
               </svg>
               <span className="text-xs">X</span>
@@ -605,30 +608,32 @@ reputa-score.vercel.app`;
             {/* Telegram */}
             <button
               onClick={() => handleSocialShare('telegram')}
-              className="flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium transition-all active:scale-95"
+              className="flex items-center justify-center gap-1 py-1.5 rounded-lg font-medium transition-all active:scale-95"
               style={{
                 background: 'rgba(0, 136, 204, 0.15)',
                 border: '1px solid rgba(0, 136, 204, 0.3)',
                 color: '#0088CC',
+                fontSize: '11px'
               }}
               title="شارك على تليجرام"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
               <span className="text-xs">TG</span>
             </button>
 
             {/* WhatsApp */}
             <button
               onClick={() => handleSocialShare('whatsapp')}
-              className="flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium transition-all active:scale-95"
+              className="flex items-center justify-center gap-1 py-1.5 rounded-lg font-medium transition-all active:scale-95"
               style={{
                 background: 'rgba(37, 211, 102, 0.15)',
                 border: '1px solid rgba(37, 211, 102, 0.3)',
                 color: '#25D366',
+                fontSize: '11px'
               }}
               title="شارك على واتساب"
             >
-              <MessageCircle className="w-4 h-4" />
+              <MessageCircle className="w-3.5 h-3.5" />
               <span className="text-xs">WA</span>
             </button>
           </div>
