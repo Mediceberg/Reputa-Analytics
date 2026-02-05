@@ -34,6 +34,22 @@ export function useReferral(): UseReferralReturn {
   const [error, setError] = useState<string | null>(null);
 
   /**
+   * Helper function to safely parse JSON responses
+   */
+  const parseJsonResponse = useCallback(async (response: Response): Promise<any> => {
+    const contentType = response.headers.get('content-type');
+    
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('❌ [useReferral] Invalid content type:', contentType);
+      console.error('❌ [useReferral] Response text:', text.substring(0, 200));
+      throw new Error(`Expected JSON but got ${contentType || 'unknown'}`);
+    }
+    
+    return response.json();
+  }, []);
+
+  /**
    * Fetch referral stats for a user
    */
   const fetchStats = useCallback(async (walletAddress: string) => {
@@ -43,13 +59,20 @@ export function useReferral(): UseReferralReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/stats?walletAddress=${walletAddress}`);
-      const data = await response.json();
+      const response = await fetch(`${API_BASE}/stats?walletAddress=${encodeURIComponent(walletAddress)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await parseJsonResponse(response);
 
       if (data.success && data.data) {
+        console.log('✅ [useReferral] Stats fetched:', data.data);
         setStats(data.data);
       } else {
         setError(data.error || 'Failed to fetch referral stats');
+        console.warn('⚠️ [useReferral] API returned non-success response:', data);
       }
     } catch (err: any) {
       console.error('[useReferral] Error fetching stats:', err);
@@ -79,7 +102,11 @@ export function useReferral(): UseReferralReturn {
           body: JSON.stringify({ walletAddress, referralCode }),
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await parseJsonResponse(response);
 
         if (data.success) {
           // Refresh stats after tracking
@@ -120,7 +147,11 @@ export function useReferral(): UseReferralReturn {
           body: JSON.stringify({ walletAddress }),
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await parseJsonResponse(response);
 
         if (data.success) {
           // Refresh stats after confirmation
@@ -161,7 +192,11 @@ export function useReferral(): UseReferralReturn {
           body: JSON.stringify({ walletAddress }),
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await parseJsonResponse(response);
 
         if (data.success) {
           // Refresh stats after claiming
@@ -189,8 +224,13 @@ export function useReferral(): UseReferralReturn {
     if (!walletAddress) return null;
 
     try {
-      const response = await fetch(`${API_BASE}/code?walletAddress=${walletAddress}`);
-      const data = await response.json();
+      const response = await fetch(`${API_BASE}/code?walletAddress=${encodeURIComponent(walletAddress)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await parseJsonResponse(response);
 
       if (data.success && data.data) {
         return data.data.referralCode;
@@ -200,7 +240,7 @@ export function useReferral(): UseReferralReturn {
       console.error('[useReferral] Error getting referral code:', err);
       return null;
     }
-  }, []);
+  }, [parseJsonResponse]);
 
   return {
     stats,

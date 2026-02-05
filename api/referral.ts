@@ -392,20 +392,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const pathname = new URL(req.url || '', 'http://localhost').pathname;
+  // Extract the route from the URL
+  // In Vercel, req.url might be like /api/referral/track, /api/referral/stats?walletAddress=xxx, etc.
+  const urlObj = new URL(req.url || '', 'http://localhost');
+  const pathname = urlObj.pathname;
+  
+  console.log('🎯 [REFERRAL API] Request:', { method: req.method, pathname });
 
   try {
-    if (pathname.endsWith('/api/referral/track') && req.method === 'POST') {
+    // Match routes - more flexible routing for Vercel
+    if (pathname.includes('/track') && req.method === 'POST') {
       return await handleTrackReferral(req, res);
-    } else if (pathname.endsWith('/api/referral/confirm') && req.method === 'POST') {
+    } else if (pathname.includes('/confirm') && req.method === 'POST') {
       return await handleConfirmReferral(req, res);
-    } else if (pathname.endsWith('/api/referral/claim-points') && req.method === 'POST') {
+    } else if (pathname.includes('/claim-points') && req.method === 'POST') {
       return await handleClaimPoints(req, res);
-    } else if (pathname.endsWith('/api/referral/stats') && req.method === 'GET') {
+    } else if (pathname.includes('/stats') && req.method === 'GET') {
       return await handleGetStats(req, res);
-    } else if (pathname.endsWith('/api/referral/code') && req.method === 'GET') {
+    } else if (pathname.includes('/code') && req.method === 'GET') {
       return await handleGetReferralCode(req, res);
     } else {
+      console.warn('⚠️ [REFERRAL] Endpoint not found:', pathname);
       return res.status(404).json({
         success: false,
         error: 'Endpoint not found',
@@ -415,7 +422,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.error('[REFERRAL] Unhandled error:', error);
     return res.status(500).json({
       success: false,
-      error: 'Internal server error',
+      error: 'Internal server error: ' + (error.message || 'Unknown'),
     });
   }
 }
