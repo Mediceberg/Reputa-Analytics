@@ -1195,9 +1195,9 @@ export function UnifiedDashboard({
       {showShareCard && (
         <ShareReputaCard
           username={username || 'Pioneer'}
-          score={mode.mode === 'demo' ? 0 : levelProgress.displayScore}
+          score={mode.mode === 'demo' ? 0 : (unifiedScoreData?.totalScore ?? levelProgress.displayScore)}
           level={levelProgress.levelIndex + 1}
-          trustRank={levelProgress.currentLevel}
+          trustRank={unifiedScoreData?.atomicTrustLevel ?? levelProgress.currentLevel}
           walletAddress={walletData.address}
           onClose={() => setShowShareCard(false)}
         />

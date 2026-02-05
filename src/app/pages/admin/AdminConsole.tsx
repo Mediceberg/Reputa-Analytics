@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { reputationService } from '../../services/reputationService';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../components/ui/table";
 import { Badge } from "../../components/ui/badge";
@@ -107,7 +108,18 @@ const AdminConsole: React.FC = () => {
                 <TableRow key={user.uid} className="border-white/5 hover:bg-white/5 transition-colors">
                   <TableCell className="font-bold text-purple-400 py-4 px-4">{user.username}</TableCell>
                   <TableCell className="font-mono text-[10px] text-slate-400">{user.wallet.substring(0, 12)}...{user.wallet.substring(user.wallet.length - 4)}</TableCell>
-                  <TableCell className="text-center font-black text-white">{user.reputationScore}</TableCell>
+                  {
+                    (() => {
+                      try {
+                        const cached = reputationService.getCachedUnifiedScore(user.uid);
+                        return (
+                          <TableCell className="text-center font-black text-white">{cached ? cached.totalScore : user.reputationScore}</TableCell>
+                        );
+                      } catch (e) {
+                        return <TableCell className="text-center font-black text-white">{user.reputationScore}</TableCell>;
+                      }
+                    })()
+                  }
                   <TableCell className="text-center">
                     <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[9px] px-2">
                       {user.trustLevel}

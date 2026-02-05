@@ -5,6 +5,15 @@
  * Supports auto-refresh with configurable intervals
  */
 
+/**
+ * DEPRECATED
+ * The legacy reputation calculation utilities previously included in this file
+ * are deprecated in favor of the unified `atomicScoring` protocol and
+ * `reputationService`. Do not add new scoring logic here — migrate any
+ * remaining callers to `src/app/protocol/atomicScoring` and
+ * `src/app/services/reputationService`.
+ */
+
 const PI_TESTNET_API = 'https://api.testnet.minepi.com';  
 const PI_MAINNET_API = 'https://api.mainnet.minepi.com';
 const PI_BLOCK_EXPLORER = 'https://blockexplorer.minepi.com';
