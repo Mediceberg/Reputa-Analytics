@@ -61,6 +61,15 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
       } catch (err) {
         console.error('Error sharing:', err);
       }
+    } else {
+      // Fallback: copy link to clipboard and show message
+      try {
+        await navigator.clipboard.writeText(stats.referralLink);
+        alert(isRTL ? 'تم نسخ الرابط!' : 'Link copied!');
+      } catch (err) {
+        console.error('Error copying link:', err);
+        alert(isRTL ? 'الرابط: ' + stats.referralLink : 'Link: ' + stats.referralLink);
+      }
     }
   };
 
@@ -157,7 +166,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           >
             <Copy className="w-4 h-4" />
           </button>
-          {navigator.share && (
+          {(navigator.share || true) && (
             <button
               onClick={handleShareLink}
               className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-all active:scale-95"
@@ -295,8 +304,24 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg p-3 bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
+        <div className="rounded-lg p-4 bg-gradient-to-r from-red-500/10 to-red-600/5 border border-red-500/30 backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded-full bg-red-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-red-400 text-xs font-bold">!</span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-red-300 font-medium mb-2">
+                {isRTL ? 'خطأ في تحميل بيانات الإحالة' : 'Error loading referral data'}
+              </p>
+              <p className="text-xs text-red-400/80 mb-3">{error}</p>
+              <button
+                onClick={() => walletAddress && fetchStats(walletAddress)}
+                className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors underline"
+              >
+                {isRTL ? 'إعادة المحاولة' : 'Retry'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
