@@ -59,34 +59,34 @@ export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
         borderBottom: '1px solid rgba(139, 92, 246, 0.15)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        height: 'calc(56px + env(safe-area-inset-top, 0px))',
+        height: 'calc(60px + env(safe-area-inset-top, 0px))',
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div className="flex items-center justify-between px-4 h-14">
+      <div className="flex items-center justify-between px-3 sm:px-4 h-15">
         <button
           onClick={onMenuClick}
-          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all active:scale-95"
           style={{
             background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(0, 217, 255, 0.1) 100%)',
             border: '1px solid rgba(139, 92, 246, 0.25)',
           }}
         >
-          <Menu className="w-5 h-5 text-purple-400" />
+          <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button 
             onClick={handleLogoClick}
-            className="h-8 px-3 rounded-full flex items-center gap-2 cursor-pointer active:scale-95 transition-transform overflow-visible relative"
+            className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform overflow-visible relative"
             style={{
               background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%)',
               border: '1px solid rgba(0, 217, 255, 0.25)',
               zIndex: 60
             }}
           >
-            <Wallet className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-sm font-bold text-cyan-400">
+            <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 flex-shrink-0" />
+            <span className="text-xs sm:text-sm font-bold text-cyan-400">
               {balance !== undefined ? `${balance.toFixed(2)} π` : '-- π'}
             </span>
           </button>
@@ -94,26 +94,26 @@ export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
           {showPayoutIcon && (
             <button
               onClick={handleManualPayout}
-              className="w-10 h-10 rounded-xl bg-purple-500 border-2 border-white flex items-center justify-center animate-bounce shadow-[0_0_20px_rgba(168,85,247,0.5)] active:scale-90 transition-all"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-purple-500 border-2 border-white flex items-center justify-center animate-bounce shadow-[0_0_20px_rgba(168,85,247,0.5)] active:scale-90 transition-all"
               style={{
                 position: 'relative',
                 zIndex: 100,
-                marginLeft: '8px'
+                marginLeft: '6px'
               }}
             >
-              <Send className="w-5 h-5 text-white" />
+              <Send className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </button>
           )}
         </div>
 
         <button
-          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center transition-all active:scale-95"
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
-          <Bell className="w-5 h-5 text-gray-400" />
+          <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
         </button>
       </div>
     </header>

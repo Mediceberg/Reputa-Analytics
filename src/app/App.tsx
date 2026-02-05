@@ -381,7 +381,7 @@ function ReputaAppContent() {
   return (
     <div className="w-full min-h-screen futuristic-bg flex flex-col font-sans relative">
       <div className="absolute inset-0 grid-pattern pointer-events-none" />
-      <header className="px-3 py-3 sm:p-4 backdrop-blur-xl sticky top-0 z-50 flex justify-between items-center safe-area-top" style={{ background: 'rgba(10, 11, 15, 0.9)', borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+      <header className="px-3 py-3 sm:p-4 backdrop-blur-xl sticky top-0 z-50 flex justify-between items-center safe-area-top border-b border-white/5" style={{ background: 'rgba(10, 11, 15, 0.95)' }}>
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="relative w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl cursor-pointer active:scale-95 transition-transform" style={{ background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.95) 0%, rgba(20, 22, 30, 0.9) 100%)', boxShadow: '0 0 20px rgba(0, 217, 255, 0.2)' }} onClick={() => setLogoClickCount(prev => prev + 1)}>
             <img src={logoImage} alt="logo" className="w-6 h-6 sm:w-7 sm:h-7 object-contain" style={{ filter: 'drop-shadow(0 0 6px rgba(0, 217, 255, 0.5))', mixBlendMode: 'screen' }} />
@@ -404,8 +404,8 @@ function ReputaAppContent() {
               <span className="text-[9px] font-black uppercase text-amber-500">{isLoggingIn ? '...' : 'Login'}</span>
             </button>
           )}
-          <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl border border-blue-500/30 bg-blue-500/15"><Send className="w-4 h-4 text-blue-400" /></a>
-          <a href="mailto:reputa.score@gmail.com" className="p-2 rounded-xl border border-red-500/30 bg-red-500/15"><Mail className="w-4 h-4 text-red-400" /></a>
+          <a href="https://t.me/+zxYP2x_4IWljOGM0" target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl border border-blue-500/30 bg-blue-500/15 hover:bg-blue-500/25 transition-colors"><Send className="w-4 h-4 text-blue-400" /></a>
+          <a href="mailto:reputa.score@gmail.com" className="p-2 rounded-xl border border-red-500/30 bg-red-500/15 hover:bg-red-500/25 transition-colors"><Mail className="w-4 h-4 text-red-400" /></a>
         </div>
       </header>
       <main className="flex-1 w-full flex flex-col items-center justify-start z-10 overflow-y-auto overflow-x-hidden pt-4 pb-20">

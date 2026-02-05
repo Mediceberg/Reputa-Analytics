@@ -31,33 +31,33 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         paddingBottom: 'env(safe-area-inset-bottom, 8px)',
-        height: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+        height: 'calc(70px + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <div className="flex items-center justify-around px-1 py-1.5">
+      <div className="flex items-center justify-around px-1 py-2">
         {navItems.map((item) => {
           const isActive = activeItem === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onItemClick(item.id)}
-              className="flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all active:scale-95"
+              className="flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all active:scale-95"
               style={{ 
-                minWidth: '56px', 
-                minHeight: '48px', 
+                minWidth: '52px', 
+                minHeight: '52px', 
                 padding: '6px 8px',
                 ...(isActive && { background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(0, 217, 255, 0.1) 100%)' })
               }}
             >
               <item.icon 
-                className="w-5 h-5 transition-colors"
+                className="w-4.5 h-4.5 transition-colors"
                 style={{ 
                   color: isActive ? '#8B5CF6' : 'rgba(160, 164, 184, 0.6)',
-                  filter: isActive ? 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.5))' : 'none'
+                  filter: isActive ? 'drop-shadow(0 0 6px rgba(139, 92, 246, 0.5))' : 'none'
                 }}
               />
               <span 
-                className="text-[9px] font-bold uppercase tracking-wide"
+                className="text-[8px] font-bold uppercase tracking-wide"
                 style={{ 
                   color: isActive ? '#8B5CF6' : 'rgba(160, 164, 184, 0.5)'
                 }}
@@ -70,15 +70,15 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
         {onMenuClick && (
           <button
             onClick={onMenuClick}
-            className="flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all active:scale-95"
-            style={{ minWidth: '56px', minHeight: '48px', padding: '6px 8px' }}
+            className="flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all active:scale-95"
+            style={{ minWidth: '52px', minHeight: '52px', padding: '6px 8px' }}
           >
             <Menu 
-              className="w-5 h-5"
+              className="w-4.5 h-4.5"
               style={{ color: 'rgba(160, 164, 184, 0.6)' }}
             />
             <span 
-              className="text-[9px] font-bold uppercase tracking-wide"
+              className="text-[8px] font-bold uppercase tracking-wide"
               style={{ color: 'rgba(160, 164, 184, 0.5)' }}
             >
               More
