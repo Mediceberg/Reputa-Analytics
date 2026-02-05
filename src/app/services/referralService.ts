@@ -51,10 +51,11 @@ export async function trackReferral(walletAddress: string, referralCode: string)
   }
 
   try {
-    const response = await fetch(`${API_BASE}/track`, {
+    const response = await fetch(`${API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'track',
         walletAddress: walletAddress.toLowerCase(),
         referralCode: referralCode.toUpperCase(),
       }),
@@ -86,10 +87,11 @@ export async function confirmReferralOnAnalysis(walletAddress: string): Promise<
   }
 
   try {
-    const response = await fetch(`${API_BASE}/confirm`, {
+    const response = await fetch(`${API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'confirm',
         walletAddress: walletAddress.toLowerCase(),
       }),
     });
@@ -119,7 +121,7 @@ export async function generateReferralCode(walletAddress: string): Promise<strin
   }
 
   try {
-    const response = await fetch(`${API_BASE}/code?walletAddress=${walletAddress}`);
+    const response = await fetch(`${API_BASE}?action=code&walletAddress=${encodeURIComponent(walletAddress)}`);
     const data = await response.json();
 
     if (data.success && data.data) {
@@ -165,7 +167,7 @@ export async function getReferralStats(walletAddress: string) {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/stats?walletAddress=${walletAddress}`);
+    const response = await fetch(`${API_BASE}?action=stats&walletAddress=${encodeURIComponent(walletAddress)}`);
     const data = await response.json();
 
     if (data.success && data.data) {
@@ -184,7 +186,7 @@ export async function getReferralStats(walletAddress: string) {
  * Initialize referral event tracking
  * Listens for wallet analysis completion event
  */
-export function setupReferralEventListeners(walletAddress: string): void {
+export function setupReferralEventListeners(walletAddress: string): () => void {
   // Listen for wallet analysis completion
   const handleAnalysisComplete = async () => {
     console.log('📊 Wallet analysis completed, confirming referral...');
