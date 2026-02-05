@@ -59,7 +59,7 @@ export function useReferral(): UseReferralReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/stats?walletAddress=${encodeURIComponent(walletAddress)}`);
+      const response = await fetch(`${API_BASE}?action=stats&walletAddress=${encodeURIComponent(walletAddress)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -96,10 +96,10 @@ export function useReferral(): UseReferralReturn {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/track`, {
+        const response = await fetch(`${API_BASE}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress, referralCode }),
+          body: JSON.stringify({ action: 'track', walletAddress, referralCode }),
         });
 
         if (!response.ok) {
@@ -124,7 +124,7 @@ export function useReferral(): UseReferralReturn {
         setLoading(false);
       }
     },
-    [fetchStats]
+    [fetchStats, parseJsonResponse]
   );
 
   /**
@@ -141,10 +141,10 @@ export function useReferral(): UseReferralReturn {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/confirm`, {
+        const response = await fetch(`${API_BASE}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress }),
+          body: JSON.stringify({ action: 'confirm', walletAddress }),
         });
 
         if (!response.ok) {
@@ -169,7 +169,7 @@ export function useReferral(): UseReferralReturn {
         setLoading(false);
       }
     },
-    [fetchStats]
+    [fetchStats, parseJsonResponse]
   );
 
   /**
