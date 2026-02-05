@@ -408,7 +408,7 @@ function ReputaAppContent() {
           <a href="mailto:reputa.score@gmail.com" className="p-2 rounded-xl border border-red-500/30 bg-red-500/15"><Mail className="w-4 h-4 text-red-400" /></a>
         </div>
       </header>
-      <main className="flex-1 container mx-auto px-3 py-6 relative z-10 overflow-y-auto">
+      <main className="flex-1 w-full flex flex-col items-center justify-start z-10 overflow-y-auto overflow-x-hidden pt-4 pb-20">
         {isLoading ? (
           <div className="flex flex-col items-center py-24">
             <div className="relative">
@@ -418,7 +418,7 @@ function ReputaAppContent() {
             <p className="text-[10px] mt-8 font-black tracking-[0.3em] uppercase text-purple-400">Syncing Protocol...</p>
           </div>
         ) : (
-          <div className="max-w-4xl mx-auto py-6">
+          <div className="w-full max-w-4xl px-4 py-2">
             <WalletChecker onCheck={handleWalletCheck} />
             <FeedbackSection username={currentUser?.username || 'Guest'} />
           </div>

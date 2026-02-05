@@ -297,27 +297,30 @@ export function UnifiedDashboard({
   ];
 
   return (
-    <div className="w-full min-h-screen futuristic-bg flex flex-col">
-      <div className="absolute inset-0 grid-pattern pointer-events-none" />
+    <div className="flex h-screen bg-[#0A0B0F] text-white overflow-hidden relative">
+      <div className="absolute inset-0 grid-pattern opacity-30 pointer-events-none" />
       
-      {/* Mobile Top Bar with Menu */}
-      <TopBar 
-        onMenuClick={() => setIsSideDrawerOpen(true)}
-        balance={walletData.balance}
-        username={username}
-      />
-      
-      {/* Desktop Sidebar - hidden on mobile */}
-      <div className="desktop-sidebar hidden lg:flex">
+      {/* Sidebar - desktop */}
+      <div className="hidden lg:block h-full">
         <DashboardSidebar 
           mode={mode} 
-          onModeToggle={handleModeToggle}
+          onModeToggle={handleModeToggle} 
           activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
           onItemClick={handleSidebarNavigation}
         />
       </div>
 
-      <main className="flex-1 p-3 lg:p-6 overflow-x-hidden overflow-y-auto relative z-10 mobile-main-content pt-16 lg:pt-3 pb-24 lg:pb-6 w-full">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 relative h-full">
+        <TopBar 
+          onMenuClick={() => setIsSideDrawerOpen(true)} 
+          balance={walletData?.balance}
+          username={username}
+        />
+
+        {/* Dynamic content */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-8 pt-20 lg:pt-8 w-full max-w-7xl mx-auto pb-24 lg:pb-8">
+          <div className="space-y-6 lg:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Mobile Spacer for Fixed Header */}
         <div className="h-4 lg:hidden" />
         {/* Desktop Section Header - hidden on mobile */}

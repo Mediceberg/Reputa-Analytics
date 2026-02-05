@@ -57,7 +57,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
 
   return (
     <aside 
-      className="w-[260px] min-h-screen p-6 flex flex-col relative z-20"
+      className="w-[260px] h-full p-6 flex flex-col relative z-20"
       style={{
         background: 'linear-gradient(180deg, rgba(15, 17, 23, 0.95) 0%, rgba(10, 11, 15, 0.98) 100%)',
         borderRight: '1px solid rgba(139, 92, 246, 0.15)',
