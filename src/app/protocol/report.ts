@@ -64,9 +64,9 @@ export function generateReport(
     totalScore: atomicResult.adjustedScore,
     breakdown: {
       walletAge: { days: walletData.accountAge, maxScore: 20 as const, earnedScore: Math.min(20, atomicResult.walletAge.totalPoints), explanation: 'Atomic wallet age scoring' },
-      transactions: { total: walletData.totalTransactions, internal: 0, external: 0, suspicious: 0, maxScore: 40 as const, earnedScore: Math.min(40, atomicResult.piNetwork.totalPoints), details: [], explanation: 'Atomic transaction scoring' },
+      transactions: { total: walletData.totalTransactions, internal: walletData.transactions.filter(t => t.type === 'internal').length, external: walletData.transactions.filter(t => t.type === 'external').length, suspicious: 0, maxScore: 40 as const, earnedScore: Math.min(40, atomicResult.piNetwork.totalPoints), details: [], explanation: 'Atomic transaction scoring' },
       staking: { active: !!stakingData, amount: stakingData?.amount || 0, duration: stakingData?.duration || 0, maxScore: 30 as const, earnedScore: Math.min(30, atomicResult.staking.totalPoints), explanation: 'Atomic staking scoring' },
-      mining: { available: !!miningData, totalDays: miningData?.totalDays || 0, maxScore: 10 as const, earnedScore: 0, explanation: 'Mining bonus' },
+      mining: { available: !!miningData, totalDays: miningData?.totalDays || 0, maxScore: 10 as const, earnedScore: miningData?.score || 0, explanation: 'Mining bonus' },
       penalties: { externalTransactions: Math.abs(atomicResult.externalPenalty.totalPenalty), suspiciousActivity: Math.abs(atomicResult.suspiciousPenalty.totalPenalty), totalPenalty, explanation: 'Atomic penalty system' },
     },
   };

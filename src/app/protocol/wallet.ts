@@ -26,7 +26,11 @@ export async function fetchWalletData(walletAddress: string): Promise<WalletData
       from: record.from,
       to: record.to,
       type: record.from === walletAddress ? 'external' : 'internal',
-      memo: record.transaction_hash ? record.transaction_hash.slice(0, 8) : ''
+      memo: record.transaction_hash ? record.transaction_hash.slice(0, 8) : '',
+      score: {
+        totalPoints: record.from === walletAddress ? 1 : 2,
+        suspiciousPenalty: 0
+      }
     }));
 
     const nativeBalance = accountData.balances.find((b: any) => b.asset_type === 'native');

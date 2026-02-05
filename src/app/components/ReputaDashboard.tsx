@@ -53,9 +53,9 @@ export function ReputaDashboard({ walletAddress, userId, onClose }: DashboardPro
       const response = await fetch(`/api/wallet?walletAddress=${walletAddress}&userId=${userId}`);
       const apiData = await response.json();
       
-      const newReport = await generateCompleteReport(walletAddress, userId, undefined, isVIP);
+      const newReport = await generateCompleteReport(walletAddress, userId, report?.miningData, isVIP);
       
-      if (apiData.success) {
+      if (apiData.success && apiData.wallet) {
         newReport.walletData.balance = apiData.wallet.balance;
       }
       

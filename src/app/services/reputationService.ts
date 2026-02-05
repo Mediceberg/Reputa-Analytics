@@ -592,7 +592,7 @@ export class ReputationService {
     const hoursRemaining = result.remainingMs > 0 ? result.remainingMs / (1000 * 60 * 60) : 0;
     return {
       canCheckIn: result.canCheckIn,
-      countdown: result.countdown,
+      countdown: result.countdown || '00:00:00',
       hoursRemaining: hoursRemaining,
     };
   }
