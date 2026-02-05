@@ -11,6 +11,7 @@ import {
   getBackendScoreCap
 } from '../protocol/atomicScoring';
 import { DailyCheckIn } from './DailyCheckIn';
+import { ReferralSection } from './ReferralSection';
 import { useLanguage } from '../hooks/useLanguage';
 import { WalletActivityData } from '../services/piNetworkData';
 
@@ -248,6 +249,12 @@ export function ProfileSection({
       <DailyCheckIn 
         onPointsEarned={onPointsEarned}
         isDemo={mode.mode === 'demo'}
+      />
+
+      {/* Referral Section */}
+      <ReferralSection 
+        walletAddress={walletData.address}
+        username={username}
       />
 
       {/* Score Breakdown Section */}
