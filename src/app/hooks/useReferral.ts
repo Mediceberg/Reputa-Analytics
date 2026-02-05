@@ -186,10 +186,10 @@ export function useReferral(): UseReferralReturn {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/claim-points`, {
+        const response = await fetch(`${API_BASE}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ walletAddress }),
+          body: JSON.stringify({ action: 'claim-points', walletAddress }),
         });
 
         if (!response.ok) {
@@ -214,7 +214,7 @@ export function useReferral(): UseReferralReturn {
         setLoading(false);
       }
     },
-    [fetchStats]
+    [fetchStats, parseJsonResponse]
   );
 
   /**
@@ -224,7 +224,7 @@ export function useReferral(): UseReferralReturn {
     if (!walletAddress) return null;
 
     try {
-      const response = await fetch(`${API_BASE}/code?walletAddress=${encodeURIComponent(walletAddress)}`);
+      const response = await fetch(`${API_BASE}?action=code&walletAddress=${encodeURIComponent(walletAddress)}`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
