@@ -20,5 +20,5 @@ jobs:
         run: |
           git config --global user.name "reputascore-bit"
           git config --global user.email "reputa.score@gmail.com"
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/Mediceberg/Reputa-Analytics.git
+          git remote set-url origin https://reputascore-bit:${GITHUB_TOKEN}@github.com/Mediceberg/Reputa-Analytics.git
           git push -f origin main
