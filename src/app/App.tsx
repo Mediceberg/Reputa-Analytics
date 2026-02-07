@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';  
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { Send, MessageSquare, LogIn, Share2, Mail } from 'lucide-react'; 
 import { WalletChecker } from './components/WalletChecker';
 import { AccessUpgradeModal } from './components/AccessUpgradeModal';
@@ -374,6 +375,7 @@ function ReputaAppContent() {
           onUpgrade={() => { setIsVip(true); setPaymentCount(1); setIsUpgradeModalOpen(false); syncToAdmin(currentUser?.username || 'Guest', "UPGRADED_TO_VIP"); }} 
         />
         <Analytics />
+        <SpeedInsights />
       </>
     );
   }
@@ -424,6 +426,8 @@ function ReputaAppContent() {
           </div>
         )}
       </main>
+      <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
