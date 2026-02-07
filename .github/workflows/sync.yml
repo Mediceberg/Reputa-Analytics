@@ -14,11 +14,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push to Account A
-        env:
-          GITHUB_TOKEN: ${{ secrets.VERCEL_SYNC }}
-        run: |
-          git config --global user.name "reputascore-bit"
-          git config --global user.email "reputa.score@gmail.com"
-          git remote set-url origin https://reputascore-bit:${GITHUB_TOKEN}@github.com/Mediceberg/Reputa-Analytics.git
-          git push -f origin main
+      - name: Sync to Account A
+        uses: wei/git-sync@v3
+        with:
+          source_branch: "main"
+          destination_branch: "main"
+          destination_repo: "https://reputascore-bit:${{ secrets.Vercel_Sync }}@github.com/Mediceberg/Reputa-Analytics.git"
