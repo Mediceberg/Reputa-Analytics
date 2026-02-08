@@ -624,6 +624,94 @@ app.get('/api/vip-status', async (req, res) => {
 
 const PORT = 3001;
 
+// Admin Dashboard API
+app.get('/api/admin/dashboard', async (req, res) => {
+  try {
+    // الاتصال بـ MongoDB
+    const mongoose = require('mongoose');
+    
+    const MONGODB_URI = process.env.MONGODB_URI;
+    const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'reputa-v3';
+
+    if (!MONGODB_URI) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'MONGODB_URI is not defined' 
+      });
+    }
+
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(MONGODB_URI, {
+        dbName: MONGODB_DB_NAME,
+      });
+    }
+
+    const db = mongoose.connection.db;
+    if (!db) {
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Database connection failed' 
+      });
+    }
+
+    // جلب جميع المستخدمين مرتبين تنازلياً حسب السكور
+    const users = await db
+      .collection('final_users_v3')
+      .find({})
+      .sort({ reputation_score: -1 })
+      .toArray();
+
+    // جلب الإحصائيات العامة
+    const globalStats = await db
+      .collection('global_stats')
+      .findOne({});
+
+    // حساب إحصائيات إضافية
+    const totalUsers = users.length;
+    const averageReputation = totalUsers > 0
+      ? Math.round(
+          users.reduce((sum: number, user: any) => sum + (user.reputation_score || 0), 0) / totalUsers
+        )
+      : 0;
+
+    // تصنيف المستخدمين حسب مستوى السكور
+    const scoreDistribution = {
+      high: users.filter((u: any) => u.reputation_score > 80).length,
+      medium: users.filter((u: any) => u.reputation_score >= 40 && u.reputation_score <= 80).length,
+      low: users.filter((u: any) => u.reputation_score < 40).length,
+    };
+
+    return res.json({
+      success: true,
+      stats: {
+        totalPioneers: globalStats?.total_pioneers_count || 0,
+        totalPayments: globalStats?.total_payments || 0,
+        totalTransactions: globalStats?.app_transactions || 0,
+        averageReputation,
+        totalUsers,
+      },
+      scoreDistribution,
+      users: users.map((user: any) => ({
+        id: user._id || Math.random(),
+        uid: user.uid || user._id,
+        username: user.username || user.name || 'Unknown',
+        reputation_score: user.reputation_score || 0,
+        wallet_address: user.wallet_address || user.walletAddress || 'N/A',
+        vip_status: user.vip_status || false,
+        joined_date: user.joined_date || user.createdAt || new Date().toISOString(),
+        app_score: user.app_score || 0,
+        email: user.email || 'N/A',
+      })),
+    });
+  } catch (error) {
+    console.error('❌ Error in admin dashboard API:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal Server Error',
+    });
+  }
+});
+
 // App-to-User Payment (Developer Only)
 app.post('/api/payments/app-to-user', async (req, res) => {
   const { uid, amount } = req.body;

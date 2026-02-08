@@ -21,6 +21,8 @@
     "src/**/*",
     "api/**/*",
     "server/**/*",
+    "db/**/*",
+    "scripts/**/*",
     "index.html",
     "*.ts",
     "*.tsx"
