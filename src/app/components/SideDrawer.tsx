@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';   
 import { 
-  X, Home, LineChart, Activity, User, Globe, Wallet, 
-  FileText, Settings, MessageSquare, HelpCircle, Shield, 
-  LogOut, ChevronRight, Zap, Sparkles
+  X, Shield, FileText, 
+  LogOut, ChevronRight, Zap
 } from 'lucide-react';
-import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
+import { useLanguage } from '../hooks/useLanguage';
+import { getNavItemsBySection } from '../config/navigation';
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export function SideDrawer({
   onLogout
 }: SideDrawerProps) {
   const [isAnimating, setIsAnimating] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (isOpen) {
@@ -57,22 +58,32 @@ export function SideDrawer({
   };
 
   const menuItems = [
-    { id: 'dashboard', icon: Home, label: 'Home', description: 'Main dashboard' },
-    { id: 'analytics', icon: LineChart, label: 'Analytics', description: 'Charts & stats' },
-    { id: 'transactions', icon: Activity, label: 'Activity', description: 'Transaction history' },
-    { id: 'wallet', icon: Wallet, label: 'Wallet Info', description: 'Balance & details' },
-    { id: 'audit', icon: FileText, label: 'Audit Report', description: 'Trust analysis' },
-    { id: 'network', icon: Globe, label: 'Network', description: 'Pi ecosystem' },
-    ...(FUTURE_TASKS_CONFIG.enabled
-      ? [{ id: 'earn-points', icon: Sparkles, label: 'Earn Points', description: 'Future missions' }]
-      : []),
-    { id: 'profile', icon: User, label: 'Profile', description: 'Your account' },
-  ];
+    ...getNavItemsBySection('pages'),
+    ...getNavItemsBySection('transaction'),
+  ].map((item) => ({
+    ...item,
+    description:
+      item.id === 'dashboard'
+        ? 'Main dashboard'
+        : item.id === 'analytics'
+          ? 'Charts & stats'
+          : item.id === 'transactions'
+            ? 'Transaction history'
+            : item.id === 'wallet'
+              ? 'Balance & details'
+              : item.id === 'audit'
+                ? 'Trust analysis'
+                : item.id === 'network'
+                  ? 'Pi ecosystem'
+                  : item.id === 'earn-points'
+                    ? 'Future missions'
+                    : item.id === 'profile'
+                      ? 'Your account'
+                      : '',
+  }));
 
   const bottomItems = [
-    { id: 'settings', icon: Settings, label: 'Settings' },
-    { id: 'feedback', icon: MessageSquare, label: 'Feedback' },
-    { id: 'help', icon: HelpCircle, label: 'Help' },
+    ...getNavItemsBySection('tools'),
     { id: 'privacy', icon: Shield, label: 'Privacy', onClick: () => window.open('https://reputa-score.vercel.app/privacy.html', '_blank') },
     { id: 'terms', icon: FileText, label: 'Terms', onClick: () => window.open('https://reputa-score.vercel.app/terms.html', '_blank') },
   ];
@@ -163,7 +174,7 @@ export function SideDrawer({
                     </div>
                     <div className="flex-1 text-left">
                       <p className={`text-sm font-semibold ${isActive ? 'text-purple-300' : 'text-white/80'}`}>
-                        {item.label}
+                        {t(item.labelKey)}
                       </p>
                       <p className="text-[10px] text-gray-500">{item.description}</p>
                     </div>
@@ -190,7 +201,9 @@ export function SideDrawer({
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition-all"
                   >
                     <item.icon className="w-4 h-4 text-gray-500" />
-                    <span className="text-sm text-gray-400">{item.label}</span>
+                    <span className="text-sm text-gray-400">
+                      {'labelKey' in item ? t(item.labelKey) : item.label}
+                    </span>
                   </button>
                 ))}
               </div>

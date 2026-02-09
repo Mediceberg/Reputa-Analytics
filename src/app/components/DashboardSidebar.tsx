@@ -1,28 +1,8 @@
 import { useLanguage } from '../hooks/useLanguage';
 import { AppMode, MODE_IMPACTS } from '../protocol/types';
-import { 
-  LayoutDashboard, 
-  LineChart, 
-  Activity, 
-  BarChart3, 
-  CreditCard, 
-  FileText,
-  Settings,
-  MessageSquare,
-  HelpCircle,
-  TestTube,
-  Zap,
-  PieChart,
-  Shield,
-  Wallet,
-  User,
-  Globe,
-  Play,
-  Sparkles
-} from 'lucide-react';
+import { TestTube, Globe, Play } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
-import { SidebarFutureTasks } from './SidebarFutureTasks';
-import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
+import { getNavItemsBySection } from '../config/navigation';
 
 interface SidebarProps {
   mode: AppMode;
@@ -34,28 +14,9 @@ interface SidebarProps {
 export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard', onItemClick }: SidebarProps) {
   const { t } = useLanguage();
 
-  const mainItems = [
-    { icon: LayoutDashboard, labelKey: 'sidebar.dashboard', id: 'dashboard' },
-    { icon: LineChart, labelKey: 'sidebar.analytics', id: 'analytics' },
-    { icon: Activity, labelKey: 'sidebar.transactions', id: 'transactions' },
-    { icon: FileText, labelKey: 'sidebar.audit', id: 'audit' },
-  ];
-  const earnPointsItem = FUTURE_TASKS_CONFIG.enabled
-    ? [{ icon: Sparkles, labelKey: 'Earn Points', id: 'earn-points' }]
-    : [];
-
-  const transactionItems = [
-    { icon: PieChart, labelKey: 'sidebar.portfolio', id: 'portfolio' },
-    { icon: Wallet, labelKey: 'sidebar.wallet', id: 'wallet' },
-    { icon: Globe, labelKey: 'Network', id: 'network' },
-    { icon: User, labelKey: 'sidebar.profile', id: 'profile' },
-  ];
-
-  const toolsItems = [
-    { icon: Settings, labelKey: 'sidebar.settings', id: 'settings' },
-    { icon: MessageSquare, labelKey: 'sidebar.feedback', id: 'feedback' },
-    { icon: HelpCircle, labelKey: 'sidebar.help', id: 'help' },
-  ];
+  const mainItems = getNavItemsBySection('pages');
+  const transactionItems = getNavItemsBySection('transaction');
+  const toolsItems = getNavItemsBySection('tools');
 
   const handleClick = (id: string) => {
     onItemClick?.(id);
@@ -141,7 +102,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
             {t('sidebar.section.pages')}
           </p>
           <div className="space-y-1">
-            {mainItems.concat(earnPointsItem).map((item) => (
+            {mainItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleClick(item.id)}
@@ -219,8 +180,6 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
             ))}
           </div>
         </div>
-
-        <SidebarFutureTasks />
       </nav>
 
       <div 
