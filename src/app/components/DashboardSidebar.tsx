@@ -20,6 +20,7 @@ import {
   Play
 } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
+import { SidebarFutureTasks } from './SidebarFutureTasks';
 
 interface SidebarProps {
   mode: AppMode;
@@ -213,6 +214,8 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
             ))}
           </div>
         </div>
+
+        <SidebarFutureTasks />
       </nav>
 
       <div 
