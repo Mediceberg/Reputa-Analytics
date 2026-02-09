@@ -9,6 +9,7 @@ import {
   getPointsLogCollection,
   getDailyCheckinCollection,
   getUsersCollection,
+  UserDocument,
   ReputationScoreDocument,
   PointsLogDocument,
   DailyCheckinDocument,
@@ -93,9 +94,9 @@ export async function getOrCreateUser(pioneerId: string, username: string, email
       lastActiveAt: now,
       referralCode,
       referralCount: 0,
-    };
+    } as UserDocument;
     
-    await usersCollection.insertOne(user as any);
+    await usersCollection.insertOne(user);
     console.log(`✅ Created new user: ${pioneerId}`);
     
     // Initialize reputation scores for new user
@@ -168,7 +169,7 @@ export async function getReputationScores(pioneerId: string): Promise<Reputation
   
   // Get from MongoDB
   const reputationCollection = await getReputationScoresCollection();
-  const data = await reputationCollection.findOne({ pioneerId }) as ReputationScoreDocument | null;
+  const data = await reputationCollection.findOne<ReputationScoreDocument>({ pioneerId });
   
   if (data) {
     // Cache for 5 minutes
@@ -353,13 +354,13 @@ export async function addAdBonus(pioneerId: string, points: number = protocol.SC
  */
 export async function recalculateAllReputations(reason: string = 'Protocol update') {
   const reputationCollection = await getReputationScoresCollection();
-  const allUsers = await reputationCollection.find({}).toArray();
+  const allUsers = await reputationCollection.find<ReputationScoreDocument>({}).toArray();
   
   console.log(`🔄 Recalculating reputation for ${allUsers.length} users...`);
   
   let updated = 0;
   for (const user of allUsers) {
-    const userData = user as ReputationScoreDocument;
+    const userData = user as unknown as ReputationScoreDocument;
     
     // Recalculate using current protocol
     const newTotal = protocol.calculateTotalScore(
@@ -439,7 +440,7 @@ export async function getPointsHistory(pioneerId: string, limit: number = 100) {
   const pointsLogCollection = await getPointsLogCollection();
   
   const history = await pointsLogCollection
-    .find({ pioneerId })
+    .find<PointsLogDocument>({ pioneerId })
     .sort({ timestamp: -1 })
     .limit(limit)
     .toArray();
@@ -457,7 +458,7 @@ export async function getCheckinHistory(pioneerId: string, days: number = 30) {
   daysAgo.setDate(daysAgo.getDate() - days);
   
   const history = await checkinCollection
-    .find({
+    .find<DailyCheckinDocument>({
       pioneerId,
       timestamp: { $gte: daysAgo }
     })

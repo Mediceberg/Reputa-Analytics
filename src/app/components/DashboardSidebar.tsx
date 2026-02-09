@@ -1,25 +1,8 @@
 import { useLanguage } from '../hooks/useLanguage';
 import { AppMode, MODE_IMPACTS } from '../protocol/types';
-import { 
-  LayoutDashboard, 
-  LineChart, 
-  Activity, 
-  BarChart3, 
-  CreditCard, 
-  FileText,
-  Settings,
-  MessageSquare,
-  HelpCircle,
-  TestTube,
-  Zap,
-  PieChart,
-  Shield,
-  Wallet,
-  User,
-  Globe,
-  Play
-} from 'lucide-react';
+import { TestTube, Globe, Play } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
+import { getNavItemsBySection } from '../config/navigation';
 
 interface SidebarProps {
   mode: AppMode;
@@ -31,25 +14,9 @@ interface SidebarProps {
 export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard', onItemClick }: SidebarProps) {
   const { t } = useLanguage();
 
-  const mainItems = [
-    { icon: LayoutDashboard, labelKey: 'sidebar.dashboard', id: 'dashboard' },
-    { icon: LineChart, labelKey: 'sidebar.analytics', id: 'analytics' },
-    { icon: Activity, labelKey: 'sidebar.transactions', id: 'transactions' },
-    { icon: FileText, labelKey: 'sidebar.audit', id: 'audit' },
-  ];
-
-  const transactionItems = [
-    { icon: PieChart, labelKey: 'sidebar.portfolio', id: 'portfolio' },
-    { icon: Wallet, labelKey: 'sidebar.wallet', id: 'wallet' },
-    { icon: Globe, labelKey: 'Network', id: 'network' },
-    { icon: User, labelKey: 'sidebar.profile', id: 'profile' },
-  ];
-
-  const toolsItems = [
-    { icon: Settings, labelKey: 'sidebar.settings', id: 'settings' },
-    { icon: MessageSquare, labelKey: 'sidebar.feedback', id: 'feedback' },
-    { icon: HelpCircle, labelKey: 'sidebar.help', id: 'help' },
-  ];
+  const mainItems = getNavItemsBySection('pages');
+  const transactionItems = getNavItemsBySection('transaction');
+  const toolsItems = getNavItemsBySection('tools');
 
   const handleClick = (id: string) => {
     onItemClick?.(id);
