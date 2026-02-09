@@ -34,10 +34,10 @@ app.use((req, res, next) => {
 const toStringParam = (value: unknown) => {
   if (Array.isArray(value)) {
     const first = value[0];
-    return typeof first === 'string' ? first : undefined;
+    return typeof first === 'string' ? String(first) : undefined;
   }
   if (typeof value === 'string') {
-    return value;
+    return String(value);
   }
   return undefined;
 };
@@ -173,8 +173,8 @@ app.post('/api/auth', async (req: Request, res: Response) => {
 app.all('/api/wallet', async (req: Request, res: Response) => {
   try {
     const query = req.method === 'GET' ? req.query : req.body;
-    const userId = toStringParam(query.userId);
-    const walletAddress = toStringParam(query.walletAddress);
+    const userId = toStringParam((query as any).userId);
+    const walletAddress = toStringParam((query as any).walletAddress);
 
     if (!userId && !walletAddress) {
       return res.status(400).json({ error: 'userId or walletAddress is required' });
@@ -562,7 +562,13 @@ app.get('/api/user', async (req: Request, res: Response) => {
     case 'getWalletState':
       return handleGetWalletState(uid as string, res);
     case 'getTopUsers':
-      return handleGetTopUsers(req.query, res);
+      return handleGetTopUsers(
+        {
+          limit: toStringParam(req.query.limit),
+          offset: toStringParam(req.query.offset),
+        },
+        res
+      );
     default:
       return res.status(200).json({
         status: 'API Ready',
@@ -1974,11 +1980,11 @@ app.get('/api/reputation/leaderboard', async (req: Request, res: Response) => {
 
 app.get('/api/reputation/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const db = await getMongoDb();
     const usersCollection = db.collection('final_users_v3');
 
-    const user = await usersCollection.findOne({ pioneerId: String(pioneerId) });
+    const user = await usersCollection.findOne({ pioneerId });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -2330,8 +2336,8 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
 
 app.get('/api/auth/user/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const user = await userService.getUserProfile(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    const user = await userService.getUserProfile(pioneerId);
 
     res.json({
       success: true,
@@ -2359,12 +2365,13 @@ app.post('/api/wallet/link', async (req: Request, res: Response) => {
 
 app.get('/api/wallet/:pioneerId/:network', async (req: Request, res: Response) => {
   try {
-    const { pioneerId, network } = req.params;
+    const pioneerId = String(req.params.pioneerId);
+    const network = String(req.params.network) as 'mainnet' | 'testnet';
     const db = await getMongoDb();
 
     const wallet = await db.collection('Wallets').findOne({
-      pioneerId: String(pioneerId),
-      network: network as 'mainnet' | 'testnet',
+      pioneerId,
+      network,
     });
 
     if (!wallet) {
@@ -2382,12 +2389,12 @@ app.get('/api/wallet/:pioneerId/:network', async (req: Request, res: Response) =
 
 app.get('/api/points/log/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const limit = toNumberParam(req.query.limit, 50);
     const db = await getMongoDb();
 
     const log = await db.collection('PointsLog')
-      .find({ pioneerId: String(pioneerId) })
+      .find({ pioneerId })
       .sort({ timestamp: -1 })
       .limit(limit)
       .toArray();
@@ -2429,8 +2436,8 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
 
 app.post('/api/sync/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const syncResult = await autoSyncService.syncUserData(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    const syncResult = await autoSyncService.syncUserData(pioneerId);
 
     res.json({
       success: true,
@@ -2444,8 +2451,8 @@ app.post('/api/sync/:pioneerId', async (req: Request, res: Response) => {
 
 app.get('/api/sync/status/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const status = await autoSyncService.getSyncStatus(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    const status = await autoSyncService.getSyncStatus(pioneerId);
 
     res.json({
       success: true,
@@ -2458,9 +2465,9 @@ app.get('/api/sync/status/:pioneerId', async (req: Request, res: Response) => {
 
 app.post('/api/activity/daily-checkin/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const { withAds = false } = req.body;
-    const points = await userService.dailyCheckIn(String(pioneerId), withAds);
+    const points = await userService.dailyCheckIn(pioneerId, withAds);
 
     res.json({
       success: true,
@@ -2503,8 +2510,8 @@ app.post('/api/activity/confirm-referral', async (req: Request, res: Response) =
 
 app.post('/api/demo/initialize/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const demoData = await demoModeManager.initializeDemoMode(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    const demoData = await demoModeManager.initializeDemoMode(pioneerId);
 
     res.json({
       success: true,
@@ -2518,8 +2525,8 @@ app.post('/api/demo/initialize/:pioneerId', async (req: Request, res: Response) 
 
 app.get('/api/demo/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const demoData = await demoModeManager.getDemoModeData(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    const demoData = await demoModeManager.getDemoModeData(pioneerId);
 
     if (!demoData) {
       return res.status(404).json({ success: false, error: 'Demo mode not found' });
@@ -2536,10 +2543,10 @@ app.get('/api/demo/:pioneerId', async (req: Request, res: Response) => {
 
 app.post('/api/demo/:pioneerId/simulate/transaction', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const { type, amount } = req.body;
 
-    await demoModeManager.simulateDemoTransaction(String(pioneerId), { type, amount });
+    await demoModeManager.simulateDemoTransaction(pioneerId, { type, amount });
 
     res.json({
       success: true,
@@ -2552,10 +2559,10 @@ app.post('/api/demo/:pioneerId/simulate/transaction', async (req: Request, res: 
 
 app.post('/api/demo/:pioneerId/simulate/daily-login', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const { withAds = false } = req.body;
 
-    const points = await demoModeManager.simulateDemoDailyLogin(String(pioneerId), withAds);
+    const points = await demoModeManager.simulateDemoDailyLogin(pioneerId, withAds);
 
     res.json({
       success: true,
@@ -2569,8 +2576,8 @@ app.post('/api/demo/:pioneerId/simulate/daily-login', async (req: Request, res: 
 
 app.post('/api/demo/:pioneerId/deactivate', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    await demoModeManager.deactivateDemoMode(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    await demoModeManager.deactivateDemoMode(pioneerId);
 
     res.json({
       success: true,
@@ -2583,8 +2590,8 @@ app.post('/api/demo/:pioneerId/deactivate', async (req: Request, res: Response) 
 
 app.post('/api/demo/:pioneerId/reset', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    await demoModeManager.resetDemoMode(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    await demoModeManager.resetDemoMode(pioneerId);
 
     res.json({
       success: true,
@@ -2651,8 +2658,8 @@ app.get('/api/admin/demo-sessions', async (req: Request, res: Response) => {
 
 app.delete('/api/admin/user/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    await userService.deleteUser(String(pioneerId));
+    const pioneerId = String(req.params.pioneerId);
+    await userService.deleteUser(pioneerId);
 
     res.json({
       success: true,
@@ -2794,19 +2801,19 @@ app.get('/api/admin/user/:pioneerId/details', async (req: Request, res: Response
   try {
     const db = await getMongoDb();
     const usersCollection = db.collection('final_users_v3');
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
 
-    const user = await usersCollection.findOne({ pioneerId: String(pioneerId) });
+    const user = await usersCollection.findOne({ pioneerId });
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    const wallets = await db.collection('Wallets').find({ pioneerId: String(pioneerId) }).toArray();
-    const recentTx = await db.collection('Transactions').find({ pioneerId: String(pioneerId) }).sort({ timestamp: -1 }).limit(50).toArray();
-    const pointsHistory = await db.collection('PointsLog').find({ pioneerId: String(pioneerId) }).sort({ timestamp: -1 }).limit(100).toArray();
-    const referralsGiven = await db.collection('Referrals').find({ referrerId: String(pioneerId) }).toArray();
-    const referralsReceived = await db.collection('Referrals').find({ referredPioneerId: String(pioneerId) }).toArray();
-    const dailyLogins = await db.collection('DailyCheckin').find({ pioneerId: String(pioneerId) }).sort({ date: -1 }).limit(30).toArray();
+    const wallets = await db.collection('Wallets').find({ pioneerId }).toArray();
+    const recentTx = await db.collection('Transactions').find({ pioneerId }).sort({ timestamp: -1 }).limit(50).toArray();
+    const pointsHistory = await db.collection('PointsLog').find({ pioneerId }).sort({ timestamp: -1 }).limit(100).toArray();
+    const referralsGiven = await db.collection('Referrals').find({ referrerId: pioneerId }).toArray();
+    const referralsReceived = await db.collection('Referrals').find({ referredPioneerId: pioneerId }).toArray();
+    const dailyLogins = await db.collection('DailyCheckin').find({ pioneerId }).sort({ date: -1 }).limit(30).toArray();
 
     res.json({
       success: true,
@@ -2928,8 +2935,8 @@ app.get('/api/admin/export/users', async (req: Request, res: Response) => {
 
 app.post('/api/admin/sync/trigger/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    res.json({ success: true, message: `Sync triggered for ${String(pioneerId)}` });
+    const pioneerId = String(req.params.pioneerId);
+    res.json({ success: true, message: `Sync triggered for ${pioneerId}` });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });
   }
