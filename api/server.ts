@@ -1,6 +1,5 @@
 import 'dotenv/config.js';
 import express, { Request, Response, NextFunction } from 'express';
-import type { ParsedQs } from 'qs';
 import cors from 'cors';
 import { Redis } from '@upstash/redis';
 import * as StellarSdk from 'stellar-sdk';
@@ -32,15 +31,7 @@ app.use((req, res, next) => {
   next();
 });
 
-type QueryValue =
-  | string
-  | string[]
-  | ParsedQs
-  | ParsedQs[]
-  | Array<string | ParsedQs>
-  | undefined;
-
-const toStringParam = (value: QueryValue) => {
+const toStringParam = (value: unknown) => {
   if (Array.isArray(value)) {
     const first = value[0];
     return typeof first === 'string' ? first : undefined;
@@ -51,7 +42,7 @@ const toStringParam = (value: QueryValue) => {
   return undefined;
 };
 
-const toNumberParam = (value: QueryValue, fallback: number) => {
+const toNumberParam = (value: unknown, fallback: number) => {
   const raw = toStringParam(value);
   const parsed = raw ? Number(raw) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : fallback;
