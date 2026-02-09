@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Sparkles } from 'lucide-react';
-import { FUTURE_TASKS_CONFIG, type FutureTaskDefinition } from '../../server/config/reputaProtocol';
+import { FUTURE_TASKS_CONFIG, type FutureTaskDefinition } from '../protocol/futureTasks';
 
 const statusLabels: Record<FutureTaskDefinition['verification']['status'], string> = {
   pending: 'Verification Pending',
