@@ -1,11 +1,6 @@
-import {   
-  LayoutDashboard, 
-  LineChart, 
-  Activity, 
-  User,
-  Globe,
-  Menu
-} from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
+import { getMobileBottomNavItems } from '../config/navigation';
 
 interface MobileBottomNavProps {
   activeItem: string;
@@ -14,13 +9,8 @@ interface MobileBottomNavProps {
 }
 
 export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: MobileBottomNavProps) {
-  const navItems = [
-    { icon: LayoutDashboard, id: 'dashboard', label: 'Home' },
-    { icon: LineChart, id: 'analytics', label: 'Analytics' },
-    { icon: Activity, id: 'transactions', label: 'Activity' },
-    { icon: Globe, id: 'network', label: 'Network' },
-    { icon: User, id: 'profile', label: 'Profile' },
-  ];
+  const { t } = useLanguage();
+  const navItems = getMobileBottomNavItems();
 
   return (
     <nav 
@@ -62,7 +52,7 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
                   color: isActive ? '#8B5CF6' : 'rgba(160, 164, 184, 0.5)'
                 }}
               >
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </button>
           );

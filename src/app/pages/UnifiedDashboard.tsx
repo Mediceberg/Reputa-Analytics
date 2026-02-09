@@ -5,6 +5,7 @@ import { MobileBottomNav } from '../components/MobileBottomNav';
 import { SideDrawer } from '../components/SideDrawer';
 import { TopBar } from '../components/TopBar';
 import { MainCard } from '../components/MainCard';
+import { FutureTasksPage } from './FutureTasksPage';
 const TransactionTimeline = React.lazy(async () => ({ default: (await import('../components/charts/TransactionTimeline')).TransactionTimeline }));
 const PointsBreakdown = React.lazy(async () => ({ default: (await import('../components/charts/PointsBreakdown')).PointsBreakdown }));
 const RiskActivity = React.lazy(async () => ({ default: (await import('../components/charts/RiskActivity')).RiskActivity }));
@@ -51,6 +52,7 @@ import {
   Settings, MessageSquare, HelpCircle, FileText as FileTextIcon, TestTube, AlertCircle, Info
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
 
 interface UnifiedDashboardProps {
   walletData: WalletData;
@@ -60,7 +62,19 @@ interface UnifiedDashboardProps {
   username?: string;
 }
 
-type ActiveSection = 'overview' | 'analytics' | 'transactions' | 'audit' | 'portfolio' | 'wallet' | 'network' | 'profile' | 'settings' | 'feedback' | 'help';
+type ActiveSection =
+  | 'overview'
+  | 'analytics'
+  | 'transactions'
+  | 'audit'
+  | 'portfolio'
+  | 'wallet'
+  | 'network'
+  | 'earn-points'
+  | 'profile'
+  | 'settings'
+  | 'feedback'
+  | 'help';
 type NetworkSubPage = null | 'network-info' | 'top-wallets' | 'reputation';
 
 export function UnifiedDashboard({ 
@@ -79,6 +93,20 @@ export function UnifiedDashboard({
     return { mode: 'testnet', connected: true };
   });
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
+  const sectionPaths: Record<ActiveSection, string> = {
+    'overview': '/',
+    'analytics': '/analytics',
+    'transactions': '/activity',
+    'audit': '/audit',
+    'portfolio': '/portfolio',
+    'wallet': '/wallet',
+    'network': '/network',
+    'earn-points': '/earn-points',
+    'profile': '/profile',
+    'settings': '/settings',
+    'feedback': '/feedback',
+    'help': '/help',
+  };
   const activeSectionLabel = useMemo(() => {
     const sectionLabels: Record<string, string> = {
       'overview': 'Reputa Score',
@@ -88,6 +116,7 @@ export function UnifiedDashboard({
       'portfolio': 'Portfolio',
       'wallet': 'Wallet',
       'network': 'Network',
+      'earn-points': 'Earn Points',
       'settings': 'Settings'
     };
     return sectionLabels[activeSection] || activeSection;
@@ -140,6 +169,21 @@ export function UnifiedDashboard({
     }
     loadUnifiedScore();
   }, [mode.mode, username]);
+
+  useEffect(() => {
+    const path = window.location.pathname;
+    const matchedSection = (Object.entries(sectionPaths).find(([, value]) => value === path) || [])[0] as ActiveSection | undefined;
+    if (matchedSection && matchedSection !== activeSection) {
+      setActiveSection(matchedSection);
+    }
+  }, []);
+
+  useEffect(() => {
+    const nextPath = sectionPaths[activeSection];
+    if (nextPath && window.location.pathname !== nextPath) {
+      window.history.replaceState({}, '', nextPath);
+    }
+  }, [activeSection]);
 
   const handlePointsEarned = async (points: number, type: 'checkin' | 'ad' | 'merge') => {
     const unified = reputationService.getUnifiedScore();
@@ -263,6 +307,7 @@ export function UnifiedDashboard({
       'portfolio': 'portfolio',
       'wallet': 'wallet',
       'network': 'network',
+      'earn-points': 'earn-points',
       'profile': 'profile',
       'settings': 'settings',
       'feedback': 'feedback',
@@ -295,6 +340,9 @@ export function UnifiedDashboard({
     { id: 'portfolio', icon: PieChart, label: t('sidebar.portfolio') },
     { id: 'wallet', icon: Wallet, label: t('sidebar.wallet') },
     { id: 'network', icon: Globe, label: 'Network' },
+    ...(FUTURE_TASKS_CONFIG.enabled
+      ? [{ id: 'earn-points', icon: Sparkles, label: 'Earn Points' }]
+      : []),
   ];
 
   return (
@@ -338,6 +386,7 @@ export function UnifiedDashboard({
                activeSection === 'portfolio' ? 'Portfolio' :
                activeSection === 'wallet' ? 'Wallet' :
                activeSection === 'network' ? 'Network' :
+               activeSection === 'earn-points' ? 'Earn Points' :
                activeSection === 'profile' ? 'Profile' :
                activeSection === 'settings' ? 'Settings' :
                activeSection}
@@ -830,6 +879,12 @@ export function UnifiedDashboard({
               </div>
             )}
           </>
+        )}
+
+        {activeSection === 'earn-points' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <FutureTasksPage />
+          </div>
         )}
 
         {activeSection === 'profile' && (
