@@ -17,9 +17,12 @@ import {
   Wallet,
   User,
   Globe,
-  Play
+  Play,
+  Sparkles
 } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
+import { SidebarFutureTasks } from './SidebarFutureTasks';
+import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
 
 interface SidebarProps {
   mode: AppMode;
@@ -37,6 +40,9 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
     { icon: Activity, labelKey: 'sidebar.transactions', id: 'transactions' },
     { icon: FileText, labelKey: 'sidebar.audit', id: 'audit' },
   ];
+  const earnPointsItem = FUTURE_TASKS_CONFIG.enabled
+    ? [{ icon: Sparkles, labelKey: 'Earn Points', id: 'earn-points' }]
+    : [];
 
   const transactionItems = [
     { icon: PieChart, labelKey: 'sidebar.portfolio', id: 'portfolio' },
@@ -135,7 +141,7 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
             {t('sidebar.section.pages')}
           </p>
           <div className="space-y-1">
-            {mainItems.map((item) => (
+            {mainItems.concat(earnPointsItem).map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleClick(item.id)}
@@ -213,6 +219,8 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
             ))}
           </div>
         </div>
+
+        <SidebarFutureTasks />
       </nav>
 
       <div 

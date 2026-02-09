@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { 
   X, Home, LineChart, Activity, User, Globe, Wallet, 
   FileText, Settings, MessageSquare, HelpCircle, Shield, 
-  LogOut, ChevronRight, Zap
+  LogOut, ChevronRight, Zap, Sparkles
 } from 'lucide-react';
+import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -62,6 +63,9 @@ export function SideDrawer({
     { id: 'wallet', icon: Wallet, label: 'Wallet Info', description: 'Balance & details' },
     { id: 'audit', icon: FileText, label: 'Audit Report', description: 'Trust analysis' },
     { id: 'network', icon: Globe, label: 'Network', description: 'Pi ecosystem' },
+    ...(FUTURE_TASKS_CONFIG.enabled
+      ? [{ id: 'earn-points', icon: Sparkles, label: 'Earn Points', description: 'Future missions' }]
+      : []),
     { id: 'profile', icon: User, label: 'Profile', description: 'Your account' },
   ];
 

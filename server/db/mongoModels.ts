@@ -83,7 +83,7 @@ export interface UserDocument {
 }
 
 async function createUsersCollection(database: Db) {
-  const collectionName = 'Users';
+  const collectionName = 'final_users_v3';
   
   try {
     await database.createCollection(collectionName, {
@@ -107,7 +107,7 @@ async function createUsersCollection(database: Db) {
         }
       }
     });
-    console.log(`✅ Created Users collection`);
+    console.log(`✅ Created final_users_v3 collection`);
   } catch (error: any) {
     if (error.code !== 48) {
       console.error('Error creating Users collection:', error);
@@ -343,7 +343,7 @@ async function createWalletSnapshotsCollection(database: Db) {
 
 export async function getUsersCollection(): Promise<Collection> {
   const database = await getMongoDb();
-  return database.collection('Users');
+  return database.collection('final_users_v3');
 }
 
 export async function getReputationScoresCollection(): Promise<Collection> {
