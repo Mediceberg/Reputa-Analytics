@@ -32,7 +32,13 @@ app.use((req, res, next) => {
   next();
 });
 
-type QueryValue = string | string[] | ParsedQs | ParsedQs[] | undefined;
+type QueryValue =
+  | string
+  | string[]
+  | ParsedQs
+  | ParsedQs[]
+  | Array<string | ParsedQs>
+  | undefined;
 
 const toStringParam = (value: QueryValue) => {
   if (Array.isArray(value)) {
@@ -1833,7 +1839,7 @@ app.post('/api/reputation/sync', async (req: Request, res: Response) => {
       details: updateData,
     });
 
-    if (!result.value) {
+    if (!result || !result.value) {
       return res.status(404).json({ error: 'User not found' });
     }
 

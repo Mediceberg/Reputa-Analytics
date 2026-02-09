@@ -78,13 +78,14 @@ async function clearReputationCache(pioneerId: string) {
 export async function getOrCreateUser(pioneerId: string, username: string, email: string) {
   const usersCollection = await getUsersCollection();
   
-  let user = await usersCollection.findOne({ pioneerId });
+  const existingUser = await usersCollection.findOne({ pioneerId });
+  let user: UserDocument | null = existingUser ? (existingUser as UserDocument) : null;
   
   if (!user) {
     const referralCode = generateReferralCode();
     const now = new Date();
     
-    user = {
+    const newUser: UserDocument = {
       pioneerId,
       username,
       email,
@@ -94,9 +95,10 @@ export async function getOrCreateUser(pioneerId: string, username: string, email
       lastActiveAt: now,
       referralCode,
       referralCount: 0,
-    } as UserDocument;
+    };
     
-    await usersCollection.insertOne(user);
+    await usersCollection.insertOne(newUser);
+    user = newUser;
     console.log(`✅ Created new user: ${pioneerId}`);
     
     // Initialize reputation scores for new user
