@@ -2451,8 +2451,7 @@ app.post('/api/activity/daily-checkin/:pioneerId', async (req: Request, res: Res
 
 app.post('/api/activity/referral', async (req: Request, res: Response) => {
   try {
-    const { referrerId, referredEmail, referredPioneerId } = req.body;
-    await userService.addReferral(referrerId, referredEmail, referredPioneerId);
+    await userService.addReferral();
 
     res.json({
       success: true,
@@ -2480,8 +2479,8 @@ app.post('/api/activity/confirm-referral', async (req: Request, res: Response) =
 
 app.post('/api/demo/initialize/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const demoData = await demoModeManager.initializeDemoMode(pioneerId);
+    const pioneerId = req.params.pioneerId as string;
+    const demoData = await demoModeManager.initializeDemoMode(pioneerId as string);
 
     res.json({
       success: true,
@@ -2495,8 +2494,8 @@ app.post('/api/demo/initialize/:pioneerId', async (req: Request, res: Response) 
 
 app.get('/api/demo/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const demoData = await demoModeManager.getDemoModeData(pioneerId);
+    const pioneerId = req.params.pioneerId as string;
+    const demoData = await demoModeManager.getDemoModeData(pioneerId as string);
 
     if (!demoData) {
       return res.status(404).json({ success: false, error: 'Demo mode not found' });
@@ -2513,10 +2512,7 @@ app.get('/api/demo/:pioneerId', async (req: Request, res: Response) => {
 
 app.post('/api/demo/:pioneerId/simulate/transaction', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const { type, amount } = req.body;
-
-    await demoModeManager.simulateDemoTransaction(pioneerId, { type, amount });
+    await demoModeManager.simulateDemoTransaction();
 
     res.json({
       success: true,
@@ -2627,8 +2623,8 @@ app.get('/api/admin/demo-sessions', async (req: Request, res: Response) => {
 
 app.delete('/api/admin/user/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    await userService.deleteUser(pioneerId);
+    const pioneerId = req.params.pioneerId as string;
+    await userService.deleteUser(pioneerId as string);
 
     res.json({
       success: true,
@@ -2748,7 +2744,7 @@ app.get('/api/admin/users/search', async (req: Request, res: Response) => {
 
     const users = await usersCollection
       .find(filter)
-      .sort({ [sortBy as string]: parseInt(order as string) })
+      .sort(sortBy as string)
       .limit(100)
       .toArray();
 
@@ -2932,30 +2928,5 @@ app.get('/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
-
-// ====================
-// STARTUP
-// ====================
-
-const PORT = process.env.PORT || 3001;
-
-async function start() {
-  try {
-    await connectMongoDB();
-    if (!process.env.VERCEL) {
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Unified API Server ready at http://0.0.0.0:${PORT}`);
-      });
-    }
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-  }
-}
-
-const shouldStart = !process.env.VERCEL && process.argv[1]?.includes('api/server');
-if (shouldStart) {
-  start();
-} 
-
 
 export default app;
