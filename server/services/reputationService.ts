@@ -4,7 +4,7 @@
  * Uses MongoDB as primary source, Redis only for caching
  */
 
-import {
+import { 
   getReputationScoresCollection,
   getPointsLogCollection,
   getDailyCheckinCollection,
