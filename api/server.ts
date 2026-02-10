@@ -4,13 +4,13 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { Redis } from '@upstash/redis';
 import * as StellarSdk from 'stellar-sdk';
-import protocol from '../server/config/reputaProtocol';
-import * as reputationService from '../server/services/reputationService';
+import protocol from '../server/config/reputaProtocol.js';
+import * as reputationService from '../server/services/reputationService.js';
 import {
   connectMongoDB,
   getMongoDb,
   getReputationScoresCollection,
-} from '../server/db/mongoModels';
+} from '../server/db/mongoModels.js';
 
 const app = express();
 
@@ -2921,5 +2921,18 @@ if (shouldStart) {
   });
 }
 
+
+
+const PORT = Number(process.env.PORT) || 3001;
+const entryArg = process.argv[1] ?? '';
+
+// Keep startup guard broad to support tsx/ts-node and compiled JS paths.
+const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
+if (shouldStart) {
+  app.listen(PORT, '0.0.0.0', async () => {
+    await connectMongoDB();
+    console.log(`🚀 Unified API Server ready at http://0.0.0.0:${PORT}`);
+  });
+}
 
 export default app;

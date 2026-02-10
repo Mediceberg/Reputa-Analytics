@@ -1,12 +1,12 @@
 import 'dotenv/config.js';
 import express, { Request, Response, NextFunction } from 'express';
 import * as StellarSdk from 'stellar-sdk';
-import protocol from '../server/config/reputaProtocol';
-import * as reputationService from '../server/services/reputationService';
+import protocol from '../server/config/reputaProtocol.js';
+import * as reputationService from '../server/services/reputationService.js';
 import {
   getMongoDb,
   getReputationScoresCollection,
-} from '../server/db/mongoModels';
+} from '../server/db/mongoModels.js';
 import { applyCommonMiddleware } from './server.middleware';
 import { toNumberParam, toStringParam } from './server.params';
 import { createRedisClient } from './server.redis';
