@@ -4,7 +4,7 @@
  * Redis used only for caching with short TTL (5 minutes)
  */
 
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'reputa-v3';
@@ -65,7 +65,7 @@ async function initializeCollections(database: Db) {
 // ====================
 
 export interface UserDocument {
-  _id?: string;
+  _id?: ObjectId;
   pioneerId: string;        // Unique Pi Network ID
   username: string;
   email: string;
@@ -83,7 +83,7 @@ export interface UserDocument {
 }
 
 async function createUsersCollection(database: Db) {
-  const collectionName = 'Users';
+  const collectionName = 'final_users_v3';
   
   try {
     await database.createCollection(collectionName, {
@@ -107,7 +107,7 @@ async function createUsersCollection(database: Db) {
         }
       }
     });
-    console.log(`✅ Created Users collection`);
+    console.log(`✅ Created final_users_v3 collection`);
   } catch (error: any) {
     if (error.code !== 48) {
       console.error('Error creating Users collection:', error);
@@ -131,7 +131,7 @@ async function createUsersCollection(database: Db) {
 // ====================
 
 export interface ReputationScoreDocument {
-  _id?: string;
+  _id?: ObjectId;
   pioneerId: string;        // Reference to user
   
   // Protocol version
@@ -227,7 +227,7 @@ async function createReputationScoresCollection(database: Db) {
 // ====================
 
 export interface DailyCheckinDocument {
-  _id?: string;
+  _id?: ObjectId;
   pioneerId: string;
   date: string;              // YYYY-MM-DD
   timestamp: Date;
@@ -263,7 +263,7 @@ async function createDailyCheckinCollection(database: Db) {
 // ====================
 
 export interface PointsLogDocument {
-  _id?: string;
+  _id?: ObjectId;
   pioneerId: string;
   type: 'check_in' | 'ad_bonus' | 'wallet_scan' | 'referral' | 'task_complete' | 'manual_adjustment' | 'erosion';
   points: number;           // Points added/removed
@@ -299,7 +299,7 @@ async function createPointsLogCollection(database: Db) {
 // ====================
 
 export interface WalletSnapshotDocument {
-  _id?: string;
+  _id?: ObjectId;
   pioneerId: string;
   walletAddress: string;
   network: 'mainnet' | 'testnet';
@@ -341,27 +341,27 @@ async function createWalletSnapshotsCollection(database: Db) {
 // COLLECTION GETTERS
 // ====================
 
-export async function getUsersCollection(): Promise<Collection> {
+export async function getUsersCollection(): Promise<Collection<UserDocument>> {
   const database = await getMongoDb();
-  return database.collection('Users');
+  return database.collection('final_users_v3');
 }
 
-export async function getReputationScoresCollection(): Promise<Collection> {
+export async function getReputationScoresCollection(): Promise<Collection<ReputationScoreDocument>> {
   const database = await getMongoDb();
   return database.collection('ReputationScores');
 }
 
-export async function getDailyCheckinCollection(): Promise<Collection> {
+export async function getDailyCheckinCollection(): Promise<Collection<DailyCheckinDocument>> {
   const database = await getMongoDb();
   return database.collection('DailyCheckin');
 }
 
-export async function getPointsLogCollection(): Promise<Collection> {
+export async function getPointsLogCollection(): Promise<Collection<PointsLogDocument>> {
   const database = await getMongoDb();
   return database.collection('PointsLog');
 }
 
-export async function getWalletSnapshotsCollection(): Promise<Collection> {
+export async function getWalletSnapshotsCollection(): Promise<Collection<WalletSnapshotDocument>> {
   const database = await getMongoDb();
   return database.collection('WalletSnapshots');
 }

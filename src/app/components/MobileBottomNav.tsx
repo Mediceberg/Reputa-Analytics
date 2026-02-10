@@ -1,11 +1,7 @@
-import {   
-  LayoutDashboard, 
-  LineChart, 
-  Activity, 
-  User,
-  Globe,
-  Menu
-} from 'lucide-react';
+import { Menu, Sparkles } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
+import { getMobileBottomNavItems } from '../config/navigation';
+import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
 
 interface MobileBottomNavProps {
   activeItem: string;
@@ -14,13 +10,15 @@ interface MobileBottomNavProps {
 }
 
 export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: MobileBottomNavProps) {
-  const navItems = [
-    { icon: LayoutDashboard, id: 'dashboard', label: 'Home' },
-    { icon: LineChart, id: 'analytics', label: 'Analytics' },
-    { icon: Activity, id: 'transactions', label: 'Activity' },
-    { icon: Globe, id: 'network', label: 'Network' },
-    { icon: User, id: 'profile', label: 'Profile' },
-  ];
+  const { t } = useLanguage();
+  const navItems = getMobileBottomNavItems();
+  const hasEarnPoints = navItems.some((item) => item.id === 'earn-points');
+  const resolvedItems = hasEarnPoints || !FUTURE_TASKS_CONFIG.enabled
+    ? navItems
+    : [
+        ...navItems,
+        { id: 'earn-points', labelKey: 'sidebar.earnPoints', icon: Sparkles },
+      ];
 
   return (
     <nav 
@@ -35,7 +33,7 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
       }}
     >
       <div className="flex items-center justify-around px-1 py-2">
-        {navItems.map((item) => {
+        {resolvedItems.map((item) => {
           const isActive = activeItem === item.id;
           return (
             <button
@@ -62,7 +60,7 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
                   color: isActive ? '#8B5CF6' : 'rgba(160, 164, 184, 0.5)'
                 }}
               >
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </button>
           );

@@ -135,6 +135,12 @@ export const SCORING_RULES = {
 };
 
 // ====================
+// FUTURE TASKS (MISSIONS)
+// ====================
+
+export { FUTURE_TASKS_CONFIG } from '../../src/app/protocol/futureTasks';
+
+// ====================
 // CALCULATION UTILITIES
 // ====================
 
