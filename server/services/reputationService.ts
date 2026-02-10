@@ -15,7 +15,7 @@ import {
   DailyCheckinDocument,
 } from '../db/mongoModels.js';
 
-import protocol from '../config/reputaProtocol';
+import protocol from '../config/reputaProtocol.js';
 
 // ====================
 // CACHE WITH REDIS
