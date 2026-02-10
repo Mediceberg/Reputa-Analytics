@@ -1,4 +1,3 @@
-codex/add-modular-future-tasks-system-lzo2gq
 export type FutureTasksMode = 'ui_placeholder' | 'active' | 'disabled';
 export type FutureTaskStatus = 'coming_soon' | 'active' | 'completed';
 
@@ -8,7 +7,8 @@ export interface FutureTaskMission {
   points: number;
   type: 'social' | 'community' | 'ads' | 'other';
   status: FutureTaskStatus;
-  
+}
+
 export type FutureTaskVerificationType = 'social' | 'api' | 'blockchain' | 'manual';
 export type FutureTaskVerificationStatus = 'pending' | 'verified' | 'failed';
 export type FutureTaskClaimType = 'api' | 'contract' | 'none';
@@ -40,67 +40,19 @@ export interface FutureTaskDefinition {
   actionUrl?: string;
   verification: FutureTaskVerificationConfig;
   claim: FutureTaskClaimConfig;
- main
 }
 
 export interface FutureTasksConfig {
   enabled: boolean;
- codex/add-modular-future-tasks-system-lzo2gq
   mode: FutureTasksMode;
-  missions: FutureTaskMission[];
-}
-
-export const FUTURE_TASKS_CONFIG: FutureTasksConfig = {
-  enabled: true,
-  mode: 'ui_placeholder',
-  missions: [
-    {
-      id: 'follow_x',
-      title: 'Follow us on X',
-      points: 50,
-      type: 'social',
-      status: 'coming_soon',
-    },
-    {
-      id: 'join_telegram',
-      title: 'Join Telegram',
-      points: 50,
-      type: 'community',
-      status: 'coming_soon',
-    },
-    {
-      id: 'watch_ads',
-      title: 'Watch Ads',
-      points: 100,
-      type: 'ads',
-      status: 'coming_soon',
-    },
-    {
-      id: 'share_post_x',
-      title: 'Share post on X',
-      points: 75,
-      type: 'social',
-      status: 'coming_soon',
-    },
-    {
-      id: 'share_score_fireside',
-      title: 'Share Score on Fireside',
-      points: 100,
-      type: 'social',
-      status: 'coming_soon',
-    },
-  ],
-};
-
-export const isFutureTasksEnabled = () => FUTURE_TASKS_CONFIG.enabled && FUTURE_TASKS_CONFIG.mode !== 'disabled';
-
   sectionLabel: string;
   sectionDescription?: string;
   tasks: FutureTaskDefinition[];
 }
 
 export const FUTURE_TASKS_CONFIG: FutureTasksConfig = {
-  enabled: false,
+  enabled: true,
+  mode: 'ui_placeholder',
   sectionLabel: 'Earn Points',
   sectionDescription: 'Community missions with future verification hooks.',
   tasks: [
@@ -185,19 +137,8 @@ export const FUTURE_TASKS_CONFIG: FutureTasksConfig = {
         endpoint: '/api/v3/missions/claim',
       },
     },
-    {
-      id: 'future-missions',
-      label: 'Future Missions',
-      description: 'New community tasks will appear here.',
-      points: 50,
-      verification: {
-        type: 'manual',
-        status: 'pending',
-      },
-      claim: {
-        type: 'none',
-      },
-    },
   ],
 };
+
+export const isFutureTasksEnabled = () => FUTURE_TASKS_CONFIG.enabled && FUTURE_TASKS_CONFIG.mode !== 'disabled';;
  main
