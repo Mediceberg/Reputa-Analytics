@@ -138,7 +138,7 @@ export const SCORING_RULES = {
 // FUTURE TASKS (MISSIONS)
 // ====================
 
-export { FUTURE_TASKS_CONFIG } from '../../src/app/protocol/futureTasks';
+export { FUTURE_TASKS_CONFIG } from '../../src/app/protocol/futureTasks.js';
 
 // ====================
 // CALCULATION UTILITIES
