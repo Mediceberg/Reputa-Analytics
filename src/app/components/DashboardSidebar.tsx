@@ -3,6 +3,8 @@ import { AppMode, MODE_IMPACTS } from '../protocol/types';
 import { TestTube, Globe, Play } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
 import { getNavItemsBySection } from '../config/navigation';
+import { Sparkles } from 'lucide-react';
+import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
 
 interface SidebarProps {
   mode: AppMode;
@@ -14,7 +16,14 @@ interface SidebarProps {
 export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard', onItemClick }: SidebarProps) {
   const { t } = useLanguage();
 
-  const mainItems = getNavItemsBySection('pages');
+  const baseMainItems = getNavItemsBySection('pages');
+  const hasEarnPoints = baseMainItems.some((item) => item.id === 'earn-points');
+  const mainItems = hasEarnPoints || !FUTURE_TASKS_CONFIG.enabled
+    ? baseMainItems
+    : [
+        ...baseMainItems,
+        { id: 'earn-points', labelKey: 'sidebar.earnPoints', icon: Sparkles, section: 'pages' as const },
+      ];
   const transactionItems = getNavItemsBySection('transaction');
   const toolsItems = getNavItemsBySection('tools');
 
