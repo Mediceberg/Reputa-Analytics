@@ -2908,6 +2908,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 
+
 const PORT = Number(process.env.PORT) || 3001;
 const entryArg = process.argv[1] ?? '';
 
@@ -2919,5 +2920,6 @@ if (shouldStart) {
     console.log(`🚀 Unified API Server ready at http://0.0.0.0:${PORT}`);
   });
 }
+
 
 export default app;
