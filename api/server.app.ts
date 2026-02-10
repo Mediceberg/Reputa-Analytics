@@ -1,54 +1,21 @@
 import 'dotenv/config.js';
-codex/add-modular-future-tasks-system-lzo2gq
-import app from './server.app';
-import { startUnifiedServer } from './server.startup';
-
-const PORT = Number(process.env.PORT) || 3001;
-const entryArg = process.argv[1] ?? '';
-
-// Keep startup guard broad to support tsx/ts-node and compiled JS paths.
-const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
-if (shouldStart) {
-  void startUnifiedServer(app, PORT);
-}
-
-=======
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import { Redis } from '@upstash/redis';
 import * as StellarSdk from 'stellar-sdk';
 import protocol from '../server/config/reputaProtocol';
 import * as reputationService from '../server/services/reputationService';
 import {
-  connectMongoDB,
   getMongoDb,
   getReputationScoresCollection,
 } from '../server/db/mongoModels';
+import { applyCommonMiddleware } from './server.middleware';
+import { toNumberParam, toStringParam } from './server.params';
+import { createRedisClient } from './server.redis';
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
-app.use((req: Request, res: Response, next: NextFunction) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
+applyCommonMiddleware(app);
 
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
+const redis = createRedisClient();
 
 // ====================
 // SHARED TYPES
@@ -67,7 +34,8 @@ declare global {
 // ====================
 
 async function handleAdminGetAllUsers(req: Request, res: Response) {
-  const { password, action } = req.query;
+  const password = toStringParam(req.query.password);
+  const action = toStringParam(req.query.action);
   const adminPassword = 'admin123';
 
   if (password !== adminPassword && req.method !== 'POST') {
@@ -168,7 +136,9 @@ app.post('/api/auth', async (req: Request, res: Response) => {
 
 app.all('/api/wallet', async (req: Request, res: Response) => {
   try {
-    const { userId, walletAddress } = (req.method === 'GET' ? req.query : req.body) as { userId?: string; walletAddress?: string };
+    const query = req.method === 'GET' ? req.query : req.body;
+    const userId = toStringParam((query as any).userId);
+    const walletAddress = toStringParam((query as any).walletAddress);
 
     if (!userId && !walletAddress) {
       return res.status(400).json({ error: 'userId or walletAddress is required' });
@@ -405,8 +375,8 @@ async function handleSaveReputation(body: any, res: Response) {
 }
 
 async function handleGetTopUsers(query: any, res: Response) {
-  const limit = Math.min(parseInt(query.limit as string) || 100, 100);
-  const offset = parseInt(query.offset as string) || 0;
+  const limit = Math.min(toNumberParam(query.limit, 100), 100);
+  const offset = toNumberParam(query.offset, 0);
 
   try {
     const topUserIds = await redis.zrange('leaderboard:reputation', offset, offset + limit - 1, { rev: true, withScores: true });
@@ -545,7 +515,8 @@ async function handleSaveWalletState(body: any, res: Response) {
 }
 
 app.get('/api/user', async (req: Request, res: Response) => {
-  const { action, uid } = req.query;
+  const action = toStringParam(req.query.action);
+  const uid = toStringParam(req.query.uid);
 
   switch (action) {
     case 'checkVip':
@@ -555,7 +526,13 @@ app.get('/api/user', async (req: Request, res: Response) => {
     case 'getWalletState':
       return handleGetWalletState(uid as string, res);
     case 'getTopUsers':
-      return handleGetTopUsers(req.query, res);
+      return handleGetTopUsers(
+        {
+          limit: toStringParam(req.query.limit),
+          offset: toStringParam(req.query.offset),
+        },
+        res
+      );
     default:
       return res.status(200).json({
         status: 'API Ready',
@@ -584,7 +561,10 @@ app.post('/api/user', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/check-vip', async (req: Request, res: Response) => handleCheckVip(req.query.uid as string, res));
+app.get('/api/check-vip', async (req: Request, res: Response) => {
+  const uid = toStringParam(req.query.uid);
+  return handleCheckVip(uid ? String(uid) : '', res);
+});
 app.post('/api/save-pioneer', async (req: Request, res: Response) => handleSavePioneer(req.body, res));
 app.post('/api/save-feedback', async (req: Request, res: Response) => handleSaveFeedback(req.body, res));
 
@@ -605,7 +585,8 @@ function referralError(error: string) {
 }
 
 app.get('/api/referral', async (req: Request, res: Response) => {
-  const { action, walletAddress } = req.query;
+  const action = toStringParam(req.query.action);
+  const walletAddress = toStringParam(req.query.walletAddress);
 
   if (!walletAddress || typeof walletAddress !== 'string') {
     return res.status(400).json(referralError('Wallet address is required'));
@@ -883,9 +864,16 @@ function generateHistoricalSnapshots(): HistoricalSnapshot[] {
 
 app.get('/api/top100', async (req: Request, res: Response) => {
   try {
-    const { action = 'list', limit = '100', offset = '0', sort = 'rank', order = 'asc', timestamp, from, to } = req.query;
-    const parsedLimit = Math.min(Math.max(parseInt(limit as string, 10) || 100, 1), 100);
-    const parsedOffset = Math.max(parseInt(offset as string, 10) || 0, 0);
+    const action = toStringParam(req.query.action) ?? 'list';
+    const limit = toStringParam(req.query.limit) ?? '100';
+    const offset = toStringParam(req.query.offset) ?? '0';
+    const sort = toStringParam(req.query.sort) ?? 'rank';
+    const order = toStringParam(req.query.order) ?? 'asc';
+    const timestamp = toStringParam(req.query.timestamp);
+    const from = toStringParam(req.query.from);
+    const to = toStringParam(req.query.to);
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 100);
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
     if (action === 'snapshot') {
       const snapshots = generateHistoricalSnapshots();
@@ -897,8 +885,8 @@ app.get('/api/top100', async (req: Request, res: Response) => {
       if (from || to) {
         const filtered = snapshots.filter((item) => {
           const ts = new Date(item.timestamp).getTime();
-          const fromTs = from ? new Date(from as string).getTime() : -Infinity;
-          const toTs = to ? new Date(to as string).getTime() : Infinity;
+          const fromTs = from ? new Date(from).getTime() : -Infinity;
+          const toTs = to ? new Date(to).getTime() : Infinity;
           return ts >= fromTs && ts <= toTs;
         });
         return res.status(200).json({ success: true, snapshots: filtered });
@@ -1607,11 +1595,12 @@ async function handleDailyCheckIn(uid: string, res: Response) {
 }
 
 app.get('/api/reputation', async (req: Request, res: Response) => {
-  const { uid, action } = req.query as { uid?: string; action?: string };
+  const uid = toStringParam(req.query.uid);
+  const action = toStringParam(req.query.action);
   if (action === 'checkin') {
-    return handleDailyCheckIn(uid as string, res);
+    return handleDailyCheckIn(uid ? String(uid) : '', res);
   }
-  return handleGetReputationV2(uid as string, res);
+  return handleGetReputationV2(uid ? String(uid) : '', res);
 });
 
 app.post('/api/reputation', async (req: Request, res: Response) => {
@@ -1811,6 +1800,10 @@ app.post('/api/reputation/sync', async (req: Request, res: Response) => {
       details: updateData,
     });
 
+    if (!result || !result.value) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     res.json(result.value);
   } catch (error: any) {
     console.error('❌ Error syncing user reputation:', error);
@@ -1932,14 +1925,14 @@ app.post('/api/reputation/task-complete', async (req: Request, res: Response) =>
 
 app.get('/api/reputation/leaderboard', async (req: Request, res: Response) => {
   try {
-    const { limit = '100' } = req.query;
+    const limit = toStringParam(req.query.limit) ?? '100';
     const db = await getMongoDb();
     const usersCollection = db.collection('final_users_v3');
 
     const leaderboard = await usersCollection
       .find({})
       .sort({ reputationScore: -1 })
-      .limit(parseInt(limit as string))
+      .limit(parseInt(limit, 10))
       .toArray();
 
     res.json({ success: true, leaderboard });
@@ -1951,7 +1944,7 @@ app.get('/api/reputation/leaderboard', async (req: Request, res: Response) => {
 
 app.get('/api/reputation/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const db = await getMongoDb();
     const usersCollection = db.collection('final_users_v3');
 
@@ -1972,7 +1965,9 @@ app.get('/api/reputation/:pioneerId', async (req: Request, res: Response) => {
 // ====================
 
 async function ensureUser(req: Request, res: Response, next: NextFunction) {
-  const { pioneerId, username, email } = req.query;
+  const pioneerId = toStringParam(req.query.pioneerId);
+  const username = toStringParam(req.query.username);
+  const email = toStringParam(req.query.email);
 
   if (!pioneerId || !username || !email) {
     return res.status(400).json({
@@ -1982,8 +1977,8 @@ async function ensureUser(req: Request, res: Response, next: NextFunction) {
   }
 
   try {
-    await reputationService.getOrCreateUser(pioneerId as string, username as string, email as string);
-    req.pioneerId = pioneerId as string;
+    await reputationService.getOrCreateUser(String(pioneerId), String(username), String(email));
+    req.pioneerId = String(pioneerId);
     next();
   } catch (error) {
     res.status(500).json({ success: false, error: 'User initialization failed' });
@@ -2138,9 +2133,8 @@ app.post('/api/v3/reputation/ad-bonus', ensureUser, async (req: Request, res: Re
 app.get('/api/v3/reputation/history', ensureUser, async (req: Request, res: Response) => {
   try {
     const pioneerId = req.pioneerId!;
-    const { limit } = req.query;
-
-    const history = await reputationService.getPointsHistory(pioneerId, parseInt(limit as string) || 100);
+    const limit = toStringParam(req.query.limit);
+    const history = await reputationService.getPointsHistory(pioneerId, parseInt(limit ?? '') || 100);
 
     return res.json({
       success: true,
@@ -2158,9 +2152,8 @@ app.get('/api/v3/reputation/history', ensureUser, async (req: Request, res: Resp
 app.get('/api/v3/reputation/check-in-history', ensureUser, async (req: Request, res: Response) => {
   try {
     const pioneerId = req.pioneerId!;
-    const { days } = req.query;
-
-    const history = await reputationService.getCheckinHistory(pioneerId, parseInt(days as string) || 30);
+    const days = toStringParam(req.query.days);
+    const history = await reputationService.getCheckinHistory(pioneerId, parseInt(days ?? '') || 30);
 
     return res.json({
       success: true,
@@ -2177,8 +2170,8 @@ app.get('/api/v3/reputation/check-in-history', ensureUser, async (req: Request, 
 
 app.get('/api/v3/reputation/leaderboard', async (req: Request, res: Response) => {
   try {
-    const { limit } = req.query;
-    const pageSize = Math.min(parseInt(limit as string) || 100, 1000);
+    const limit = toStringParam(req.query.limit);
+    const pageSize = Math.min(parseInt(limit ?? '') || 100, 1000);
 
     const reputationCollection = await getReputationScoresCollection();
     const topUsers = await reputationCollection.find({}).sort({ totalReputationScore: -1 }).limit(pageSize).toArray();
@@ -2264,9 +2257,9 @@ const userService = {
   },
   getUserStats: async () => ({ total: 0 }),
   getUserRank: async () => 0,
-  dailyCheckIn: async () => 0,
-  addReferral: async () => {},
-  confirmReferral: async () => {},
+  dailyCheckIn: async (_pioneerId: string, _withAds: boolean = false) => 0,
+  addReferral: async (_referrerId: string, _referredEmail?: string, _referredPioneerId?: string) => {},
+  confirmReferral: async (_referrerId: string, _referredPioneerId?: string) => {},
   deleteUser: async (pioneerId: string) => {
     const db = await getMongoDb();
     await db.collection('final_users_v3').deleteOne({ pioneerId });
@@ -2282,11 +2275,11 @@ const autoSyncService = {
 const demoModeManager = {
   initializeDemoMode: async (pioneerId: string) => ({ pioneerId, isActive: true }),
   getDemoModeData: async (pioneerId: string) => ({ pioneerId, isActive: true }),
-  simulateDemoTransaction: async () => {},
-  simulateDemoDailyLogin: async () => 0,
-  deactivateDemoMode: async () => {},
-  resetDemoMode: async () => {},
-  getAllDemoSessions: async () => [],
+  simulateDemoTransaction: async (_pioneerId: string, _transaction?: { type?: string; amount?: number }) => {},
+  simulateDemoDailyLogin: async (_pioneerId: string, _withAds: boolean = false) => 0,
+  deactivateDemoMode: async (_pioneerId: string) => {},
+  resetDemoMode: async (_pioneerId: string) => {},
+  getAllDemoSessions: async (_limit: number = 50) => [],
 };
 
 app.post('/api/auth/register', async (req: Request, res: Response) => {
@@ -2307,7 +2300,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
 
 app.get('/api/auth/user/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const user = await userService.getUserProfile(pioneerId);
 
     res.json({
@@ -2336,12 +2329,13 @@ app.post('/api/wallet/link', async (req: Request, res: Response) => {
 
 app.get('/api/wallet/:pioneerId/:network', async (req: Request, res: Response) => {
   try {
-    const { pioneerId, network } = req.params;
+    const pioneerId = String(req.params.pioneerId);
+    const network = String(req.params.network) as 'mainnet' | 'testnet';
     const db = await getMongoDb();
 
     const wallet = await db.collection('Wallets').findOne({
       pioneerId,
-      network: network as 'mainnet' | 'testnet',
+      network,
     });
 
     if (!wallet) {
@@ -2359,14 +2353,14 @@ app.get('/api/wallet/:pioneerId/:network', async (req: Request, res: Response) =
 
 app.get('/api/points/log/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const { limit = 50 } = req.query;
+    const pioneerId = String(req.params.pioneerId);
+    const limit = toNumberParam(req.query.limit, 50);
     const db = await getMongoDb();
 
     const log = await db.collection('PointsLog')
       .find({ pioneerId })
       .sort({ timestamp: -1 })
-      .limit(parseInt(limit as string))
+      .limit(limit)
       .toArray();
 
     res.json({
@@ -2381,9 +2375,9 @@ app.get('/api/points/log/:pioneerId', async (req: Request, res: Response) => {
 
 app.get('/api/leaderboard', async (req: Request, res: Response) => {
   try {
-    const { limit = 100 } = req.query;
+    const limit = toNumberParam(req.query.limit, 100);
 
-    const leaderboard = await userService.getLeaderboard(parseInt(limit as string));
+    const leaderboard = await userService.getLeaderboard(limit);
 
     res.json({
       success: true,
@@ -2406,7 +2400,7 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
 
 app.post('/api/sync/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const syncResult = await autoSyncService.syncUserData(pioneerId);
 
     res.json({
@@ -2421,7 +2415,7 @@ app.post('/api/sync/:pioneerId', async (req: Request, res: Response) => {
 
 app.get('/api/sync/status/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const status = await autoSyncService.getSyncStatus(pioneerId);
 
     res.json({
@@ -2435,7 +2429,7 @@ app.get('/api/sync/status/:pioneerId', async (req: Request, res: Response) => {
 
 app.post('/api/activity/daily-checkin/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const { withAds = false } = req.body;
     const points = await userService.dailyCheckIn(pioneerId, withAds);
 
@@ -2480,7 +2474,7 @@ app.post('/api/activity/confirm-referral', async (req: Request, res: Response) =
 
 app.post('/api/demo/initialize/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const demoData = await demoModeManager.initializeDemoMode(pioneerId);
 
     res.json({
@@ -2495,7 +2489,7 @@ app.post('/api/demo/initialize/:pioneerId', async (req: Request, res: Response) 
 
 app.get('/api/demo/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const demoData = await demoModeManager.getDemoModeData(pioneerId);
 
     if (!demoData) {
@@ -2513,7 +2507,7 @@ app.get('/api/demo/:pioneerId', async (req: Request, res: Response) => {
 
 app.post('/api/demo/:pioneerId/simulate/transaction', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const { type, amount } = req.body;
 
     await demoModeManager.simulateDemoTransaction(pioneerId, { type, amount });
@@ -2529,7 +2523,7 @@ app.post('/api/demo/:pioneerId/simulate/transaction', async (req: Request, res: 
 
 app.post('/api/demo/:pioneerId/simulate/daily-login', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     const { withAds = false } = req.body;
 
     const points = await demoModeManager.simulateDemoDailyLogin(pioneerId, withAds);
@@ -2546,7 +2540,7 @@ app.post('/api/demo/:pioneerId/simulate/daily-login', async (req: Request, res: 
 
 app.post('/api/demo/:pioneerId/deactivate', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     await demoModeManager.deactivateDemoMode(pioneerId);
 
     res.json({
@@ -2560,7 +2554,7 @@ app.post('/api/demo/:pioneerId/deactivate', async (req: Request, res: Response) 
 
 app.post('/api/demo/:pioneerId/reset', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     await demoModeManager.resetDemoMode(pioneerId);
 
     res.json({
@@ -2575,12 +2569,13 @@ app.post('/api/demo/:pioneerId/reset', async (req: Request, res: Response) => {
 app.get('/api/admin/users', async (req: Request, res: Response) => {
   try {
     const db = await getMongoDb();
-    const { limit = 100, skip = 0 } = req.query;
+    const limit = toNumberParam(req.query.limit, 100);
+    const skip = toNumberParam(req.query.skip, 0);
 
     const users = await db.collection('final_users_v3')
       .find({})
-      .skip(parseInt(skip as string))
-      .limit(parseInt(limit as string))
+      .skip(skip)
+      .limit(limit)
       .toArray();
 
     const totalCount = await db.collection('final_users_v3').countDocuments({});
@@ -2612,8 +2607,8 @@ app.post('/api/admin/update-weekly', async (req: Request, res: Response) => {
 
 app.get('/api/admin/demo-sessions', async (req: Request, res: Response) => {
   try {
-    const { limit = 50 } = req.query;
-    const sessions = await demoModeManager.getAllDemoSessions(parseInt(limit as string));
+    const limit = toNumberParam(req.query.limit, 50);
+    const sessions = await demoModeManager.getAllDemoSessions(limit);
 
     res.json({
       success: true,
@@ -2627,7 +2622,7 @@ app.get('/api/admin/demo-sessions', async (req: Request, res: Response) => {
 
 app.delete('/api/admin/user/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     await userService.deleteUser(pioneerId);
 
     res.json({
@@ -2730,7 +2725,10 @@ app.get('/api/admin/users/search', async (req: Request, res: Response) => {
   try {
     const db = await getMongoDb();
     const usersCollection = db.collection('final_users_v3');
-    const { query, level, sortBy = 'reputationScore', order = -1 } = req.query;
+    const query = toStringParam(req.query.query);
+    const level = toStringParam(req.query.level);
+    const sortBy = toStringParam(req.query.sortBy) ?? 'reputationScore';
+    const order = toNumberParam(req.query.order, -1);
 
     let filter: any = {};
 
@@ -2746,9 +2744,10 @@ app.get('/api/admin/users/search', async (req: Request, res: Response) => {
       filter.level = level;
     }
 
+    const sortSpec = { [sortBy]: order } as Record<string, 1 | -1>;
     const users = await usersCollection
       .find(filter)
-      .sort({ [sortBy as string]: parseInt(order as string) })
+      .sort(sortSpec)
       .limit(100)
       .toArray();
 
@@ -2766,7 +2765,7 @@ app.get('/api/admin/user/:pioneerId/details', async (req: Request, res: Response
   try {
     const db = await getMongoDb();
     const usersCollection = db.collection('final_users_v3');
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
 
     const user = await usersCollection.findOne({ pioneerId });
     if (!user) {
@@ -2900,7 +2899,7 @@ app.get('/api/admin/export/users', async (req: Request, res: Response) => {
 
 app.post('/api/admin/sync/trigger/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
+    const pioneerId = String(req.params.pioneerId);
     res.json({ success: true, message: `Sync triggered for ${pioneerId}` });
   } catch (error) {
     res.status(500).json({ success: false, error: String(error) });
@@ -2937,25 +2936,4 @@ app.get('/health', (req: Request, res: Response) => {
 // STARTUP
 // ====================
 
-const PORT = process.env.PORT || 3001;
-
-async function start() {
-  try {
-    await connectMongoDB();
-    if (!process.env.VERCEL) {
-      app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 Unified API Server ready at http://0.0.0.0:${PORT}`);
-      });
-    }
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-  }
-}
-
-const shouldStart = !process.env.VERCEL && process.argv[1]?.includes('api/server');
-if (shouldStart) {
-  start();
-} 
-
- main
 export default app;
