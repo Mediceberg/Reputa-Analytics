@@ -202,7 +202,7 @@ export default function AdminDashboard() {
               <h3 className="text-cyan-300 font-medium mb-4">📈 ملخص التوزيع</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">مستخدمين بسكور عالي (>80)</span>
+                  <span className="text-gray-400">مستخدمين بسكور عالي (&gt;80)</span>
                   <span className="text-emerald-300 font-bold">{data.scoreDistribution.high}</span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
                   <span className="text-cyan-300 font-bold">{data.scoreDistribution.medium}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">مستخدمين بسكور منخفض (<40)</span>
+                  <span className="text-gray-400">مستخدمين بسكور منخفض (&lt;40)</span>
                   <span className="text-gray-300 font-bold">{data.scoreDistribution.low}</span>
                 </div>
               </div>
