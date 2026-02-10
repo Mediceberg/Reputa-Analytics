@@ -1,5 +1,5 @@
 import { Express } from 'express';
-import { connectMongoDB } from '../server/db/mongoModels';
+import { connectMongoDB } from '../server/db/mongoModels.js';
 
 export async function startUnifiedServer(app: Express, port: number) {
   try {
