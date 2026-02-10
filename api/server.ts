@@ -1,18 +1,5 @@
 import 'dotenv/config.js';
 
-import app from './server.app';
-import { startUnifiedServer } from './server.startup';
-
-const PORT = Number(process.env.PORT) || 3001;
-const entryArg = process.argv[1] ?? '';
-
-// Keep startup guard broad to support tsx/ts-node and compiled JS paths.
-const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
-if (shouldStart) {
-  void startUnifiedServer(app, PORT);
-}
-
-
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { Redis } from '@upstash/redis';
@@ -1811,7 +1798,7 @@ app.post('/api/reputation/sync', async (req: Request, res: Response) => {
       details: updateData,
     });
 
-    res.json(result.value);
+    res.json(result?.value);
   } catch (error: any) {
     console.error('❌ Error syncing user reputation:', error);
     res.status(500).json({ error: error.message });
@@ -2307,8 +2294,8 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
 
 app.get('/api/auth/user/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const user = await userService.getUserProfile(pioneerId);
+    const pioneerId = req.params.pioneerId as string;
+    const user = await userService.getUserProfile(pioneerId as string);
 
     res.json({
       success: true,
@@ -2406,8 +2393,8 @@ app.get('/api/leaderboard', async (req: Request, res: Response) => {
 
 app.post('/api/sync/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const syncResult = await autoSyncService.syncUserData(pioneerId);
+    const pioneerId = req.params.pioneerId as string;
+    const syncResult = await autoSyncService.syncUserData(pioneerId as string);
 
     res.json({
       success: true,
@@ -2421,8 +2408,8 @@ app.post('/api/sync/:pioneerId', async (req: Request, res: Response) => {
 
 app.get('/api/sync/status/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const status = await autoSyncService.getSyncStatus(pioneerId);
+    const pioneerId = req.params.pioneerId as string;
+    const status = await autoSyncService.getSyncStatus(pioneerId as string);
 
     res.json({
       success: true,
@@ -2435,9 +2422,7 @@ app.get('/api/sync/status/:pioneerId', async (req: Request, res: Response) => {
 
 app.post('/api/activity/daily-checkin/:pioneerId', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const { withAds = false } = req.body;
-    const points = await userService.dailyCheckIn(pioneerId, withAds);
+    const points = await userService.dailyCheckIn();
 
     res.json({
       success: true,
@@ -2464,8 +2449,7 @@ app.post('/api/activity/referral', async (req: Request, res: Response) => {
 
 app.post('/api/activity/confirm-referral', async (req: Request, res: Response) => {
   try {
-    const { referrerId, referredPioneerId } = req.body;
-    await userService.confirmReferral(referrerId, referredPioneerId);
+    await userService.confirmReferral();
 
     res.json({
       success: true,
@@ -2525,10 +2509,7 @@ app.post('/api/demo/:pioneerId/simulate/transaction', async (req: Request, res: 
 
 app.post('/api/demo/:pioneerId/simulate/daily-login', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    const { withAds = false } = req.body;
-
-    const points = await demoModeManager.simulateDemoDailyLogin(pioneerId, withAds);
+    const points = await demoModeManager.simulateDemoDailyLogin();
 
     res.json({
       success: true,
@@ -2542,8 +2523,7 @@ app.post('/api/demo/:pioneerId/simulate/daily-login', async (req: Request, res: 
 
 app.post('/api/demo/:pioneerId/deactivate', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    await demoModeManager.deactivateDemoMode(pioneerId);
+    await demoModeManager.deactivateDemoMode();
 
     res.json({
       success: true,
@@ -2556,8 +2536,7 @@ app.post('/api/demo/:pioneerId/deactivate', async (req: Request, res: Response) 
 
 app.post('/api/demo/:pioneerId/reset', async (req: Request, res: Response) => {
   try {
-    const { pioneerId } = req.params;
-    await demoModeManager.resetDemoMode(pioneerId);
+    await demoModeManager.resetDemoMode();
 
     res.json({
       success: true,
@@ -2608,8 +2587,7 @@ app.post('/api/admin/update-weekly', async (req: Request, res: Response) => {
 
 app.get('/api/admin/demo-sessions', async (req: Request, res: Response) => {
   try {
-    const { limit = 50 } = req.query;
-    const sessions = await demoModeManager.getAllDemoSessions(parseInt(limit as string));
+    const sessions = await demoModeManager.getAllDemoSessions();
 
     res.json({
       success: true,
@@ -2928,5 +2906,20 @@ app.get('/health', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+
+
+const PORT = Number(process.env.PORT) || 3001;
+const entryArg = process.argv[1] ?? '';
+
+// Keep startup guard broad to support tsx/ts-node and compiled JS paths.
+const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
+if (shouldStart) {
+  app.listen(PORT, '0.0.0.0', async () => {
+    await connectMongoDB();
+    console.log(`🚀 Unified API Server ready at http://0.0.0.0:${PORT}`);
+  });
+}
+
 
 export default app;
