@@ -8,7 +8,7 @@ export interface FutureTaskMission {
   points: number;
   type: 'social' | 'community' | 'ads' | 'other';
   status: FutureTaskStatus;
-=======
+  
 export type FutureTaskVerificationType = 'social' | 'api' | 'blockchain' | 'manual';
 export type FutureTaskVerificationStatus = 'pending' | 'verified' | 'failed';
 export type FutureTaskClaimType = 'api' | 'contract' | 'none';
@@ -93,7 +93,7 @@ export const FUTURE_TASKS_CONFIG: FutureTasksConfig = {
 };
 
 export const isFutureTasksEnabled = () => FUTURE_TASKS_CONFIG.enabled && FUTURE_TASKS_CONFIG.mode !== 'disabled';
-=======
+
   sectionLabel: string;
   sectionDescription?: string;
   tasks: FutureTaskDefinition[];
