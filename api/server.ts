@@ -2957,5 +2957,5 @@ if (shouldStart) {
   start();
 } 
 
- main
+
 export default app;
