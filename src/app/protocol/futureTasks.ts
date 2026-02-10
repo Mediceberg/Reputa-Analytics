@@ -56,3 +56,5 @@ export const FUTURE_TASKS_CONFIG: FutureTasksConfig = {
     },
   ],
 };
+
+export const isFutureTasksEnabled = () => FUTURE_TASKS_CONFIG.enabled && FUTURE_TASKS_CONFIG.mode !== 'disabled';

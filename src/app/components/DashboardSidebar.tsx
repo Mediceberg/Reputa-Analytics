@@ -17,12 +17,16 @@ export function DashboardSidebar({ mode, onModeToggle, activeItem = 'dashboard',
 
   const baseMainItems = getNavItemsBySection('pages');
   const hasEarnPoints = baseMainItems.some((item) => item.id === 'earn-points');
+  const fallbackEarnPointsItem = {
+    id: 'earn-points',
+    labelKey: 'sidebar.earnPoints',
+    icon: Sparkles,
+    section: 'pages' as const,
+  };
+
   const mainItems = hasEarnPoints || !FUTURE_TASKS_CONFIG.enabled
     ? baseMainItems
-    : [
-        ...baseMainItems,
-        { id: 'earn-points', labelKey: 'sidebar.earnPoints', icon: Sparkles, section: 'pages' as const },
-      ];
+    : [...baseMainItems, fallbackEarnPointsItem];
   const transactionItems = getNavItemsBySection('transaction');
   const toolsItems = getNavItemsBySection('tools');
 
