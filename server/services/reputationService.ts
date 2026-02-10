@@ -13,7 +13,7 @@ import {
   ReputationScoreDocument,
   PointsLogDocument,
   DailyCheckinDocument,
-} from '../db/mongoModels';
+} from '../db/mongoModels.js';
 
 import protocol from '../config/reputaProtocol';
 
