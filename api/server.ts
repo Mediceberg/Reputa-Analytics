@@ -2910,6 +2910,8 @@ app.get('/health', (req: Request, res: Response) => {
 const PORT = Number(process.env.PORT) || 3001;
 const entryArg = process.argv[1] ?? '';
 
+
+
 const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
 
 if (shouldStart) {
