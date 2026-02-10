@@ -1,6 +1,10 @@
 {
+  "version": 2,
   "functions": {
-    "api/server.ts": {
+    "api/**/*.ts": {
+      "includeFiles": "server/**"
+    },
+    "api/**/*.js": {
       "includeFiles": "server/**"
     }
   },
