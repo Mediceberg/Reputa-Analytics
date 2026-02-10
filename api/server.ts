@@ -2911,8 +2911,9 @@ const PORT = Number(process.env.PORT) || 3001;
 const entryArg = process.argv[1] ?? '';
 
 
-
 const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
+const shouldStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('/server.js'));
+
 
 if (shouldStart) {
   app.listen(PORT, '0.0.0.0', async () => {
