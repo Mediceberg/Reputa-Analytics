@@ -7,6 +7,7 @@ const PORT = Number(process.env.PORT) || 3001;
 
 
 
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use((req: Request, res: Response, next: NextFunction) => {
