@@ -20,7 +20,7 @@ import { ShareReputaCard } from './components/ShareReputaCard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
-import { initializeUnifiedReputationOnLogin, getCachedReputation } from './services/reputationInitializer';
+import { initializeUnifiedReputationOnLogin, getCachedReputation, migrateLegacyReputationCache } from './services/reputationInitializer';
 import { initializeReferralOnLogin, captureReferralCodeFromUrl, dispatchWalletAnalysisCompleteEvent } from './services/referralService';
 import logoImage from '../assets/logo-new.png';
 
@@ -232,6 +232,7 @@ function ReputaAppContent() {
 
   useEffect(() => {
     const initApp = async () => {
+      migrateLegacyReputationCache();
       const checkPiBrowser = async () => {
         if (typeof window === 'undefined') return false;
         const ua = navigator.userAgent.toLowerCase();

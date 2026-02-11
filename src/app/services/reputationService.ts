@@ -63,6 +63,7 @@ export class ReputationService {
   private isDemo: boolean = false;
   private syncQueue: Array<{ action: string; data: any }> = [];
   private isSyncing: boolean = false;
+  private unifiedScoreListeners = new Set<(score: UnifiedScoreData) => void>();
 
   private constructor() {}
 
@@ -75,6 +76,30 @@ export class ReputationService {
 
   setUserId(uid: string) {
     this.uid = uid;
+  }
+
+  subscribeUnifiedScore(listener: (score: UnifiedScoreData) => void): () => void {
+    this.unifiedScoreListeners.add(listener);
+    listener(this.getUnifiedScore());
+
+    return () => {
+      this.unifiedScoreListeners.delete(listener);
+    };
+  }
+
+  private notifyUnifiedScoreListeners(): void {
+    const score = this.getUnifiedScore();
+    this.unifiedScoreListeners.forEach((listener) => {
+      try {
+        listener(score);
+      } catch (error) {
+        console.error('[ReputationService] Unified score listener failed:', error);
+      }
+    });
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('reputation:updated', { detail: score }));
+    }
   }
 
   getUserId(): string | null {
@@ -112,6 +137,7 @@ export class ReputationService {
         lastBlockchainSync: new Date().toISOString(),
         isNew: false,
       };
+      this.notifyUnifiedScoreListeners();
       return this.currentState!;
     }
 
@@ -153,11 +179,13 @@ export class ReputationService {
             isNew: false,
           };
           this.saveLocalState(this.currentState);
+          this.notifyUnifiedScoreListeners();
           console.log('[ReputationService] Loaded from API:', this.currentState.reputationScore);
           return this.currentState;
         } else if (localState && (localState.reputationScore > 0 || localState.totalCheckInDays > 0)) {
           console.log('[ReputationService] API empty, using local state:', localState.reputationScore);
           this.currentState = localState;
+          this.notifyUnifiedScoreListeners();
           this.syncLocalToServer(localState);
           return localState;
         }
@@ -169,6 +197,7 @@ export class ReputationService {
     if (localState && (localState.reputationScore > 0 || localState.totalCheckInDays > 0)) {
       console.log('[ReputationService] Using local fallback:', localState.reputationScore);
       this.currentState = localState;
+      this.notifyUnifiedScoreListeners();
       return localState;
     }
 
@@ -176,6 +205,7 @@ export class ReputationService {
     if (walletAddress) {
       this.currentState.walletAddress = walletAddress;
     }
+    this.notifyUnifiedScoreListeners();
     return this.currentState;
   }
 
@@ -217,6 +247,8 @@ export class ReputationService {
     } catch (e) {
       console.error('[ReputationService] Error saving local state:', e);
     }
+
+    this.notifyUnifiedScoreListeners();
   }
 
   private async syncLocalToServer(state: UserReputationState): Promise<void> {
@@ -249,11 +281,13 @@ export class ReputationService {
   async saveReputation(state: UserReputationState): Promise<boolean> {
     if (this.isDemo) {
       this.currentState = state;
+      this.notifyUnifiedScoreListeners();
       return true;
     }
 
     this.currentState = state;
     this.saveLocalState(state);
+    this.notifyUnifiedScoreListeners();
     return true;
   }
 
@@ -336,6 +370,7 @@ export class ReputationService {
     newState.totalCheckInDays += 1;
     newState.streak = (newState.streak || 0) + 1;
     this.currentState = newState;
+    this.notifyUnifiedScoreListeners();
     return { success: true, pointsEarned: basePoints, newState };
   }
 
@@ -381,6 +416,7 @@ export class ReputationService {
     this.saveLocalState(newState);
     this.addToSyncQueue('checkIn', { uid: this.uid, walletAddress: this.currentState.walletAddress });
     this.currentState = newState;
+    this.notifyUnifiedScoreListeners();
 
     console.log('[ReputationService] performLocalCheckIn', {
       uid: this.uid,
@@ -478,6 +514,7 @@ export class ReputationService {
     const newState = { ...this.currentState };
     newState.dailyCheckInPoints += adBonusPoints;
     this.currentState = newState;
+    this.notifyUnifiedScoreListeners();
     return { success: true, pointsEarned: adBonusPoints, newState };
   }
 
@@ -546,10 +583,15 @@ export class ReputationService {
     if (this.isDemo) {
       const newState: UserReputationState = {
         ...this.currentState,
+
+        reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints - points),
+
         reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints + points),
+
         dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       };
       this.currentState = newState;
+      this.notifyUnifiedScoreListeners();
       console.log('[ReputationService] mergeCheckInPointsToReputation (demo)', {
         uid: this.uid,
         merged: points,
@@ -562,7 +604,11 @@ export class ReputationService {
     const now = new Date();
     const newState: UserReputationState = {
       ...this.currentState,
+
+      reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints - points),
+
       reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints + points),
+
       dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       interactionHistory: [
         {
@@ -578,6 +624,7 @@ export class ReputationService {
 
     this.currentState = newState;
     this.saveLocalState(newState);
+    this.notifyUnifiedScoreListeners();
     console.log('[ReputationService] mergeCheckInPointsToReputation', {
       uid: this.uid,
       merged: points,
@@ -656,6 +703,7 @@ export class ReputationService {
 
       await this.saveReputation(newState);
       this.currentState = newState;
+      this.notifyUnifiedScoreListeners();
 
       console.log('[ReputationService] Blockchain sync complete:', {
         newScore: newBlockchainScore,
@@ -697,6 +745,7 @@ export class ReputationService {
 
     await this.saveReputation(newState);
     this.currentState = newState;
+    this.notifyUnifiedScoreListeners();
     return true;
   }
 
