@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import { TRUST_LEVEL_COLORS, getLevelProgress } from '../../protocol/atomicScoring';
-=======
+
 import { 
   calculateAtomicReputation, 
   AtomicReputationResult, 
