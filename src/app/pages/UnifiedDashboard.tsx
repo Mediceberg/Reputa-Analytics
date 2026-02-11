@@ -44,6 +44,7 @@ import {
   mapAtomicToTrustLevel
 } from '../protocol/atomicScoring';
 import { reputationService, UnifiedScoreData } from '../services/reputationService';
+import { useReputationEngine } from '../hooks/useReputationEngine';
 import { 
   ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
   Activity, Clock, Zap, Sparkles, BarChart3, FileText,
@@ -126,6 +127,8 @@ export function UnifiedDashboard({
   const [showShareCard, setShowShareCard] = useState(false);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
   const [unifiedScoreData, setUnifiedScoreData] = useState<UnifiedScoreData | null>(null);
+  const [reputationUid, setReputationUid] = useState<string>('demo');
+  const reputationEngine = useReputationEngine(reputationUid);
   const [userPoints, setUserPoints] = useState({
     total: walletData.reputaScore || 0,
     checkIn: 0,
@@ -138,6 +141,7 @@ export function UnifiedDashboard({
     async function loadUnifiedScore() {
       const isDemo = mode.mode === 'demo' || !username || username === 'Guest_Explorer';
       const uid = isDemo ? 'demo' : (localStorage.getItem('piUserId') || `user_${Date.now()}`);
+      setReputationUid(uid);
       
       if (isDemo) {
         reputationService.setDemoMode(true);
@@ -169,6 +173,22 @@ export function UnifiedDashboard({
     }
     loadUnifiedScore();
   }, [mode.mode, username]);
+
+  useEffect(() => {
+    const unsubscribe = reputationService.subscribeUnifiedScore((score) => {
+      if (score.uid && score.uid !== reputationUid) return;
+      setUnifiedScoreData(score);
+      setUserPoints({
+        total: score.totalScore,
+        checkIn: score.dailyCheckInPoints || 0,
+        transactions: 0,
+        activity: score.blockchainScore || 0,
+        streak: score.streak || 0,
+      });
+    });
+
+    return unsubscribe;
+  }, [reputationUid]);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -238,15 +258,15 @@ export function UnifiedDashboard({
     if (unifiedScoreData) {
       const demoData = generateDemoActivityData();
       demoData.accountAgeDays = walletData.accountAge || 180;
-      demoData.internalTxCount = walletData.transactions?.length || 25;
-      demoData.dailyCheckins = unifiedScoreData.totalCheckInDays;
-      demoData.adBonuses = Math.floor((unifiedScoreData.dailyCheckInPoints || 0) / 5);
-      const result = calculateAtomicReputation(demoData);
-      result.interaction.dailyCheckins = unifiedScoreData.totalCheckInDays;
-      result.interaction.totalPoints = unifiedScoreData.totalScore;
-      result.adjustedScore = unifiedScoreData.totalScore;
-      result.rawScore = (unifiedScoreData.blockchainScore || 0) + (unifiedScoreData.dailyCheckInPoints || 0);
-      return result;
+      demoData.internalTxCount = unifiedScoreData.blockchainScore || 0;
+      demoData.appInteractions = unifiedScoreData.totalCheckInDays || 0;
+      demoData.sdkPayments = 0;
+      demoData.normalTrades = 0;
+      demoData.dailyCheckins = unifiedScoreData.dailyCheckInPoints || 0;
+      demoData.adBonuses = 0;
+      demoData.reportViews = 0;
+      demoData.toolUsage = 0;
+      return calculateAtomicReputation(demoData);
     }
     const demoData = generateDemoActivityData();
     demoData.accountAgeDays = walletData.accountAge || 180;
@@ -254,15 +274,9 @@ export function UnifiedDashboard({
     return calculateAtomicReputation(demoData);
   }, [walletData.accountAge, walletData.transactions?.length, unifiedScoreData]);
 
-  const modeAdjustedScore = useMemo(() => {
-    const baseScore = atomicResult.adjustedScore;
-    const impact = MODE_IMPACTS[mode.mode];
-    return Math.round(baseScore * (impact.impactPercentage / 100));
-  }, [atomicResult.adjustedScore, mode.mode]);
-
   const levelProgress = useMemo(() => {
-    return getLevelProgress(modeAdjustedScore);
-  }, [modeAdjustedScore]);
+    return getLevelProgress(atomicResult.adjustedScore);
+  }, [atomicResult.adjustedScore]);
 
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
@@ -288,10 +302,6 @@ export function UnifiedDashboard({
     handleModeChange(modes[nextIndex]);
   };
 
-  const getReputationWithModeImpact = (baseScore: number): number => {
-    const impact = MODE_IMPACTS[mode.mode];
-    return Math.round(baseScore * (impact.impactPercentage / 100));
-  };
 
   const handlePeriodChange = (newPeriod: 'day' | 'week' | 'month') => {
     const mapToState = (p: 'day' | 'week' | 'month') => p === 'day' ? '7d' : p === 'week' ? '30d' : '90d';
@@ -518,10 +528,9 @@ export function UnifiedDashboard({
                 controlledOpen={pointsModalOpen}
                 setControlledOpen={setPointsModalOpen}
                 currentPoints={userPoints.total}
-                checkInPoints={userPoints.checkIn}
-                transactionPoints={userPoints.transactions}
-                activityPoints={userPoints.activity}
-                streakBonus={userPoints.streak}
+                mainnetPoints={reputationEngine.Mainnet_Points}
+                testnetPoints={reputationEngine.Testnet_Points}
+                appEngagementPoints={reputationEngine.App_Engagement_Points}
               />
             </Suspense>
 
@@ -1212,7 +1221,7 @@ export function UnifiedDashboard({
                     <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
                   </summary>
                   <div className="p-4 text-xs text-gray-400 leading-relaxed">
-                    Reputa Score is an advanced AI-powered reputation protocol for the Pi Network. It analyzes on-chain behavior to determine wallet trustworthiness.
+                    Reputa Score is generated by the unified ReputationAtomic engine. Every widget reads from the same score object to keep values perfectly consistent.
                   </div>
                 </details>
                 <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
@@ -1221,7 +1230,7 @@ export function UnifiedDashboard({
                     <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
                   </summary>
                   <div className="p-4 text-xs text-gray-400 leading-relaxed">
-                    The score is based on transaction volume, account age, consistency of activity, and network trust factors. Higher scores indicate greater reliability.
+                    Exact formula: Total Score = Mainnet_Points + Testnet_Points + App_Engagement_Points (with protocol cap). Any Mainnet update is pushed immediately to all score cards.
                   </div>
                 </details>
               </div>
