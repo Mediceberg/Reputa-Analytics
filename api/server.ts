@@ -54,17 +54,52 @@ declare global {
 // ====================
 
 async function handleAdminGetAllUsers(req: Request, res: Response) {
-  const { password, action } = req.query;
-  const adminPassword = 'admin123';
+  const { action } = req.query;
+  const queryPassword = typeof req.query.password === 'string' ? req.query.password : undefined;
+  const headerPassword = typeof req.headers['x-admin-password'] === 'string' ? req.headers['x-admin-password'] : undefined;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const suppliedPassword = headerPassword || queryPassword;
 
-  if (password !== adminPassword && req.method !== 'POST') {
+  if (suppliedPassword !== adminPassword && req.method !== 'POST') {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   try {
     if (action === 'getAllUsers') {
-      const topUserIds = await redis.zrange('leaderboard:reputation', 0, -1, { rev: true });
       const users: any[] = [];
+
+      // MongoDB is the primary source for v3 reputation state.
+      const reputationCollection = await getReputationScoresCollection();
+      const mongoUsers = await reputationCollection
+        .find({}, {
+          projection: {
+            pioneerId: 1,
+            reputationLevel: 1,
+            totalReputationScore: 1,
+            updatedAt: 1,
+          },
+        })
+        .sort({ totalReputationScore: -1 })
+        .limit(200)
+        .toArray();
+
+      if (mongoUsers.length > 0) {
+        for (const user of mongoUsers) {
+          users.push({
+            uid: user.pioneerId,
+            username: user.pioneerId,
+            wallet: 'N/A',
+            reputationScore: user.totalReputationScore || 0,
+            trustLevel: protocol.LEVEL_NAMES[user.reputationLevel] || 'Low Trust',
+            lastActiveAt: user.updatedAt || 'N/A',
+          });
+        }
+
+        return res.status(200).json({ success: true, users, source: 'mongo' });
+      }
+
+      // Fallback for legacy data still stored in Upstash.
+      const topUserIds = await redis.zrange('leaderboard:reputation', 0, -1, { rev: true });
 
       for (const uid of topUserIds) {
         const [reputationData, entryData] = await Promise.all([
@@ -87,7 +122,7 @@ async function handleAdminGetAllUsers(req: Request, res: Response) {
         }
       }
 
-      return res.status(200).json({ success: true, users });
+      return res.status(200).json({ success: true, users, source: 'upstash' });
     }
 
     return res.status(400).json({ error: 'Invalid action' });
