@@ -436,7 +436,7 @@ export async function fetchReputationData(
     const accountAge = sanitizeNumber(calculateAccountAge(String(account?.sequence || '0')));
     const activityLevel = sanitizeNumber(calculateActivityLevel(txRecords));
 
-    const score = calculateReputationScore({
+    const score = calculateReputationAtomicScore({
       transactionCount: txCount,
       accountAge,
       activityLevel,
@@ -580,7 +580,7 @@ function calculateActivityLevel(transactions: any[]): number {
   return Math.min(100, Math.floor((recentTx.length / transactions.length) * 100));
 }
 
-function calculateReputationScore(data: {
+function calculateReputationAtomicScore(data: {
   transactionCount: number;
   accountAge: number;
   activityLevel: number;

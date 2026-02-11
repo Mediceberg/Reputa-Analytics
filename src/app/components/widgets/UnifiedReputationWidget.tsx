@@ -12,9 +12,6 @@ import {
   Network,
   ChevronRight,
 } from 'lucide-react';
-
-import { TRUST_LEVEL_COLORS, getLevelProgress } from '../../protocol/atomicScoring';
-
 import { 
   calculateAtomicReputation, 
   AtomicReputationResult, 
@@ -23,8 +20,6 @@ import {
   getLevelProgress,
   WalletActivityData
 } from '../../protocol/atomicScoring';
-import { calculateReputationAtomic } from '../../protocol/ReputationAtomic';
-
 import { reputationService } from '../../services/reputationService';
 import { useReputationEngine } from '../../hooks/useReputationEngine';
 
@@ -79,9 +74,7 @@ export function UnifiedReputationWidget({
     loadReputation();
   }, [loadReputation]);
 
-
-
-  const totalScore = calculateReputationAtomic({ Mainnet_Points: blockchainScore, Testnet_Points: 0, App_Engagement_Points: checkInPoints }).totalScore;
+  const totalScore = blockchainScore + checkInPoints;
   const trustLevel: AtomicTrustLevel = atomicResult?.trustLevel || 'Medium';
   const colors = TRUST_LEVEL_COLORS[trustLevel];
   const progress = getLevelProgress(totalScore);
@@ -93,7 +86,6 @@ export function UnifiedReputationWidget({
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     return `${Math.floor(seconds / 86400)}d ago`;
   };
-
 
   if (loading) {
     return (

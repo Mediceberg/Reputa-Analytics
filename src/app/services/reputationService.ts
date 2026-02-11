@@ -583,11 +583,7 @@ export class ReputationService {
     if (this.isDemo) {
       const newState: UserReputationState = {
         ...this.currentState,
-
         reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints - points),
-
-        reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints + points),
-
         dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       };
       this.currentState = newState;
@@ -604,11 +600,7 @@ export class ReputationService {
     const now = new Date();
     const newState: UserReputationState = {
       ...this.currentState,
-
       reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints - points),
-
-      reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints + points),
-
       dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       interactionHistory: [
         {
