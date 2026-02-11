@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Gift, Play, CheckCircle, Zap, Merge } from 'lucide-react';
 import { reputationService, UserReputationState } from '../services/reputationService';
 import { SCORING_RULES } from '../protocol/scoringRulesEngine';
+import { useReputationEngine } from '../hooks/useReputationEngine';
 
 interface DailyCheckInProps {
   userId?: string;
@@ -18,10 +19,13 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
   const [countdown, setCountdown] = useState('');
   const [isMerging, setIsMerging] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [reputationUid, setReputationUid] = useState<string>('demo');
+  const reputationEngine = useReputationEngine(reputationUid);
 
   useEffect(() => {
     async function loadState() {
       const uid = isDemo ? 'demo' : (userId || localStorage.getItem('piUserId') || `user_${Date.now()}`);
+      setReputationUid(uid);
       if (isDemo) {
         reputationService.setDemoMode(true);
       }
@@ -107,8 +111,7 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
   const dailyCheckInPoints = safeNumber(state.dailyCheckInPoints);
   const totalCheckInDays = safeNumber(state.totalCheckInDays);
   // prefer unified protocol score as single source of truth
-  const unified = reputationService.getUnifiedScore();
-  const reputationScore = safeNumber(unified?.totalScore || state.reputationScore);
+  const reputationScore = safeNumber(reputationEngine.totalScore || state.reputationScore);
 
   // merge allowed only after a minimum number of check-in days
   const MERGE_MIN_DAYS = 7;
