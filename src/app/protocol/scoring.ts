@@ -10,7 +10,8 @@ export function calculateReputationScore(
   walletData: WalletData,
   _stakingData?: StakingData,
   _miningData?: MiningData
-): ReputationScores {
+): 
+  ReputationScores {
   const atomic = calculateReputationAtomic({
     Mainnet_Points: walletData.totalTransactions || 0,
     Testnet_Points: Math.max(0, Math.floor((walletData.balance || 0) / 10)),
