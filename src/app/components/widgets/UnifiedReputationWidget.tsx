@@ -12,7 +12,14 @@ import {
   Network,
   ChevronRight,
 } from 'lucide-react';
-import { TRUST_LEVEL_COLORS, getLevelProgress } from '../../protocol/atomicScoring';
+import { 
+  calculateAtomicReputation, 
+  AtomicReputationResult, 
+  AtomicTrustLevel,
+  TRUST_LEVEL_COLORS,
+  getLevelProgress,
+  WalletActivityData
+} from '../../protocol/atomicScoring';
 import { reputationService } from '../../services/reputationService';
 import { useReputationEngine } from '../../hooks/useReputationEngine';
 
@@ -66,6 +73,19 @@ export function UnifiedReputationWidget({
   useEffect(() => {
     loadReputation();
   }, [loadReputation]);
+
+  const totalScore = blockchainScore + checkInPoints;
+  const trustLevel: AtomicTrustLevel = atomicResult?.trustLevel || 'Medium';
+  const colors = TRUST_LEVEL_COLORS[trustLevel];
+  const progress = getLevelProgress(totalScore);
+
+  const formatTimeAgo = (timestamp: string) => {
+    const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
+  };
 
   if (loading) {
     return (
