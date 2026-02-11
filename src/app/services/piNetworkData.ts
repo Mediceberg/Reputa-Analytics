@@ -14,6 +14,8 @@
  * `src/app/services/reputationService`.
  */
 
+import { calculateReputationAtomic } from '../protocol/ReputationAtomic';
+
 const PI_TESTNET_API = 'https://api.testnet.minepi.com';  
 const PI_MAINNET_API = 'https://api.mainnet.minepi.com';
 const PI_BLOCK_EXPLORER = 'https://blockexplorer.minepi.com';
@@ -84,6 +86,91 @@ export interface WalletActivityData {
   txDates?: Date[];
 }
 
+
+function sanitizeNumber(value: unknown, fallback: number = 0): number {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.max(0, num);
+}
+
+function sanitizeAddress(value: unknown): string {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  return /^G[A-Z2-7]{20,}$/.test(raw) ? raw : 'GDU22WEH7M3O...SAFE';
+}
+
+function sanitizeIsoDate(value: unknown): string {
+  const parsed = new Date(typeof value === 'string' ? value : Date.now());
+  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+function sanitizeDate(value: unknown): Date {
+  const parsed = new Date(value as any);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function sanitizeActivityData(data: WalletActivityData): WalletActivityData {
+  return {
+    ...data,
+    accountAgeDays: sanitizeNumber(data.accountAgeDays),
+    lastActivityDate: sanitizeDate(data.lastActivityDate),
+    dailyCheckins: sanitizeNumber(data.dailyCheckins),
+    adBonuses: sanitizeNumber(data.adBonuses),
+    reportViews: sanitizeNumber(data.reportViews),
+    toolUsage: sanitizeNumber(data.toolUsage),
+    internalTxCount: sanitizeNumber(data.internalTxCount),
+    appInteractions: sanitizeNumber(data.appInteractions),
+    sdkPayments: sanitizeNumber(data.sdkPayments),
+    normalTrades: sanitizeNumber(data.normalTrades),
+    uniqueTokens: sanitizeNumber(data.uniqueTokens),
+    regularActivityWeeks: sanitizeNumber(data.regularActivityWeeks),
+    stakingDays: sanitizeNumber(data.stakingDays),
+    smallExternalTransfers: sanitizeNumber(data.smallExternalTransfers),
+    frequentExternalTransfers: sanitizeNumber(data.frequentExternalTransfers),
+    suddenExits: sanitizeNumber(data.suddenExits),
+    continuousDrain: sanitizeNumber(data.continuousDrain),
+    spamCount: sanitizeNumber(data.spamCount),
+    farmingInstances: sanitizeNumber(data.farmingInstances),
+    suspiciousLinks: sanitizeNumber(data.suspiciousLinks),
+    txDates: (data.txDates || []).map((date) => sanitizeDate(date)),
+  };
+}
+
+function sanitizeNetworkMetrics(metrics: NetworkMetrics): NetworkMetrics {
+  return {
+    ...metrics,
+    circulatingSupply: sanitizeNumber(metrics.circulatingSupply),
+    lockedMiningRewards: sanitizeNumber(metrics.lockedMiningRewards),
+    unlockedMiningRewards: sanitizeNumber(metrics.unlockedMiningRewards),
+    totalMigratedMining: sanitizeNumber(metrics.totalMigratedMining),
+    effectiveTotalSupply: sanitizeNumber(metrics.effectiveTotalSupply),
+    maxSupply: sanitizeNumber(metrics.maxSupply),
+    activeWallets: sanitizeNumber(metrics.activeWallets),
+    lastUpdated: sanitizeIsoDate(metrics.lastUpdated),
+  };
+}
+
+function sanitizeTopWallet(wallet: TopWallet): TopWallet {
+  return {
+    ...wallet,
+    rank: sanitizeNumber(wallet.rank, 1),
+    address: sanitizeAddress(wallet.address),
+    balance: sanitizeNumber(wallet.balance),
+    activityScore: Math.min(100, sanitizeNumber(wallet.activityScore)),
+    lastActive: sanitizeIsoDate(wallet.lastActive),
+  };
+}
+
+function sanitizeReputationData(data: ReputationData): ReputationData {
+  return {
+    ...data,
+    score: sanitizeNumber(data.score),
+    transactionCount: sanitizeNumber(data.transactionCount),
+    accountAge: sanitizeNumber(data.accountAge),
+    networkActivity: Math.min(100, sanitizeNumber(data.networkActivity)),
+    activityData: sanitizeActivityData(data.activityData),
+  };
+}
+
 /**
  * Check if running in Pi Browser
  */
@@ -137,7 +224,7 @@ export async function fetchNetworkMetrics(isMainnet: boolean = true, forceRefres
       metricsCache = metrics;
       lastFetchTime = now;
       notifyListeners(metrics);
-      return metrics;
+      return sanitizeNetworkMetrics(metrics);
     }
   } catch (error) {
     console.warn('[PI NETWORK] API fetch failed, using real mainnet data:', error);
@@ -148,7 +235,7 @@ export async function fetchNetworkMetrics(isMainnet: boolean = true, forceRefres
   const realMainnetMetrics = getRealMainnetMetrics();
   metricsCache = realMainnetMetrics;
   lastFetchTime = now;
-  return realMainnetMetrics;
+  return sanitizeNetworkMetrics(realMainnetMetrics);
 }
 
 /**
@@ -156,7 +243,7 @@ export async function fetchNetworkMetrics(isMainnet: boolean = true, forceRefres
  * Updated from official blockexplorer.minepi.com
  */
 function getRealMainnetMetrics(): NetworkMetrics {
-  return {
+  return sanitizeNetworkMetrics({
     totalMigratedMining: 8396155970.124,
     lockedMiningRewards: 4809505264.851,
     unlockedMiningRewards: 3586650705.273,
@@ -167,14 +254,14 @@ function getRealMainnetMetrics(): NetworkMetrics {
     lastUpdated: new Date().toISOString(),
     isEstimated: false,
     source: 'blockexplorer',
-  };
+  });
 }
 
 function getEstimatedMetrics(isMainnet: boolean): NetworkMetrics {
   if (isMainnet) {
     return getRealMainnetMetrics();
   }
-  return {
+  return sanitizeNetworkMetrics({
     circulatingSupply: 1000000000,
     lockedMiningRewards: 5000000000,
     unlockedMiningRewards: 500000000,
@@ -185,7 +272,7 @@ function getEstimatedMetrics(isMainnet: boolean): NetworkMetrics {
     lastUpdated: new Date().toISOString(),
     isEstimated: true,
     source: 'estimated',
-  };
+  });
 }
 
 /**
@@ -271,18 +358,18 @@ export async function fetchTopWallets(isMainnet: boolean = false): Promise<TopWa
   // This returns sample data to demonstrate the feature
   // In a real implementation, this could connect to a third-party analytics service
   
-  return getEstimatedTopWallets(isMainnet);
+  return getEstimatedTopWallets(isMainnet).map(sanitizeTopWallet);
 }
 
 function getEstimatedTopWallets(isMainnet: boolean): TopWallet[] {
   // Generate sample data representing typical wallet distribution
   const baseBalance = isMainnet ? 1000000 : 100000;
-  
+
   return Array.from({ length: 100 }, (_, i) => {
     const rank = i + 1;
     // Logarithmic distribution for realistic balance spread
     const balance = Math.floor(baseBalance * Math.pow(0.92, i) + Math.random() * 1000);
-    
+
     return {
       rank,
       address: generateSampleAddress(rank),
@@ -312,16 +399,16 @@ export async function fetchReputationData(
   isMainnet: boolean = false
 ): Promise<ReputationData> {
   const baseUrl = getApiBaseUrl(isMainnet);
-  
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
+
     // Fetch account details
     const accountResponse = await fetch(`${baseUrl}/accounts/${walletAddress}`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       signal: controller.signal,
     });
@@ -330,11 +417,11 @@ export async function fetchReputationData(
     const txResponse = await fetch(`${baseUrl}/accounts/${walletAddress}/transactions?limit=100`, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
 
     if (!accountResponse.ok) {
@@ -343,25 +430,26 @@ export async function fetchReputationData(
 
     const account = await accountResponse.json();
     const transactions = txResponse.ok ? await txResponse.json() : { _embedded: { records: [] } };
-    
-    const txCount = transactions._embedded?.records?.length || 0;
-    const accountAge = calculateAccountAge(account.sequence);
-    const activityLevel = calculateActivityLevel(transactions._embedded?.records || []);
-    
-    const score = calculateReputationScore({
+    const txRecords = Array.isArray(transactions?._embedded?.records) ? transactions._embedded.records : [];
+
+    const txCount = sanitizeNumber(txRecords.length);
+    const accountAge = sanitizeNumber(calculateAccountAge(String(account?.sequence || '0')));
+    const activityLevel = sanitizeNumber(calculateActivityLevel(txRecords));
+
+    const score = calculateReputationAtomicScore({
       transactionCount: txCount,
       accountAge,
       activityLevel,
-      balance: parseFloat(account.balances?.find((b: any) => b.asset_type === 'native')?.balance || '0'),
+      balance: sanitizeNumber(
+        parseFloat(account?.balances?.find((b: any) => b?.asset_type === 'native')?.balance || '0'),
+      ),
     });
 
-    const activityData = deriveActivityDataFromTransactions(
-      transactions._embedded?.records || [],
-      accountAge,
-      txCount
+    const activityData = sanitizeActivityData(
+      deriveActivityDataFromTransactions(txRecords, accountAge, txCount),
     );
 
-    return {
+    return sanitizeReputationData({
       score,
       trustLevel: getTrustLevel(score),
       transactionCount: txCount,
@@ -370,10 +458,10 @@ export async function fetchReputationData(
       onChainVerified: true,
       isEstimated: false,
       activityData,
-    };
+    });
   } catch (error) {
     console.warn('[PI NETWORK] Failed to fetch reputation, using estimated data:', error);
-    return {
+    return sanitizeReputationData({
       score: 350,
       trustLevel: 'Medium',
       transactionCount: 25,
@@ -382,7 +470,7 @@ export async function fetchReputationData(
       onChainVerified: false,
       isEstimated: true,
       activityData: generateEstimatedActivityData(180, 25),
-    };
+    });
   }
 }
 
@@ -492,18 +580,19 @@ function calculateActivityLevel(transactions: any[]): number {
   return Math.min(100, Math.floor((recentTx.length / transactions.length) * 100));
 }
 
-function calculateReputationScore(data: {
+function calculateReputationAtomicScore(data: {
   transactionCount: number;
   accountAge: number;
   activityLevel: number;
   balance: number;
 }): number {
-  const txScore = Math.min(250, data.transactionCount * 2.5);
-  const ageScore = Math.min(200, data.accountAge * 0.5);
-  const activityScore = Math.min(300, data.activityLevel * 3);
-  const balanceScore = Math.min(250, Math.log10(data.balance + 1) * 25);
-  
-  return Math.floor(txScore + ageScore + activityScore + balanceScore);
+  const result = calculateReputationAtomic({
+    Mainnet_Points: data.transactionCount,
+    Testnet_Points: Math.max(0, Math.floor(data.activityLevel / 2)),
+    App_Engagement_Points: Math.max(0, Math.floor(Math.log10(data.balance + 1) * 10)),
+  });
+
+  return result.totalScore;
 }
 
 function getTrustLevel(score: number): 'Low' | 'Medium' | 'High' | 'Elite' {

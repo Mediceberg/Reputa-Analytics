@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'; 
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { reputationService } from '../services/reputationService';
 
 interface TrustContextType {
   miningDays: number;
@@ -18,74 +19,57 @@ export const TrustProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isDemo, setIsDemo] = useState(false);
   const [walletData, setWalletData] = useState<any>(null);
 
-  // OCR simulation for mining image
-  const updateMiningDays = useCallback(async (image: File) => {
-    console.log("Processing Pi Mining Screenshot...");
-    
-    // Simulate OCR processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Extract days (mock - in production use Tesseract.js)
-    const extractedDays = Math.floor(Math.random() * 500) + 1000;
-    setMiningDays(extractedDays);
-    
-    // Recalculate score
-    calculateScore(extractedDays, walletData);
-  }, [walletData]);
+  // Keep trust score synced from unified ReputationAtomic pipeline only.
+  useEffect(() => {
+    const unsubscribe = reputationService.subscribeUnifiedScore((score) => {
+      setTrustScore(score.totalScore || 0);
+    });
 
-  // Trust score calculation
-  const calculateScore = useCallback((days: number, wallet: any) => {
-    let score = 500; // Base score
-    
-    // Mining days bonus
-    if (days > 1000) score += 100;
-    else if (days > 500) score += 50;
-    
-    // Wallet balance bonus
-    if (wallet?.balance > 100) score += 50;
-    
-    // Transaction penalty for external flows
-    if (wallet?.externalFlow > 50) score -= 50;
-    
-    setTrustScore(Math.min(1000, Math.max(0, score)));
+    return unsubscribe;
   }, []);
 
-  // Refresh wallet data from Testnet
+  const updateMiningDays = useCallback(async (_image: File) => {
+    console.log('Processing Pi Mining Screenshot...');
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Keep miningDays behavior for UI, but do not calculate reputation here.
+    const extractedDays = Math.floor(Math.random() * 500) + 1000;
+    setMiningDays(extractedDays);
+  }, []);
+
+  // Refresh wallet data from Testnet (no local score calculation)
   const refreshWallet = useCallback(async (address: string) => {
     try {
       const response = await fetch(`https://api.testnet.minepi.com/accounts/${address}`);
       if (response.ok) {
         const data = await response.json();
         const balance = data.balances?.find((b: any) => b.asset_type === 'native');
-        
-        const wallet = {
+
+        setWalletData({
           address,
           balance: balance ? parseFloat(balance.balance) : 0,
-          externalFlow: 0
-        };
-        
-        setWalletData(wallet);
-        calculateScore(miningDays, wallet);
+          externalFlow: 0,
+        });
       }
     } catch (error) {
       console.error('Wallet refresh failed:', error);
     }
-  }, [miningDays, calculateScore]);
+  }, []);
 
   const toggleDemo = useCallback(() => {
-    setIsDemo(prev => !prev);
+    setIsDemo((prev) => !prev);
   }, []);
 
   return (
-    <TrustContext.Provider 
-      value={{ 
-        miningDays, 
-        trustScore, 
-        isDemo, 
-        walletData, 
-        updateMiningDays, 
+    <TrustContext.Provider
+      value={{
+        miningDays,
+        trustScore,
+        isDemo,
+        walletData,
+        updateMiningDays,
         toggleDemo,
-        refreshWallet
+        refreshWallet,
       }}
     >
       {children}
@@ -95,6 +79,6 @@ export const TrustProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 export const useTrust = () => {
   const context = useContext(TrustContext);
-  if (!context) throw new Error("useTrust must be used within TrustProvider");
+  if (!context) throw new Error('useTrust must be used within TrustProvider');
   return context;
 };
