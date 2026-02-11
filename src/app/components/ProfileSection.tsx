@@ -82,9 +82,8 @@ export function ProfileSection({
   }, [activityData, walletData.accountAge, walletData.transactions?.length]);
 
   const levelProgress = useMemo(() => {
-    const earnedPoints = userPoints.checkIn + userPoints.activity + userPoints.streak;
-    return getLevelProgress(atomicResult.adjustedScore + earnedPoints);
-  }, [atomicResult.adjustedScore, userPoints.checkIn, userPoints.activity, userPoints.streak]);
+    return getLevelProgress(atomicResult.adjustedScore);
+  }, [atomicResult.adjustedScore]);
 
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel];
   const levelName = LEVEL_NAMES[levelProgress.currentLevel];

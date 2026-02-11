@@ -14,6 +14,8 @@
  * `src/app/services/reputationService`.
  */
 
+import { calculateReputationAtomic } from '../protocol/ReputationAtomic';
+
 const PI_TESTNET_API = 'https://api.testnet.minepi.com';  
 const PI_MAINNET_API = 'https://api.mainnet.minepi.com';
 const PI_BLOCK_EXPLORER = 'https://blockexplorer.minepi.com';
@@ -498,12 +500,13 @@ function calculateReputationScore(data: {
   activityLevel: number;
   balance: number;
 }): number {
-  const txScore = Math.min(250, data.transactionCount * 2.5);
-  const ageScore = Math.min(200, data.accountAge * 0.5);
-  const activityScore = Math.min(300, data.activityLevel * 3);
-  const balanceScore = Math.min(250, Math.log10(data.balance + 1) * 25);
-  
-  return Math.floor(txScore + ageScore + activityScore + balanceScore);
+  const result = calculateReputationAtomic({
+    Mainnet_Points: data.transactionCount,
+    Testnet_Points: Math.max(0, Math.floor(data.activityLevel / 2)),
+    App_Engagement_Points: Math.max(0, Math.floor(Math.log10(data.balance + 1) * 10)),
+  });
+
+  return result.totalScore;
 }
 
 function getTrustLevel(score: number): 'Low' | 'Medium' | 'High' | 'Elite' {

@@ -14,6 +14,7 @@ import {
   getLevelProgress,
   TRUST_LEVEL_COLORS
 } from '../protocol/atomicScoring';
+import { calculateReputationAtomic } from '../protocol/ReputationAtomic';
 import { walletDataService, WalletSnapshot, ActivityEvent } from './walletDataService';
 import {
   SCORING_RULES,
@@ -545,7 +546,7 @@ export class ReputationService {
     if (this.isDemo) {
       const newState: UserReputationState = {
         ...this.currentState,
-        reputationScore: this.currentState.reputationScore + points,
+        reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints + points),
         dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       };
       this.currentState = newState;
@@ -561,7 +562,7 @@ export class ReputationService {
     const now = new Date();
     const newState: UserReputationState = {
       ...this.currentState,
-      reputationScore: this.currentState.reputationScore + points,
+      reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore, 0, this.currentState.dailyCheckInPoints + points),
       dailyCheckInPoints: this.currentState.dailyCheckInPoints - points,
       interactionHistory: [
         {
@@ -643,7 +644,7 @@ export class ReputationService {
         ...this.currentState,
         walletAddress,
         blockchainScore: newBlockchainScore,
-        reputationScore: this.currentState.dailyCheckInPoints + newBlockchainScore,
+        reputationScore: this.calculateUnifiedScore(newBlockchainScore, 0, this.currentState.dailyCheckInPoints),
         blockchainEvents: [
           ...result.newEvents,
           ...this.currentState.blockchainEvents.slice(0, 99),
@@ -686,7 +687,7 @@ export class ReputationService {
     const newState: UserReputationState = {
       ...this.currentState,
       blockchainScore: this.currentState.blockchainScore + event.points,
-      reputationScore: this.currentState.reputationScore + event.points,
+      reputationScore: this.calculateUnifiedScore(this.currentState.blockchainScore + event.points, 0, this.currentState.dailyCheckInPoints),
       blockchainEvents: [
         event,
         ...this.currentState.blockchainEvents.slice(0, 99),
@@ -699,14 +700,21 @@ export class ReputationService {
     return true;
   }
 
+  private calculateUnifiedScore(mainnetPoints: number, testnetPoints: number, appEngagementPoints: number): number {
+    return calculateReputationAtomic({
+      Mainnet_Points: mainnetPoints,
+      Testnet_Points: testnetPoints,
+      App_Engagement_Points: appEngagementPoints,
+    }).totalScore;
+  }
+
   getBlockchainScore(): number {
     return this.currentState?.blockchainScore || 0;
   }
 
   getTotalScore(): number {
     if (!this.currentState) return 0;
-    return (this.currentState.blockchainScore || 0) + 
-           (this.currentState.dailyCheckInPoints || 0);
+    return this.calculateUnifiedScore(this.currentState.blockchainScore || 0, 0, this.currentState.dailyCheckInPoints || 0);
   }
 
   getBlockchainEvents(): ActivityEvent[] {
@@ -769,7 +777,7 @@ export class ReputationService {
       const stored = localStorage.getItem(`reputation_${readUid}`);
       if (!stored) return null;
       const parsed = JSON.parse(stored) as UserReputationState;
-      const totalScore = (parsed.blockchainScore || 0) + (parsed.dailyCheckInPoints || 0);
+      const totalScore = this.calculateUnifiedScore(parsed.blockchainScore || 0, 0, parsed.dailyCheckInPoints || 0);
       const levelInfo = parsed ? ({ level: 1, rank: 'Low Trust', progressPercent: 0, pointsToNext: 100 } as any) : null;
       const colors = levelInfo ? { bg: '#000', text: '#fff', border: 'rgba(255,255,255,0.08)' } : { bg: '#000', text: '#fff', border: 'rgba(255,255,255,0.08)' };
 

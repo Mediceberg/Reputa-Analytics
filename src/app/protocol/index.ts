@@ -5,6 +5,8 @@
  */
 
 // Core Functions - يتم تصدير الدوال التي تم ربطها بالبلوكشين والـ SDK
+export { calculateReputationAtomic, getReputationAtomicScoreCap, type ReputationAtomicInput, type ReputationAtomicResult } from './ReputationAtomic';
+
 export { fetchWalletData } from './wallet';
 export { analyzeTransaction, analyzeAllTransactions, getTransactionExplanation, flagSuspiciousTransactions } from './transactions'; 
 export { analyzeStaking, estimateStaking } from './staking';
