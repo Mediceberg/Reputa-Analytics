@@ -166,7 +166,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           >
             <Copy className="w-4 h-4" />
           </button>
-          {(navigator.share || true) && (
+          {(typeof navigator !== 'undefined' && typeof navigator.share === 'function') && (
             <button
               onClick={handleShareLink}
               className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-all active:scale-95"

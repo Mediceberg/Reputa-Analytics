@@ -199,7 +199,7 @@ export function SideDrawer({
                   <button
                     key={item.id}
                     onClick={() => {
-                      if (item.onClick) {
+                      if ('onClick' in item && typeof item.onClick === 'function') {
                         item.onClick();
                         handleClose();
                       } else {

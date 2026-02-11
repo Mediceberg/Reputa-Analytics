@@ -37,17 +37,17 @@ export function FutureTasksPage() {
       </div>
 
       <div className="grid gap-4">
-        {FUTURE_TASKS_CONFIG.missions.map((mission) => (
+        {FUTURE_TASKS_CONFIG.tasks.map((mission) => (
           <div
             key={mission.id}
             className="glass-card flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between"
             style={{ border: '1px solid rgba(255, 255, 255, 0.08)' }}
           >
             <div>
-              <p className="text-sm font-semibold text-white">{mission.title}</p>
+              <p className="text-sm font-semibold text-white">{mission.label}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-wide text-gray-500">
-                <span className="rounded-full border border-white/10 px-2 py-0.5">{mission.type}</span>
-                <span className="rounded-full border border-white/10 px-2 py-0.5">{mission.status.replace('_', ' ')}</span>
+                <span className="rounded-full border border-white/10 px-2 py-0.5">{mission.verification.type}</span>
+                <span className="rounded-full border border-white/10 px-2 py-0.5">{mission.verification.status.replace('_', ' ')}</span>
               </div>
               <p className="mt-2 text-xs font-semibold text-cyan-300">+{mission.points} pts</p>
             </div>
