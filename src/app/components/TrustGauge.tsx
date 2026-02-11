@@ -3,15 +3,20 @@ import { motion } from 'motion/react';
 import { ShieldCheck, ShieldAlert, ShieldBan, Sparkles, Zap, TrendingUp } from 'lucide-react';
 import { Card } from './ui/card';
 import type { TrustLevel } from '../protocol/types';
+import { getBackendScoreCap } from '../protocol/atomicScoring';
 
 interface TrustGaugeProps {
   score: number;
   trustLevel: TrustLevel;
   consistencyScore?: number;
   networkTrust?: number;
+  mainnetPoints?: number;
+  testnetPoints?: number;
+  appEngagementPoints?: number;
 }
 
-export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }: TrustGaugeProps) {
+export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust, mainnetPoints = 0, testnetPoints = 0, appEngagementPoints = 0 }: TrustGaugeProps) {
+  const scoreCap = getBackendScoreCap();
   const [animatedScore, setAnimatedScore] = useState(0);
   const [displayScore, setDisplayScore] = useState(0);
 
@@ -72,7 +77,7 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
   };
 
   const gaugeColor = getGaugeColor(trustLevel);
-  const rotation = (score / 1000) * 180 - 90;
+  const rotation = (score / scoreCap) * 180 - 90;
 
   return (
     <Card className="p-6 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border border-cyan-500/20 shadow-2xl shadow-cyan-500/10 overflow-hidden relative backdrop-blur-xl">
@@ -147,7 +152,7 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
                 strokeLinecap="round"
                 filter="url(#glowDark)"
                 initial={{ pathLength: 0 }}
-                animate={{ pathLength: animatedScore / 1000 }}
+                animate={{ pathLength: animatedScore / scoreCap }}
                 transition={{ duration: 1.5, ease: 'easeOut' }}
               />
 
@@ -183,7 +188,7 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
                   {displayScore}
                 </span>
                 <span className="text-[11px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                  out of 1000
+                  out of {scoreCap.toLocaleString()}
                 </span>
               </motion.div>
             </div>
@@ -214,19 +219,19 @@ export function TrustGauge({ score, trustLevel, consistencyScore, networkTrust }
 
             <p className="text-gray-400 mb-6 leading-relaxed">{getDescription()}</p>
 
-            {/* Score Breakdown */}
+            {/* Atomic Score Breakdown */}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl border border-purple-500/30 backdrop-blur-sm">
-                <p className="text-[10px] text-purple-400 font-bold uppercase mb-1">Balance</p>
-                <p className="font-bold text-purple-300">30%</p>
+                <p className="text-[10px] text-purple-400 font-bold uppercase mb-1">Mainnet</p>
+                <p className="font-bold text-purple-300">{mainnetPoints}</p>
               </div>
               <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 rounded-xl border border-cyan-500/30 backdrop-blur-sm">
-                <p className="text-[10px] text-cyan-400 font-bold uppercase mb-1">Age</p>
-                <p className="font-bold text-cyan-300">40%</p>
+                <p className="text-[10px] text-cyan-400 font-bold uppercase mb-1">Testnet</p>
+                <p className="font-bold text-cyan-300">{testnetPoints}</p>
               </div>
               <div className="p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl border border-emerald-500/30 backdrop-blur-sm">
-                <p className="text-[10px] text-emerald-400 font-bold uppercase mb-1">Activity</p>
-                <p className="font-bold text-emerald-300">30%</p>
+                <p className="text-[10px] text-emerald-400 font-bold uppercase mb-1">App Engage</p>
+                <p className="font-bold text-emerald-300">{appEngagementPoints}</p>
               </div>
             </div>
           </div>
