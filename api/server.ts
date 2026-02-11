@@ -1,7 +1,14 @@
 import 'dotenv/config.js';
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import * as StellarSdk from '@stellar/stellar-sdk';
+import { Redis } from '@upstash/redis';
 
-import app from './server.app.js';
-import { startUnifiedServer } from './server.startup.js';
+import app from './server.app';
+import { startUnifiedServer } from './server.startup';
+import { getMongoDb, getReputationScoresCollection } from '../server/db/mongoModels';
+import * as reputationService from '../server/services/reputationService';
+import protocol from '../server/config/reputaProtocol';
 
 const PORT = Number(process.env.PORT) || 3001;
 
