@@ -17,6 +17,85 @@ applyCommonMiddleware(app);
 
 const redis = createRedisClient();
 
+const REPUTATION_CACHE_TTL_SECONDS = Number(process.env.REPUTATION_CACHE_TTL_SECONDS || 300);
+
+function toPioneerId(uid: string) {
+  return `legacy:${uid}`;
+}
+
+function mapLegacyReputationToMongo(data: any) {
+  const score = Number(data.reputationScore || 0);
+  const blockchainScore = Number(data.blockchainScore || 0);
+  const dailyCheckInPoints = Number(data.dailyCheckInPoints || 0);
+
+  return {
+    pioneerId: toPioneerId(data.uid),
+    protocolVersion: protocol.PROTOCOL_VERSION,
+    totalReputationScore: score,
+    reputationLevel: protocol.calculateLevelFromPoints(score),
+    walletMainnetScore: blockchainScore,
+    walletTestnetScore: 0,
+    appEngagementScore: dailyCheckInPoints,
+    checkInScore: dailyCheckInPoints,
+    adBonusScore: 0,
+    taskCompletionScore: 0,
+    referralScore: 0,
+    lastCheckInDate: data.lastCheckIn ? String(data.lastCheckIn).slice(0, 10) : undefined,
+    lastActivityDate: new Date(),
+    currentStreak: Number(data.totalCheckInDays || 0),
+    longestStreak: Number(data.totalCheckInDays || 0),
+    lastErosionDate: new Date(),
+    legacy: {
+      uid: data.uid,
+      username: data.username || null,
+      walletAddress: data.walletAddress || null,
+      blockchainEvents: data.blockchainEvents || [],
+      interactionHistory: data.interactionHistory || [],
+      walletSnapshot: data.walletSnapshot || null,
+      lastBlockchainSync: data.lastBlockchainSync || null,
+      trustLevel: data.trustLevel || computeTrustLevel(score),
+      lastUpdated: new Date().toISOString(),
+      isLegacyShape: true,
+    },
+    updatedAt: new Date(),
+    createdAt: new Date(),
+    updateReason: 'Legacy API saveReputation sync',
+  };
+}
+
+function mapMongoReputationToLegacy(uid: string, doc: any) {
+  const legacy = doc?.legacy || {};
+  const score = Number(doc?.totalReputationScore || legacy?.reputationScore || 0);
+
+  return {
+    uid,
+    username: legacy.username || null,
+    walletAddress: legacy.walletAddress || null,
+    reputationScore: score,
+    blockchainScore: Number(doc?.walletMainnetScore || legacy.blockchainScore || 0),
+    dailyCheckInPoints: Number(doc?.checkInScore || legacy.dailyCheckInPoints || 0),
+    totalCheckInDays: Number(doc?.currentStreak || legacy.totalCheckInDays || 0),
+    lastCheckIn: doc?.lastCheckInDate || legacy.lastCheckIn || null,
+    interactionHistory: legacy.interactionHistory || [],
+    blockchainEvents: legacy.blockchainEvents || [],
+    walletSnapshot: legacy.walletSnapshot || null,
+    lastUpdated: (doc?.updatedAt instanceof Date ? doc.updatedAt.toISOString() : legacy.lastUpdated) || null,
+    lastBlockchainSync: legacy.lastBlockchainSync || null,
+    trustLevel: legacy.trustLevel || computeTrustLevel(score),
+    isNew: false,
+  };
+}
+
+async function getReputationFromCache(uid: string) {
+  const cached = await redis.get(`reputation:${uid}`);
+  if (!cached) return null;
+  return typeof cached === 'string' ? JSON.parse(cached) : cached;
+}
+
+async function cacheReputation(uid: string, data: any) {
+  await redis.set(`reputation:${uid}`, JSON.stringify(data), { ex: REPUTATION_CACHE_TTL_SECONDS });
+}
+
 // ====================
 // SHARED TYPES
 // ====================
@@ -36,9 +115,12 @@ declare global {
 async function handleAdminGetAllUsers(req: Request, res: Response) {
   const password = toStringParam(req.query.password);
   const action = toStringParam(req.query.action);
-  const adminPassword = 'admin123';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const authHeader = req.headers.authorization || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const isAuthorized = req.method === 'POST' || password === adminPassword || bearerToken === adminPassword;
 
-  if (password !== adminPassword && req.method !== 'POST') {
+  if (!isAuthorized) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -285,9 +367,15 @@ async function handleGetReputation(uid: string | undefined, res: Response) {
     return res.status(400).json({ error: 'Missing uid' });
   }
 
-  const reputationData = await redis.get(`reputation:${uid}`);
+  const cached = await getReputationFromCache(uid);
+  if (cached) {
+    return res.status(200).json({ success: true, data: cached, source: 'cache' });
+  }
 
-  if (!reputationData) {
+  const reputationCollection = await getReputationScoresCollection();
+  const mongoDoc = await reputationCollection.findOne({ pioneerId: toPioneerId(uid) });
+
+  if (!mongoDoc) {
     return res.status(200).json({
       success: true,
       data: {
@@ -304,11 +392,14 @@ async function handleGetReputation(uid: string | undefined, res: Response) {
         lastBlockchainSync: null,
         isNew: true,
       },
+      source: 'mongo',
     });
   }
 
-  const parsed = typeof reputationData === 'string' ? JSON.parse(reputationData) : reputationData;
-  return res.status(200).json({ success: true, data: parsed });
+  const legacyShape = mapMongoReputationToLegacy(uid, mongoDoc);
+  await cacheReputation(uid, legacyShape);
+
+  return res.status(200).json({ success: true, data: legacyShape, source: 'mongo' });
 }
 
 async function handleSaveReputation(body: any, res: Response) {
@@ -349,7 +440,24 @@ async function handleSaveReputation(body: any, res: Response) {
     lastUpdated: new Date().toISOString(),
   };
 
-  await redis.set(`reputation:${uid}`, JSON.stringify(reputationData));
+  const reputationCollection = await getReputationScoresCollection();
+  const mongoPayload = mapLegacyReputationToMongo(reputationData);
+
+  await reputationCollection.updateOne(
+    { pioneerId: toPioneerId(uid) },
+    {
+      $set: {
+        ...mongoPayload,
+        updatedAt: new Date(),
+      },
+      $setOnInsert: {
+        createdAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+
+  await cacheReputation(uid, reputationData);
 
   const computedTrustLevel = computeTrustLevel(reputationScore || 0);
 
@@ -364,14 +472,14 @@ async function handleSaveReputation(body: any, res: Response) {
       trustLevel: computedTrustLevel,
       lastUpdated: new Date().toISOString(),
     };
-    await redis.set(`leaderboard_entry:${uid}`, JSON.stringify(leaderboardEntry));
+    await redis.set(`leaderboard_entry:${uid}`, JSON.stringify(leaderboardEntry), { ex: REPUTATION_CACHE_TTL_SECONDS });
   } else {
     await redis.zrem('leaderboard:reputation', uid);
     await redis.del(`leaderboard_entry:${uid}`);
   }
 
   console.log(`[REPUTATION] Saved for user: ${uid}, blockchain: ${blockchainScore}, total: ${reputationScore}`);
-  return res.status(200).json({ success: true, data: reputationData });
+  return res.status(200).json({ success: true, data: reputationData, persisted: 'mongodb', cached: true });
 }
 
 async function handleGetTopUsers(query: any, res: Response) {

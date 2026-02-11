@@ -23,9 +23,12 @@
     "server/**/*",
     "db/**/*",
     "scripts/**/*",
-    "index.html",
-    "*.ts",
-    "*.tsx"
+    "index.html"
   ],
-  "exclude": ["node_modules", "dist", "attached_assets"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "attached_assets",
+    "src/app/api/**/*"
+  ]
 }

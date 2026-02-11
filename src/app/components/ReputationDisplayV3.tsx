@@ -5,7 +5,6 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import protocol from '../../server/config/reputaProtocol';
 
 interface ReputationDisplayProps {
   pioneerId: string;
@@ -58,14 +57,6 @@ export const ReputationDisplay: React.FC<ReputationDisplayProps> = ({
   if (!reputation) {
     return <div className="text-gray-500 py-8">No reputation data</div>;
   }
-
-  const levelColor = {
-    1: '#8B7355',  // Brown
-    5: '#4169E1',  // Royal Blue
-    10: '#FFD700', // Gold
-    15: '#FF6347', // Tomato
-    20: '#FF1493'  // Deep Pink
-  };
 
   const getLevelColor = (level: number) => {
     if (level >= 18) return '#FF1493';
