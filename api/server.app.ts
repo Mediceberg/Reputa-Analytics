@@ -1,3 +1,4 @@
+
 import 'dotenv/config.js';
 import express, { Request, Response, NextFunction } from 'express';
 import * as StellarSdk from 'stellar-sdk';
@@ -3043,5 +3044,15 @@ app.get('/health', (req: Request, res: Response) => {
 // ====================
 // STARTUP
 // ====================
+=======
+/**
+ * Legacy entrypoint kept for backwards compatibility.
+ *
+ * Unified API implementation lives in `api/server.ts` to prevent
+ * protocol drift and duplicated route logic.
+ */
+
+import app from './server.js';
+
 
 export default app;
