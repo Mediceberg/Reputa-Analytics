@@ -1,18 +1,11 @@
 import 'dotenv/config.js';
 
-import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import { Redis } from '@upstash/redis';
-import * as StellarSdk from 'stellar-sdk';
-import protocol from '../server/config/reputaProtocol.js';
-import * as reputationService from '../server/services/reputationService.js';
-import {
-  connectMongoDB,
-  getMongoDb,
-  getReputationScoresCollection,
-} from '../server/db/mongoModels.js';
+import app from './server.app.js';
+import { startUnifiedServer } from './server.startup.js';
 
-const app = express();
+const PORT = Number(process.env.PORT) || 3001;
+
+
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
@@ -2943,15 +2936,12 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 const PORT_FINAL = Number(process.env.PORT) || 3001;
-const entryArg = process.argv[1] ?? '';
 
+const entryArg = process.argv[1] ?? '';
 const isDevStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts'));
 
 if (isDevStart) {
-  app.listen(PORT_FINAL, '0.0.0.0', async () => {
-    await connectMongoDB();
-    console.log(`🚀 Server ready at http://0.0.0.0:${PORT_FINAL}`);
-  });
+  startUnifiedServer(app, PORT);
 }
 
 export default app;

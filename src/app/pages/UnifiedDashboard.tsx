@@ -341,7 +341,7 @@ export function UnifiedDashboard({
     { id: 'wallet', icon: Wallet, label: t('sidebar.wallet') },
     { id: 'network', icon: Globe, label: 'Network' },
     ...(FUTURE_TASKS_CONFIG.enabled
-      ? [{ id: 'earn-points', icon: Sparkles, label: 'Earn Points' }]
+      ? [{ id: 'earn-points' as ActiveSection, icon: Sparkles, label: 'Earn Points' }]
       : []),
   ];
 

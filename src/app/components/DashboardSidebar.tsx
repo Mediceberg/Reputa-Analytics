@@ -2,12 +2,10 @@ import { useLanguage } from '../hooks/useLanguage';
 import { AppMode, MODE_IMPACTS } from '../protocol/types';
 import { TestTube, Globe, Play, Sparkles } from 'lucide-react';
 import logoImage from '../../assets/logo-new.png';
- codex/add-modular-future-tasks-system-lzo2gq
 import { getNavItemsBySection } from '../config/navigation';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
 
 import { SidebarFutureTasks } from './SidebarFutureTasks';
- main
 
 interface SidebarProps {
   mode: AppMode;
