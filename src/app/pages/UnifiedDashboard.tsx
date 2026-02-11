@@ -470,6 +470,9 @@ export function UnifiedDashboard({
               trustLevel={gaugeLevel}
               consistencyScore={walletData.consistencyScore ?? 85}
               networkTrust={walletData.networkTrust ?? 90}
+              mainnetPoints={reputationEngine.Mainnet_Points}
+              testnetPoints={reputationEngine.Testnet_Points}
+              appEngagementPoints={reputationEngine.App_Engagement_Points}
             />
 
             {/* Quick Stats Grid */}
@@ -740,13 +743,26 @@ export function UnifiedDashboard({
                 
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Reputa Score</p>
-                    <p className="text-2xl font-black neon-text-purple">{walletData.reputaScore ?? 0} <span className="text-gray-500 text-sm">/ 1000</span></p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Atomic Score</p>
+                    <p className="text-2xl font-black neon-text-purple">{reputationEngine.totalScore} <span className="text-gray-500 text-sm">/ {getBackendScoreCap().toLocaleString()}</span></p>
                   </div>
-                  
-                  <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">Total Transactions</p>
-                    <p className="text-xl font-black text-cyan-400">{walletData.totalTransactions || (walletData.transactions?.length ?? 0)}</p>
+
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.15)' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-3">Atomic Breakdown</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center">
+                        <p className="text-lg font-black text-purple-300">{reputationEngine.Mainnet_Points}</p>
+                        <p className="text-[8px] font-bold uppercase text-gray-500">Mainnet</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-black text-cyan-300">{reputationEngine.Testnet_Points}</p>
+                        <p className="text-[8px] font-bold uppercase text-gray-500">Testnet</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-lg font-black text-emerald-300">{reputationEngine.App_Engagement_Points}</p>
+                        <p className="text-[8px] font-bold uppercase text-gray-500">App Engage</p>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="p-4 rounded-xl" style={{ background: trustColors.bg, border: `1px solid ${trustColors.border}` }}>
@@ -762,6 +778,9 @@ export function UnifiedDashboard({
               trustLevel={gaugeLevel}
               consistencyScore={walletData.consistencyScore ?? 85}
               networkTrust={walletData.networkTrust ?? 90}
+              mainnetPoints={reputationEngine.Mainnet_Points}
+              testnetPoints={reputationEngine.Testnet_Points}
+              appEngagementPoints={reputationEngine.App_Engagement_Points}
             />
           </div>
         )}
@@ -769,7 +788,7 @@ export function UnifiedDashboard({
         {activeSection === 'network' && (
           <>
             {networkSubPage === 'network-info' ? (
-              <AtomicProtocolPage onBack={() => setNetworkSubPage(null)} />
+              <NetworkInfoPage onBack={() => setNetworkSubPage(null)} />
             ) : networkSubPage === 'top-wallets' ? (
               <TopWalletsPage onBack={() => setNetworkSubPage(null)} />
             ) : networkSubPage === 'reputation' ? (

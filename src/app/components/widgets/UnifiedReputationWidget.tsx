@@ -74,11 +74,6 @@ export function UnifiedReputationWidget({
     loadReputation();
   }, [loadReputation]);
 
-  const totalScore = blockchainScore + checkInPoints;
-  const trustLevel: AtomicTrustLevel = atomicResult?.trustLevel || 'Medium';
-  const colors = TRUST_LEVEL_COLORS[trustLevel];
-  const progress = getLevelProgress(totalScore);
-
   const formatTimeAgo = (timestamp: string) => {
     const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
     if (seconds < 60) return 'Just now';
