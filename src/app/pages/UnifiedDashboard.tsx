@@ -238,15 +238,15 @@ export function UnifiedDashboard({
     if (unifiedScoreData) {
       const demoData = generateDemoActivityData();
       demoData.accountAgeDays = walletData.accountAge || 180;
-      demoData.internalTxCount = walletData.transactions?.length || 25;
-      demoData.dailyCheckins = unifiedScoreData.totalCheckInDays;
-      demoData.adBonuses = Math.floor((unifiedScoreData.dailyCheckInPoints || 0) / 5);
-      const result = calculateAtomicReputation(demoData);
-      result.interaction.dailyCheckins = unifiedScoreData.totalCheckInDays;
-      result.interaction.totalPoints = unifiedScoreData.totalScore;
-      result.adjustedScore = unifiedScoreData.totalScore;
-      result.rawScore = (unifiedScoreData.blockchainScore || 0) + (unifiedScoreData.dailyCheckInPoints || 0);
-      return result;
+      demoData.internalTxCount = unifiedScoreData.blockchainScore || 0;
+      demoData.appInteractions = unifiedScoreData.totalCheckInDays || 0;
+      demoData.sdkPayments = 0;
+      demoData.normalTrades = 0;
+      demoData.dailyCheckins = unifiedScoreData.dailyCheckInPoints || 0;
+      demoData.adBonuses = 0;
+      demoData.reportViews = 0;
+      demoData.toolUsage = 0;
+      return calculateAtomicReputation(demoData);
     }
     const demoData = generateDemoActivityData();
     demoData.accountAgeDays = walletData.accountAge || 180;
@@ -254,15 +254,9 @@ export function UnifiedDashboard({
     return calculateAtomicReputation(demoData);
   }, [walletData.accountAge, walletData.transactions?.length, unifiedScoreData]);
 
-  const modeAdjustedScore = useMemo(() => {
-    const baseScore = atomicResult.adjustedScore;
-    const impact = MODE_IMPACTS[mode.mode];
-    return Math.round(baseScore * (impact.impactPercentage / 100));
-  }, [atomicResult.adjustedScore, mode.mode]);
-
   const levelProgress = useMemo(() => {
-    return getLevelProgress(modeAdjustedScore);
-  }, [modeAdjustedScore]);
+    return getLevelProgress(atomicResult.adjustedScore);
+  }, [atomicResult.adjustedScore]);
 
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
@@ -288,10 +282,6 @@ export function UnifiedDashboard({
     handleModeChange(modes[nextIndex]);
   };
 
-  const getReputationWithModeImpact = (baseScore: number): number => {
-    const impact = MODE_IMPACTS[mode.mode];
-    return Math.round(baseScore * (impact.impactPercentage / 100));
-  };
 
   const handlePeriodChange = (newPeriod: 'day' | 'week' | 'month') => {
     const mapToState = (p: 'day' | 'week' | 'month') => p === 'day' ? '7d' : p === 'week' ? '30d' : '90d';

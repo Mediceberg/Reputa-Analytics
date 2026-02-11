@@ -26,6 +26,7 @@ import {
   getLevelProgress,
   WalletActivityData
 } from '../../protocol/atomicScoring';
+import { calculateReputationAtomic } from '../../protocol/ReputationAtomic';
 import { reputationService } from '../../services/reputationService';
 import { walletDataService, WalletSnapshot, ActivityEvent } from '../../services/walletDataService';
 
@@ -117,7 +118,7 @@ export function UnifiedReputationWidget({
     loadReputation();
   }, [loadReputation]);
 
-  const totalScore = blockchainScore + checkInPoints;
+  const totalScore = calculateReputationAtomic({ Mainnet_Points: blockchainScore, Testnet_Points: 0, App_Engagement_Points: checkInPoints }).totalScore;
   const trustLevel: AtomicTrustLevel = atomicResult?.trustLevel || 'Medium';
   const colors = TRUST_LEVEL_COLORS[trustLevel];
   const progress = getLevelProgress(totalScore);
