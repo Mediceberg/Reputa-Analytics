@@ -12,9 +12,10 @@ import { AtomicScoreBreakdown } from '../components/AtomicScoreBreakdown';
 interface ReputationPageProps {
   onBack: () => void;
   walletAddress?: string;
+  sharedAtomicResult?: AtomicReputationResult;
 }
 
-export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
+export function ReputationPage({ onBack, walletAddress, sharedAtomicResult }: ReputationPageProps) {
   const [reputation, setReputation] = useState<ReputationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [address, setAddress] = useState(walletAddress || '');
@@ -22,11 +23,13 @@ export function ReputationPage({ onBack, walletAddress }: ReputationPageProps) {
   const [showDetails, setShowDetails] = useState(false);
   
   const atomicResult = useMemo<AtomicReputationResult>(() => {
+    // Use shared result from parent (single source of truth) if available
+    if (sharedAtomicResult) return sharedAtomicResult;
     if (reputation?.activityData) {
       return calculateAtomicReputation(reputation.activityData);
     }
     return calculateAtomicReputation(generateDemoActivityData());
-  }, [reputation]);
+  }, [sharedAtomicResult, reputation]);
 
   const loadReputation = async (addr: string) => {
     if (!addr) {

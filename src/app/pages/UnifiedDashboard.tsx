@@ -942,7 +942,7 @@ export function UnifiedDashboard({
             ) : networkSubPage === 'top-wallets' ? (
               <TopWalletsPage onBack={() => setNetworkSubPage(null)} />
             ) : networkSubPage === 'reputation' ? (
-              <ReputationPage onBack={() => setNetworkSubPage(null)} walletAddress={walletData.address} />
+              <ReputationPage onBack={() => setNetworkSubPage(null)} walletAddress={walletData.address} sharedAtomicResult={atomicResult} />
             ) : (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Network Info Header */}
@@ -1074,6 +1074,7 @@ export function UnifiedDashboard({
               mode={mode}
               userPoints={userPoints}
               onPointsEarned={handlePointsEarned}
+              sharedAtomicResult={atomicResult}
             />
 
           </div>

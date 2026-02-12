@@ -438,7 +438,7 @@ export async function fetchReputationData(
     const txRecords = Array.isArray(transactions?._embedded?.records) ? transactions._embedded.records : [];
 
     const txCount = sanitizeNumber(txRecords.length);
-    const accountAge = sanitizeNumber(calculateAccountAge(String(account?.sequence || '0')));
+    const accountAge = sanitizeNumber(calculateAccountAge(String(account?.sequence || '0'), txRecords));
     const activityLevel = sanitizeNumber(calculateActivityLevel(txRecords));
 
     const score = calculateReputationAtomicScore({
@@ -570,9 +570,24 @@ function getWalletStatus(account: any): 'active' | 'dormant' | 'new' {
   return 'dormant';
 }
 
-function calculateAccountAge(sequence: string): number {
-  // Estimate days based on sequence number
-  return Math.floor(parseInt(sequence || '0') / 10);
+function calculateAccountAge(sequence: string, txRecords?: any[]): number {
+  // Try to calculate from first transaction date
+  if (txRecords && txRecords.length > 0) {
+    // txRecords are sorted desc, so last record is the oldest
+    const sortedByDate = [...txRecords].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    const firstTxDate = new Date(sortedByDate[0].created_at);
+    if (!isNaN(firstTxDate.getTime())) {
+      const days = Math.floor((Date.now() - firstTxDate.getTime()) / (1000 * 60 * 60 * 24));
+      return Math.max(0, days);
+    }
+  }
+  // Fallback: rough estimate from sequence (sequence ~ operations count)
+  const seq = parseInt(sequence || '0');
+  if (seq <= 0) return 0;
+  // Assume ~1 operation per day as rough estimate, capped at 10 years
+  return Math.min(Math.floor(seq / 1), 3650);
 }
 
 function calculateActivityLevel(transactions: any[]): number {
