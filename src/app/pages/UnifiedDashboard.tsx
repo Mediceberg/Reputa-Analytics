@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, Suspense } from 'react';  
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';  
 import { useLanguage } from '../hooks/useLanguage';
 import { DashboardSidebar } from '../components/DashboardSidebar';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -55,6 +55,8 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
+import { fetchWalletData } from '../protocol/wallet';
+import { walletDataService } from '../services/walletDataService';
 
 interface UnifiedDashboardProps {
   walletData: WalletData;
@@ -96,6 +98,9 @@ export function UnifiedDashboard({
     }
     return { mode: 'testnet', connected: true };
   });
+  // Live wallet data — starts from prop, re-fetched on network switch
+  const [liveWalletData, setLiveWalletData] = useState<WalletData>(walletData);
+  const [networkLoading, setNetworkLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const sectionPaths: Record<ActiveSection, string> = {
     'overview': '/',
@@ -247,14 +252,14 @@ export function UnifiedDashboard({
   };
 
   const profilePageData = useMemo(() => ({
-    walletData,
+    walletData: liveWalletData,
     username: username || 'Pioneer',
     isProUser,
     mode,
     userPoints,
     onPointsEarned: handlePointsEarned,
     onBack: () => setActiveSection('overview')
-  }), [walletData, username, isProUser, mode, userPoints]);
+  }), [liveWalletData, username, isProUser, mode, userPoints]);
   
   const [timelineData, setTimelineData] = useState<{ internal: ChartDataPoint[]; external: ChartDataPoint[] }>({ internal: [], external: [] });
   const [breakdownData, setBreakdownData] = useState<ChartDataPoint[]>([]);
@@ -285,20 +290,20 @@ export function UnifiedDashboard({
 
   const atomicResult = useMemo(() => {
     const activityData = generateDemoActivityData();
-    activityData.accountAgeDays = walletData.accountAge || 180;
+    activityData.accountAgeDays = liveWalletData.accountAge || 180;
     
     // Use real wallet data for transaction counts
-    const txCount = walletData.transactions?.length || 0;
-    const receivedTx = walletData.transactions?.filter((t: any) => t.type === 'internal').length || 0;
-    const sentTx = walletData.transactions?.filter((t: any) => t.type === 'external').length || 0;
+    const txCount = liveWalletData.transactions?.length || 0;
+    const receivedTx = liveWalletData.transactions?.filter((t: any) => t.type === 'internal').length || 0;
+    const sentTx = liveWalletData.transactions?.filter((t: any) => t.type === 'external').length || 0;
     
     activityData.internalTxCount = receivedTx;
     activityData.appInteractions = sentTx;
-    activityData.mainnetTxCount = walletData.mainnetTxCount ?? txCount;
-    activityData.testnetTxCount = walletData.testnetTxCount ?? txCount;
-    activityData.totalVolume = walletData.balance || 0;
+    activityData.mainnetTxCount = liveWalletData.mainnetTxCount ?? txCount;
+    activityData.testnetTxCount = liveWalletData.testnetTxCount ?? txCount;
+    activityData.totalVolume = liveWalletData.balance || 0;
     activityData.uniqueContacts = Math.min(Math.floor(txCount / 3), 30);
-    activityData.regularActivityWeeks = Math.min(Math.floor((walletData.accountAge || 0) / 7), 52);
+    activityData.regularActivityWeeks = Math.min(Math.floor((liveWalletData.accountAge || 0) / 7), 52);
     
     // App engagement from reputation service
     if (unifiedScoreData) {
@@ -318,7 +323,7 @@ export function UnifiedDashboard({
     activityData.stakingDays = 0;
     
     return calculateAtomicReputation(activityData);
-  }, [walletData.accountAge, walletData.transactions?.length, walletData.balance, unifiedScoreData]);
+  }, [liveWalletData.accountAge, liveWalletData.transactions?.length, liveWalletData.balance, unifiedScoreData]);
 
   const levelProgress = useMemo(() => {
     return getLevelProgress(atomicResult.adjustedScore);
@@ -327,19 +332,41 @@ export function UnifiedDashboard({
   const defaultColors = { text: '#00D9FF', bg: 'rgba(0, 217, 255, 0.1)', border: 'rgba(0, 217, 255, 0.3)' };
   const trustColors = TRUST_LEVEL_COLORS[levelProgress.currentLevel] || defaultColors;
 
-  const handleModeChange = (newMode: NetworkMode) => {
+  const handleModeChange = useCallback(async (newMode: NetworkMode) => {
     if (newMode === 'demo') {
       setMode({ mode: 'demo', connected: false });
       localStorage.setItem('reputaNetworkMode', 'demo');
-    } else {
-      setMode({ 
-        mode: newMode, 
-        connected: true,
-        walletAddress: walletData.address
-      });
-      localStorage.setItem('reputaNetworkMode', newMode);
+      return;
     }
-  };
+
+    // 1. Sync ALL localStorage keys so every service reads the same value
+    localStorage.setItem('reputaNetworkMode', newMode);
+    localStorage.setItem('PI_NETWORK', newMode);
+
+    // 2. Update WalletDataService singleton at runtime
+    walletDataService.setNetwork(newMode);
+
+    // 3. Update React state
+    setMode({ mode: newMode, connected: true, walletAddress: liveWalletData.address });
+
+    // 4. Re-fetch wallet data from the new network
+    const address = liveWalletData.address;
+    if (!address || address.includes('DEMO')) return;
+
+    setNetworkLoading(true);
+    try {
+      const freshData = await fetchWalletData(address);
+      setLiveWalletData(freshData);
+      console.log(`[Network Switch] Fetched ${newMode} data for ${address.slice(0, 8)}...`, {
+        balance: freshData.balance,
+        txCount: freshData.transactions?.length,
+      });
+    } catch (error) {
+      console.warn(`[Network Switch] Failed to fetch ${newMode} data, keeping current:`, error);
+    } finally {
+      setNetworkLoading(false);
+    }
+  }, [liveWalletData.address]);
 
   const handleModeToggle = () => {
     const modes: NetworkMode[] = ['testnet', 'mainnet', 'demo'];
@@ -349,7 +376,6 @@ export function UnifiedDashboard({
   };
 
   const handleFastNetworkToggle = () => {
-    // Fast toggle between mainnet and testnet only (skip demo)
     const newMode = mode.mode === 'mainnet' ? 'testnet' : 'mainnet';
     handleModeChange(newMode);
   };
@@ -414,10 +440,11 @@ export function UnifiedDashboard({
       {/* Mobile Top Bar with Menu */}
       <TopBar 
         onMenuClick={() => setIsSideDrawerOpen(true)}
-        balance={walletData.balance}
+        balance={liveWalletData.balance}
         username={username}
         networkMode={mode.mode}
         onNetworkToggle={handleFastNetworkToggle}
+        networkLoading={networkLoading}
       />
       
       {/* Desktop Sidebar - hidden on mobile */}
@@ -431,6 +458,24 @@ export function UnifiedDashboard({
       </div>
 
       <main className="flex-1 p-3 lg:p-6 overflow-x-hidden overflow-y-auto relative z-10 mobile-main-content pt-16 lg:pt-3 pb-24 lg:pb-6 w-full">
+        {/* Network Switch Loading Overlay */}
+        {networkLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: 'radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%)', filter: 'blur(20px)', transform: 'scale(2)' }} />
+                <div className="relative w-12 h-12 rounded-full animate-spin border-3 border-indigo-500/20 border-t-indigo-500" style={{ borderWidth: '3px' }} />
+              </div>
+              <p className="text-sm font-bold uppercase tracking-wider text-indigo-400 animate-pulse">
+                Switching Network...
+              </p>
+              <p className="text-[10px] text-gray-500 text-center max-w-xs">
+                Re-fetching wallet data from {mode.mode === 'mainnet' ? 'Mainnet' : 'Testnet'}
+              </p>
+            </div>
+          </div>
+        )}
+        
         {/* Mobile Spacer for Fixed Header */}
         <div className="h-4 lg:hidden" />
         {/* Desktop Section Header - hidden on mobile */}
@@ -485,8 +530,8 @@ export function UnifiedDashboard({
         <div className="mb-5">
           <MainCard
             username={username || 'Pioneer'}
-            walletAddress={walletData.address}
-            balance={walletData.balance}
+            walletAddress={liveWalletData.address}
+            balance={liveWalletData.balance}
             reputaScore={mode.mode === 'demo' ? 0 : levelProgress.displayScore}
             level={levelProgress.levelIndex + 1}
             trustLevel={levelProgress.currentLevel}
@@ -523,8 +568,8 @@ export function UnifiedDashboard({
             <TrustGauge 
               score={levelProgress.displayScore} 
               trustLevel={gaugeLevel}
-              consistencyScore={walletData.consistencyScore ?? 85}
-              networkTrust={walletData.networkTrust ?? 90}
+              consistencyScore={liveWalletData.consistencyScore ?? 85}
+              networkTrust={liveWalletData.networkTrust ?? 90}
               mainnetPoints={atomicResult.mainnetScore}
               testnetPoints={atomicResult.testnetScore}
               appEngagementPoints={atomicResult.appEngageScore}
@@ -533,7 +578,7 @@ export function UnifiedDashboard({
             {/* ═══ Unified 6-Card Action Grid ═══ */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
-                { id: 'transactions' as ActiveSection, label: 'TOTAL TX', sub: `${walletData?.totalTransactions || 0} Transactions`, icon: Activity, gradient: 'from-purple-500/20 to-violet-500/20', border: 'rgba(139, 92, 246, 0.25)', text: 'text-purple-400', glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]' },
+                { id: 'transactions' as ActiveSection, label: 'TOTAL TX', sub: `${liveWalletData?.totalTransactions || 0} Transactions`, icon: Activity, gradient: 'from-purple-500/20 to-violet-500/20', border: 'rgba(139, 92, 246, 0.25)', text: 'text-purple-400', glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]' },
                 { id: 'analytics' as ActiveSection, label: 'ANALYTICS', sub: 'Charts & Insights', icon: LineChart, gradient: 'from-cyan-500/20 to-blue-500/20', border: 'rgba(0, 217, 255, 0.25)', text: 'text-cyan-400', glow: 'hover:shadow-[0_0_20px_rgba(0,217,255,0.15)]' },
                 { id: 'portfolio' as ActiveSection, label: 'PORTFOLIO', sub: `${tokens.length} Tokens`, icon: PieChart, gradient: 'from-emerald-500/20 to-teal-500/20', border: 'rgba(16, 185, 129, 0.25)', text: 'text-emerald-400', glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
                 { id: 'audit' as ActiveSection, label: 'FULL REPORT', sub: 'Audit & Trust', icon: FileText, gradient: 'from-amber-500/20 to-orange-500/20', border: 'rgba(245, 158, 11, 0.25)', text: 'text-amber-400', glow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
@@ -649,8 +694,8 @@ export function UnifiedDashboard({
               </div>
             <Suspense fallback={<div className="py-6 text-center">Loading transactions...</div>}>
               <TransactionList 
-                transactions={walletData?.transactions?.slice(0, 4) || []} 
-                walletAddress={walletData?.address || ''} 
+                transactions={liveWalletData?.transactions?.slice(0, 4) || []} 
+                walletAddress={liveWalletData?.address || ''} 
               />
             </Suspense>
             </div>
@@ -690,8 +735,8 @@ export function UnifiedDashboard({
             <Suspense fallback={<div className="py-12 text-center">Loading transactions...</div>}>
               <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                 <TransactionList 
-                  transactions={walletData?.transactions || []} 
-                  walletAddress={walletData?.address || ''} 
+                  transactions={liveWalletData?.transactions || []} 
+                  walletAddress={liveWalletData?.address || ''} 
                 />
               </div>
             </Suspense>
@@ -703,8 +748,8 @@ export function UnifiedDashboard({
             <Suspense fallback={<div className="py-12 text-center">Loading audit report...</div>}>
               <AuditReport 
                 walletData={{
-                  ...walletData,
-                  transactions: walletData?.transactions || []
+                  ...liveWalletData,
+                  transactions: liveWalletData?.transactions || []
                 }} 
                 isProUser={isProUser} 
                 onUpgradePrompt={onUpgradePrompt}
@@ -755,10 +800,10 @@ export function UnifiedDashboard({
                 </div>
                 <div className="glass-card p-5" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                   <PiDexSection 
-                    walletAddress={walletData.address}
-                    balance={walletData.balance}
-                    totalSent={walletData.transactions?.filter(tx => tx.type === 'sent').reduce((sum, tx) => sum + tx.amount, 0) || 0}
-                    totalReceived={walletData.transactions?.filter(tx => tx.type === 'received').reduce((sum, tx) => sum + tx.amount, 0) || 0}
+                    walletAddress={liveWalletData.address}
+                    balance={liveWalletData.balance}
+                    totalSent={liveWalletData.transactions?.filter(tx => tx.type === 'sent').reduce((sum, tx) => sum + tx.amount, 0) || 0}
+                    totalReceived={liveWalletData.transactions?.filter(tx => tx.type === 'received').reduce((sum, tx) => sum + tx.amount, 0) || 0}
                     isMainnet={mode.mode !== 'testnet'}
                   />
                 </div>
@@ -781,17 +826,17 @@ export function UnifiedDashboard({
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-2">Wallet Address</p>
-                    <p className="font-mono text-sm text-white break-all">{walletData.address}</p>
+                    <p className="font-mono text-sm text-white break-all">{liveWalletData.address}</p>
                   </div>
                   
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Available Balance</p>
-                    <p className="text-2xl font-black neon-text-purple">{(walletData.balance ?? 0).toFixed(4)} <span className="text-purple-400">π</span></p>
+                    <p className="text-2xl font-black neon-text-purple">{(liveWalletData.balance ?? 0).toFixed(4)} <span className="text-purple-400">π</span></p>
                   </div>
                   
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Account Age</p>
-                    <p className="text-xl font-black text-emerald-400">{walletData.accountAge ?? 0} days</p>
+                    <p className="text-xl font-black text-emerald-400">{liveWalletData.accountAge ?? 0} days</p>
                   </div>
                 </div>
                 
@@ -830,8 +875,8 @@ export function UnifiedDashboard({
             <TrustGauge 
               score={levelProgress.displayScore} 
               trustLevel={gaugeLevel}
-              consistencyScore={walletData.consistencyScore ?? 85}
-              networkTrust={walletData.networkTrust ?? 90}
+              consistencyScore={liveWalletData.consistencyScore ?? 85}
+              networkTrust={liveWalletData.networkTrust ?? 90}
               mainnetPoints={atomicResult.mainnetScore}
               testnetPoints={atomicResult.testnetScore}
               appEngagementPoints={atomicResult.appEngageScore}
@@ -859,7 +904,7 @@ export function UnifiedDashboard({
             ) : networkSubPage === 'top-wallets' ? (
               <TopWalletsPage onBack={() => setNetworkSubPage(null)} />
             ) : networkSubPage === 'reputation' ? (
-              <ReputationPage onBack={() => setNetworkSubPage(null)} walletAddress={walletData.address} sharedAtomicResult={atomicResult} />
+              <ReputationPage onBack={() => setNetworkSubPage(null)} walletAddress={liveWalletData.address} sharedAtomicResult={atomicResult} />
             ) : (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Network Info Header */}
@@ -986,8 +1031,8 @@ export function UnifiedDashboard({
           <div className="space-y-6 animate-in fade-in duration-300">
             <Suspense fallback={<div className="py-12 text-center text-gray-400">Loading Activity Hub...</div>}>
               <ActivityHub
-                walletAddress={walletData.address}
-                walletData={walletData}
+                walletAddress={liveWalletData.address}
+                walletData={liveWalletData}
                 atomicResult={atomicResult}
                 isMainnet={mode.mode !== 'testnet'}
                 onScoreUpdate={() => {
@@ -1003,7 +1048,7 @@ export function UnifiedDashboard({
         {activeSection === 'profile' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <ProfileSection 
-              walletData={walletData}
+              walletData={liveWalletData}
               username={username || 'Pioneer'}
               isProUser={isProUser}
               mode={mode}
@@ -1361,8 +1406,8 @@ export function UnifiedDashboard({
           setIsSideDrawerOpen(false);
         }}
         username={username}
-        walletAddress={walletData.address}
-        balance={walletData.balance}
+        walletAddress={liveWalletData.address}
+        balance={liveWalletData.balance}
         onLogout={onReset}
       />
 
@@ -1373,7 +1418,7 @@ export function UnifiedDashboard({
           score={mode.mode === 'demo' ? 0 : (unifiedScoreData?.totalScore ?? levelProgress.displayScore)}
           level={levelProgress.levelIndex + 1}
           trustRank={unifiedScoreData?.atomicTrustLevel ?? levelProgress.currentLevel}
-          walletAddress={walletData.address}
+          walletAddress={liveWalletData.address}
           onClose={() => setShowShareCard(false)}
         />
       )}
