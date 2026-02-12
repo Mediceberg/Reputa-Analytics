@@ -1,5 +1,5 @@
 import React from 'react'; 
-import { X, Sparkles, Lock, Check, Shield, Zap } from 'lucide-react';
+import { X, Sparkles, Shield, Check, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Dialog,
@@ -100,7 +100,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
                       <span>Basic Trust Score</span>
                     </li>
                     <li className="flex items-start gap-2 opacity-40">
-                      <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                      <Shield className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                       <span>Limited Analysis</span>
                     </li>
                   </ul>
@@ -167,7 +167,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
 
               {/* Security Note */}
               <div className="flex items-center justify-center gap-2 text-[10px] text-gray-500 pb-6">
-                <Lock className="w-3 h-3" />
+                <Shield className="w-3 h-3" />
                 <span>Secure payment via Pi Network</span>
               </div>
             </div>

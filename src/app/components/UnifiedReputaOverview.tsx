@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'; 
 import { motion } from 'motion/react'; 
-import { 
+import {
   Shield, 
   Star, 
   Activity, 
@@ -12,7 +12,6 @@ import {
   Award, 
   Target, 
   BarChart3,
-  Lock,
   ArrowRightLeft
 } from 'lucide-react';
 import { 
@@ -209,7 +208,7 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
         label: language === 'ar' ? 'Staking' : 'Staking Status', 
         value: result.staking.totalPoints, 
         max: totalPositive, 
-        icon: Lock, 
+        icon: Shield, 
         color: '#F59E0B' 
       },
     ];
