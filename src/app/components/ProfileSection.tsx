@@ -37,23 +37,29 @@ function formatAddress(address: string): string {
 }
 
 const LEVEL_ICONS: Record<AtomicTrustLevel, React.ReactNode> = {
-  'Very Low Trust': <Shield className="w-4 h-4" />,
-  'Low Trust': <Shield className="w-4 h-4" />,
-  'Medium': <Shield className="w-4 h-4" />,
-  'Active': <Zap className="w-4 h-4" />,
+  'Novice': <Shield className="w-4 h-4" />,
+  'Explorer': <Shield className="w-4 h-4" />,
+  'Contributor': <Shield className="w-4 h-4" />,
+  'Verified': <Zap className="w-4 h-4" />,
   'Trusted': <Star className="w-4 h-4" />,
-  'Pioneer+': <Award className="w-4 h-4" />,
+  'Ambassador': <Award className="w-4 h-4" />,
   'Elite': <Award className="w-4 h-4" />,
+  'Sentinel': <Award className="w-4 h-4" />,
+  'Oracle': <Award className="w-4 h-4" />,
+  'Atomic Legend': <Award className="w-4 h-4" />,
 };
 
 const LEVEL_NAMES: Record<AtomicTrustLevel, { en: string; ar: string }> = {
-  'Very Low Trust': { en: 'Very Low', ar: 'ضعيف جداً' },
-  'Low Trust': { en: 'Low', ar: 'ضعيف' },
-  'Medium': { en: 'Medium', ar: 'متوسط' },
-  'Active': { en: 'Active', ar: 'نشط' },
+  'Novice': { en: 'Novice', ar: 'مبتدئ' },
+  'Explorer': { en: 'Explorer', ar: 'مستكشف' },
+  'Contributor': { en: 'Contributor', ar: 'مساهم' },
+  'Verified': { en: 'Verified', ar: 'موثق' },
   'Trusted': { en: 'Trusted', ar: 'موثوق' },
-  'Pioneer+': { en: 'Pioneer+', ar: 'رائد+' },
+  'Ambassador': { en: 'Ambassador', ar: 'سفير' },
   'Elite': { en: 'Elite', ar: 'نخبة' },
+  'Sentinel': { en: 'Sentinel', ar: 'حارس' },
+  'Oracle': { en: 'Oracle', ar: 'مراجع' },
+  'Atomic Legend': { en: 'Atomic Legend', ar: 'أسطورة ذرية' },
 };
 
 export function ProfileSection({ 

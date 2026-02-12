@@ -25,6 +25,19 @@ import {
   CumulativeScore,
   BACKEND_SCORE_CAP,
 } from '../protocol/scoringRulesEngine';
+import {
+  type PendingReward,
+  type RewardState,
+  type ScanSnapshot,
+  type ClaimResult,
+  calculateScanRewards,
+  claimPendingRewards,
+  createDailyCheckInReward,
+  createStreakReward,
+  createWeeklyClaimBonus,
+  createDefaultRewardState,
+} from '../protocol/rewardEngine';
+import { TOTAL_SCORE_CAP, CATEGORY_CAPS } from '../protocol/scoringRules';
 
 export interface UserReputationState {
   uid: string;
@@ -44,6 +57,9 @@ export interface UserReputationState {
   lastUpdated: string | null;
   lastBlockchainSync: string | null;
   isNew?: boolean;
+  genesisCompleted?: boolean;
+  genesisScore?: number;
+  rewardState?: RewardState;
 }
 
 export interface InteractionEvent {
@@ -64,6 +80,7 @@ export class ReputationService {
   private syncQueue: Array<{ action: string; data: any }> = [];
   private isSyncing: boolean = false;
   private unifiedScoreListeners = new Set<(score: UnifiedScoreData) => void>();
+  private rewardState: RewardState | null = null;
 
   private constructor() {}
 
@@ -788,6 +805,8 @@ export class ReputationService {
     const atomicLevel = this.mapRankToAtomicLevel(levelInfo.rank);
     const colors = TRUST_LEVEL_COLORS[atomicLevel];
 
+    const pending = this.getPendingRewards();
+
     return {
       totalScore,
       blockchainScore: this.currentState.blockchainScore || 0,
@@ -805,6 +824,10 @@ export class ReputationService {
       colors,
       walletAddress: this.currentState.walletAddress,
       uid: this.currentState.uid,
+      pendingRewardsCount: pending.rewards.length,
+      pendingRewardsTotal: pending.totalPoints,
+      genesisCompleted: this.currentState.genesisCompleted || false,
+      genesisScore: this.currentState.genesisScore || 0,
     };
   }
 
@@ -819,16 +842,19 @@ export class ReputationService {
       if (!stored) return null;
       const parsed = JSON.parse(stored) as UserReputationState;
       const totalScore = this.calculateUnifiedScore(parsed.blockchainScore || 0, 0, parsed.dailyCheckInPoints || 0);
-      const levelInfo = parsed ? ({ level: 1, rank: 'Low Trust', progressPercent: 0, pointsToNext: 100 } as any) : null;
+      const levelInfo = parsed ? ({ level: 1, rank: 'Novice', progressPercent: 0, pointsToNext: 100 } as any) : null;
       const colors = levelInfo ? { bg: '#000', text: '#fff', border: 'rgba(255,255,255,0.08)' } : { bg: '#000', text: '#fff', border: 'rgba(255,255,255,0.08)' };
+
+      const pendingCount = parsed.rewardState?.pendingRewards?.length || 0;
+      const pendingTotal = (parsed.rewardState?.pendingRewards || []).reduce((s: number, r: any) => s + (r.points || 0), 0);
 
       return {
         totalScore,
         blockchainScore: parsed.blockchainScore || 0,
         dailyCheckInPoints: parsed.dailyCheckInPoints || 0,
         level: levelInfo.level || 1,
-        trustRank: levelInfo.rank || 'Low Trust',
-        atomicTrustLevel: (levelInfo.rank || 'Low Trust') as any,
+        trustRank: levelInfo.rank || 'Novice',
+        atomicTrustLevel: (levelInfo.rank || 'Novice') as any,
         progressPercent: levelInfo.progressPercent || 0,
         pointsToNext: levelInfo.pointsToNext || 100,
         maxScore: BACKEND_SCORE_CAP,
@@ -839,6 +865,10 @@ export class ReputationService {
         colors,
         walletAddress: parsed.walletAddress,
         uid: parsed.uid,
+        pendingRewardsCount: pendingCount,
+        pendingRewardsTotal: pendingTotal,
+        genesisCompleted: parsed.genesisCompleted || false,
+        genesisScore: parsed.genesisScore || 0,
       };
     } catch (e) {
       return null;
@@ -846,14 +876,14 @@ export class ReputationService {
   }
 
   private getDefaultUnifiedScore(): UnifiedScoreData {
-    const colors = TRUST_LEVEL_COLORS['Very Low Trust'];
+    const colors = TRUST_LEVEL_COLORS['Novice'];
     return {
       totalScore: 0,
       blockchainScore: 0,
       dailyCheckInPoints: 0,
       level: 1,
-      trustRank: 'Very Low Trust',
-      atomicTrustLevel: 'Very Low Trust',
+      trustRank: 'Novice',
+      atomicTrustLevel: 'Novice',
       progressPercent: 0,
       pointsToNext: 100,
       maxScore: BACKEND_SCORE_CAP,
@@ -864,20 +894,27 @@ export class ReputationService {
       colors,
       walletAddress: undefined,
       uid: '',
+      pendingRewardsCount: 0,
+      pendingRewardsTotal: 0,
+      genesisCompleted: false,
+      genesisScore: 0,
     };
   }
 
   private mapRankToAtomicLevel(rank: string): AtomicTrustLevel {
     const mapping: Record<string, AtomicTrustLevel> = {
-      'Very Low Trust': 'Very Low Trust',
-      'Low Trust': 'Low Trust',
-      'Medium': 'Medium',
-      'Active': 'Active',
+      'Novice': 'Novice',
+      'Explorer': 'Explorer',
+      'Contributor': 'Contributor',
+      'Verified': 'Verified',
       'Trusted': 'Trusted',
-      'Pioneer+': 'Pioneer+',
+      'Ambassador': 'Ambassador',
       'Elite': 'Elite',
+      'Sentinel': 'Sentinel',
+      'Oracle': 'Oracle',
+      'Atomic Legend': 'Atomic Legend',
     };
-    return mapping[rank] || 'Low Trust';
+    return mapping[rank] || 'Novice';
   }
 
   /**
@@ -912,6 +949,225 @@ export class ReputationService {
   checkStreakValidity(): { isValid: boolean; resetStreak: boolean } {
     return validateStreak(this.currentState?.lastCheckIn || null);
   }
+
+  // ─── Reward Engine Integration ───────────────────────────────────────────
+
+  private getRewardState(): RewardState {
+    if (this.rewardState) return this.rewardState;
+    if (this.currentState?.rewardState) {
+      this.rewardState = this.currentState.rewardState;
+      return this.rewardState;
+    }
+    this.rewardState = createDefaultRewardState(this.uid || '');
+    return this.rewardState;
+  }
+
+  /**
+   * Build a ScanSnapshot from a WalletSnapshot for the reward engine
+   */
+  private walletToScanSnapshot(ws: WalletSnapshot): ScanSnapshot {
+    return {
+      walletAddress: ws.walletAddress,
+      balance: ws.balance,
+      totalTransactions: ws.totalTransactions,
+      totalSent: ws.totalSent,
+      totalReceived: ws.totalReceived,
+      totalVolume: ws.totalSent + ws.totalReceived,
+      uniqueContacts: ws.uniqueContacts,
+      uniqueTokens: 0,
+      uniqueDapps: 0,
+      hasStaking: false,
+      hasDexTrades: false,
+      txCount: ws.transactions.length,
+      receivedCount: ws.transactions.filter(tx => tx.type === 'received').length,
+      sentCount: ws.transactions.filter(tx => tx.type === 'sent').length,
+      snapshotDate: (ws.snapshotDate instanceof Date ? ws.snapshotDate : new Date(ws.snapshotDate)).toISOString(),
+    };
+  }
+
+  /**
+   * Smart Re-Scan: Compare current blockchain data with last snapshot,
+   * generate pending rewards for new activity only.
+   * كل Scan = فرصة مكافأة جديدة
+   */
+  async performSmartScan(walletAddress: string): Promise<{
+    success: boolean;
+    newPendingRewards: PendingReward[];
+    totalPending: number;
+    scanSnapshot: ScanSnapshot;
+  }> {
+    if (!this.currentState || !this.uid) {
+      throw new Error('User not loaded');
+    }
+
+    try {
+      const walletSnapshot = await walletDataService.createWalletSnapshot(walletAddress);
+      const currentScan = this.walletToScanSnapshot(walletSnapshot);
+      const rs = this.getRewardState();
+
+      // حساب المكافآت الجديدة بناءً على فرق Snapshot
+      const newRewards = calculateScanRewards(currentScan, rs.lastScanSnapshot);
+
+      // إضافة مكافآت الـ App (Daily Check-in streak)
+      if (rs.streakDays > 0) {
+        newRewards.push(createStreakReward(rs.streakDays));
+      }
+
+      // تحديث حالة المكافآت
+      rs.lastScanSnapshot = currentScan;
+      rs.pendingRewards = [...rs.pendingRewards, ...newRewards];
+
+      // تحديث الحالة الرئيسية
+      this.currentState = {
+        ...this.currentState,
+        walletAddress,
+        walletSnapshot,
+        rewardState: rs,
+        lastBlockchainSync: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+      };
+      this.rewardState = rs;
+
+      await this.saveReputation(this.currentState);
+      this.notifyUnifiedScoreListeners();
+
+      const totalPending = rs.pendingRewards.reduce((sum, r) => sum + r.points, 0);
+
+      console.log('[ReputationService] Smart scan complete:', {
+        newRewards: newRewards.length,
+        totalPending,
+      });
+
+      return {
+        success: true,
+        newPendingRewards: newRewards,
+        totalPending,
+        scanSnapshot: currentScan,
+      };
+    } catch (error) {
+      console.error('[ReputationService] Smart scan error:', error);
+      return {
+        success: false,
+        newPendingRewards: [],
+        totalPending: 0,
+        scanSnapshot: this.getRewardState().lastScanSnapshot || {} as ScanSnapshot,
+      };
+    }
+  }
+
+  /**
+   * Add a pending reward to the queue (for app interactions)
+   */
+  addPendingReward(reward: PendingReward): void {
+    const rs = this.getRewardState();
+    rs.pendingRewards.push(reward);
+    this.rewardState = rs;
+    if (this.currentState) {
+      this.currentState.rewardState = rs;
+      this.saveLocalState(this.currentState);
+      this.notifyUnifiedScoreListeners();
+    }
+  }
+
+  /**
+   * 🟢 Claim Rewards — تحويل المكافآت المعلقة إلى النقاط الرئيسية
+   * النقاط لا تُضاف مباشرة — يجب على المستخدم الضغط على Claim
+   */
+  async claimRewards(): Promise<ClaimResult> {
+    if (!this.currentState || !this.uid) {
+      throw new Error('User not loaded');
+    }
+
+    const rs = this.getRewardState();
+
+    if (rs.pendingRewards.length === 0) {
+      return {
+        claimedPoints: 0,
+        recurringClaimed: 0,
+        appClaimed: 0,
+        claimedRewards: [],
+        newClaimedRecurringTotal: rs.claimedRecurringTotal,
+        newClaimedAppTotal: rs.claimedAppTotal,
+      };
+    }
+
+    const result = claimPendingRewards(
+      rs.pendingRewards,
+      rs.claimedRecurringTotal,
+      rs.claimedAppTotal,
+    );
+
+    // Weekly claim bonus
+    rs.totalWeeklyClaims += 1;
+    const weeklyBonus = createWeeklyClaimBonus();
+
+    // تحديث حالة المكافآت
+    rs.claimedRecurringTotal = result.newClaimedRecurringTotal;
+    rs.claimedAppTotal = result.newClaimedAppTotal;
+    rs.pendingRewards = [weeklyBonus]; // الـ weekly bonus يبقى pending للـ claim القادم
+
+    // تحديث النقاط الرئيسية
+    const newBlockchainScore = this.currentState.blockchainScore + result.recurringClaimed;
+    const newDailyPoints = this.currentState.dailyCheckInPoints + result.appClaimed;
+
+    const newState: UserReputationState = {
+      ...this.currentState,
+      blockchainScore: newBlockchainScore,
+      dailyCheckInPoints: newDailyPoints,
+      reputationScore: this.calculateUnifiedScore(newBlockchainScore, 0, newDailyPoints),
+      rewardState: rs,
+      interactionHistory: [
+        {
+          type: 'claim_rewards',
+          points: result.claimedPoints,
+          timestamp: new Date().toISOString(),
+          description: `Claimed ${result.claimedPoints} points (${result.recurringClaimed} recurring + ${result.appClaimed} app)`,
+        },
+        ...this.currentState.interactionHistory.slice(0, 99),
+      ],
+      lastUpdated: new Date().toISOString(),
+    };
+
+    this.currentState = newState;
+    this.rewardState = rs;
+    await this.saveReputation(newState);
+    this.notifyUnifiedScoreListeners();
+
+    console.log('[ReputationService] Claim rewards:', {
+      claimed: result.claimedPoints,
+      recurring: result.recurringClaimed,
+      app: result.appClaimed,
+      totalWeeklyClaims: rs.totalWeeklyClaims,
+    });
+
+    return result;
+  }
+
+  /**
+   * Get current pending rewards info
+   */
+  getPendingRewards(): { rewards: PendingReward[]; totalPoints: number; recurringPoints: number; appPoints: number } {
+    const rs = this.getRewardState();
+    const recurringPoints = rs.pendingRewards
+      .filter(r => r.category === 'recurring')
+      .reduce((sum, r) => sum + r.points, 0);
+    const appPoints = rs.pendingRewards
+      .filter(r => r.category === 'app')
+      .reduce((sum, r) => sum + r.points, 0);
+    return {
+      rewards: rs.pendingRewards,
+      totalPoints: recurringPoints + appPoints,
+      recurringPoints,
+      appPoints,
+    };
+  }
+
+  /**
+   * Get the full reward state for persistence/display
+   */
+  getRewardStateData(): RewardState {
+    return this.getRewardState();
+  }
 }
 
 export interface UnifiedScoreData {
@@ -931,6 +1187,10 @@ export interface UnifiedScoreData {
   colors: { bg: string; text: string; border: string };
   walletAddress?: string;
   uid: string;
+  pendingRewardsCount: number;
+  pendingRewardsTotal: number;
+  genesisCompleted: boolean;
+  genesisScore: number;
 }
 
 export const reputationService = ReputationService.getInstance();

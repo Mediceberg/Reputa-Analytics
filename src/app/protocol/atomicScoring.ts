@@ -1,13 +1,16 @@
 import { calculateReputationAtomic, getReputationAtomicScoreCap } from './ReputationAtomic';
 
 export type AtomicTrustLevel =
-  | 'Very Low Trust'
-  | 'Low Trust'
-  | 'Medium'
-  | 'Active'
+  | 'Novice'
+  | 'Explorer'
+  | 'Contributor'
+  | 'Verified'
   | 'Trusted'
-  | 'Pioneer+'
-  | 'Elite';
+  | 'Ambassador'
+  | 'Elite'
+  | 'Sentinel'
+  | 'Oracle'
+  | 'Atomic Legend';
 
 export interface AtomicScoreItem {
   category: string;
@@ -66,14 +69,18 @@ export interface AtomicReputationResult {
 
 const BACKEND_SCORE_CAP = getReputationAtomicScoreCap();
 
+/** النظام العشري الذري — 10 مستويات من 0 إلى 1,000,000 */
 const TRUST_LEVEL_THRESHOLDS: { min: number; max: number; level: AtomicTrustLevel; index: number }[] = [
-  { min: -Infinity, max: 0, level: 'Very Low Trust', index: 0 },
-  { min: 0, max: BACKEND_SCORE_CAP * 0.1, level: 'Low Trust', index: 1 },
-  { min: BACKEND_SCORE_CAP * 0.1, max: BACKEND_SCORE_CAP * 0.25, level: 'Medium', index: 2 },
-  { min: BACKEND_SCORE_CAP * 0.25, max: BACKEND_SCORE_CAP * 0.45, level: 'Active', index: 3 },
-  { min: BACKEND_SCORE_CAP * 0.45, max: BACKEND_SCORE_CAP * 0.65, level: 'Trusted', index: 4 },
-  { min: BACKEND_SCORE_CAP * 0.65, max: BACKEND_SCORE_CAP * 0.85, level: 'Pioneer+', index: 5 },
-  { min: BACKEND_SCORE_CAP * 0.85, max: Infinity, level: 'Elite', index: 6 },
+  { min: 0,       max: 10_001,  level: 'Novice',        index: 0 },
+  { min: 10_001,  max: 50_001,  level: 'Explorer',      index: 1 },
+  { min: 50_001,  max: 150_001, level: 'Contributor',   index: 2 },
+  { min: 150_001, max: 300_001, level: 'Verified',      index: 3 },
+  { min: 300_001, max: 450_001, level: 'Trusted',       index: 4 },
+  { min: 450_001, max: 600_001, level: 'Ambassador',    index: 5 },
+  { min: 600_001, max: 750_001, level: 'Elite',         index: 6 },
+  { min: 750_001, max: 850_001, level: 'Sentinel',      index: 7 },
+  { min: 850_001, max: 950_001, level: 'Oracle',        index: 8 },
+  { min: 950_001, max: Infinity, level: 'Atomic Legend', index: 9 },
 ];
 
 export function getBackendScoreCap(): number {
@@ -179,24 +186,30 @@ export function generateDemoActivityData(): WalletActivityData {
   };
 }
 
-export const LEVEL_NAMES: AtomicTrustLevel[] = ['Very Low Trust', 'Low Trust', 'Medium', 'Active', 'Trusted', 'Pioneer+', 'Elite'];
+export const LEVEL_NAMES: AtomicTrustLevel[] = [
+  'Novice', 'Explorer', 'Contributor', 'Verified', 'Trusted',
+  'Ambassador', 'Elite', 'Sentinel', 'Oracle', 'Atomic Legend',
+];
 export type TrustLevel = 'Low' | 'Medium' | 'High' | 'Elite';
 
 export function mapAtomicToTrustLevel(atomicLevel: AtomicTrustLevel): TrustLevel {
-  if (atomicLevel === 'Elite') return 'Elite';
-  if (atomicLevel === 'Pioneer+' || atomicLevel === 'Trusted') return 'High';
-  if (atomicLevel === 'Active' || atomicLevel === 'Medium') return 'Medium';
+  if (atomicLevel === 'Atomic Legend' || atomicLevel === 'Oracle' || atomicLevel === 'Sentinel') return 'Elite';
+  if (atomicLevel === 'Elite' || atomicLevel === 'Ambassador' || atomicLevel === 'Trusted') return 'High';
+  if (atomicLevel === 'Verified' || atomicLevel === 'Contributor') return 'Medium';
   return 'Low';
 }
 
 export const TRUST_LEVEL_COLORS: Record<AtomicTrustLevel, { bg: string; text: string; border: string }> = {
-  'Very Low Trust': { bg: 'rgba(239, 68, 68, 0.2)', text: '#EF4444', border: 'rgba(239, 68, 68, 0.5)' },
-  'Low Trust': { bg: 'rgba(249, 115, 22, 0.2)', text: '#F97316', border: 'rgba(249, 115, 22, 0.5)' },
-  Medium: { bg: 'rgba(234, 179, 8, 0.2)', text: '#EAB308', border: 'rgba(234, 179, 8, 0.5)' },
-  Active: { bg: 'rgba(34, 197, 94, 0.2)', text: '#22C55E', border: 'rgba(34, 197, 94, 0.5)' },
-  Trusted: { bg: 'rgba(59, 130, 246, 0.2)', text: '#3B82F6', border: 'rgba(59, 130, 246, 0.5)' },
-  'Pioneer+': { bg: 'rgba(139, 92, 246, 0.2)', text: '#8B5CF6', border: 'rgba(139, 92, 246, 0.5)' },
-  Elite: { bg: 'rgba(0, 217, 255, 0.2)', text: '#00D9FF', border: 'rgba(0, 217, 255, 0.5)' },
+  Novice:          { bg: 'rgba(156, 163, 175, 0.15)', text: '#9CA3AF', border: 'rgba(156, 163, 175, 0.4)' },
+  Explorer:        { bg: 'rgba(249, 115, 22, 0.15)',  text: '#F97316', border: 'rgba(249, 115, 22, 0.4)' },
+  Contributor:     { bg: 'rgba(234, 179, 8, 0.15)',   text: '#EAB308', border: 'rgba(234, 179, 8, 0.4)' },
+  Verified:        { bg: 'rgba(34, 197, 94, 0.15)',   text: '#22C55E', border: 'rgba(34, 197, 94, 0.4)' },
+  Trusted:         { bg: 'rgba(59, 130, 246, 0.15)',  text: '#3B82F6', border: 'rgba(59, 130, 246, 0.4)' },
+  Ambassador:      { bg: 'rgba(139, 92, 246, 0.15)',  text: '#8B5CF6', border: 'rgba(139, 92, 246, 0.4)' },
+  Elite:           { bg: 'rgba(236, 72, 153, 0.15)',  text: '#EC4899', border: 'rgba(236, 72, 153, 0.4)' },
+  Sentinel:        { bg: 'rgba(168, 85, 247, 0.15)',  text: '#A855F7', border: 'rgba(168, 85, 247, 0.4)' },
+  Oracle:          { bg: 'rgba(251, 191, 36, 0.2)',   text: '#FBBF24', border: 'rgba(251, 191, 36, 0.5)' },
+  'Atomic Legend':  { bg: 'rgba(0, 217, 255, 0.2)',    text: '#00D9FF', border: 'rgba(0, 217, 255, 0.5)' },
 };
 
 export const CATEGORY_LABELS: Record<string, { en: string; ar: string }> = {

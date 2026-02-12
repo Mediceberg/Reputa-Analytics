@@ -97,13 +97,16 @@ export function AtomicProtocolPage({ onBack }: AtomicProtocolPageProps) {
   ];
 
   const trustLevels = [
-    { level: 'Very Low Trust', range: '0-1000', color: ATOMIC_TRUST_LEVEL_COLORS['Very Low Trust'] },
-    { level: 'Low Trust', range: '1000-2000', color: ATOMIC_TRUST_LEVEL_COLORS['Low Trust'] },
-    { level: 'Medium', range: '2000-4000', color: ATOMIC_TRUST_LEVEL_COLORS['Medium'] },
-    { level: 'Active', range: '4000-6000', color: ATOMIC_TRUST_LEVEL_COLORS['Active'] },
-    { level: 'Trusted', range: '6000-7500', color: ATOMIC_TRUST_LEVEL_COLORS['Trusted'] },
-    { level: 'Pioneer+', range: '7500-8500', color: ATOMIC_TRUST_LEVEL_COLORS['Pioneer+'] },
-    { level: 'Elite', range: '8500-10000', color: ATOMIC_TRUST_LEVEL_COLORS['Elite'] },
+    { level: 'Novice', range: '0-10,000', color: ATOMIC_TRUST_LEVEL_COLORS['Novice'] },
+    { level: 'Explorer', range: '10,001-50,000', color: ATOMIC_TRUST_LEVEL_COLORS['Explorer'] },
+    { level: 'Contributor', range: '50,001-150,000', color: ATOMIC_TRUST_LEVEL_COLORS['Contributor'] },
+    { level: 'Verified', range: '150,001-300,000', color: ATOMIC_TRUST_LEVEL_COLORS['Verified'] },
+    { level: 'Trusted', range: '300,001-450,000', color: ATOMIC_TRUST_LEVEL_COLORS['Trusted'] },
+    { level: 'Ambassador', range: '450,001-600,000', color: ATOMIC_TRUST_LEVEL_COLORS['Ambassador'] },
+    { level: 'Elite', range: '600,001-750,000', color: ATOMIC_TRUST_LEVEL_COLORS['Elite'] },
+    { level: 'Sentinel', range: '750,001-850,000', color: ATOMIC_TRUST_LEVEL_COLORS['Sentinel'] },
+    { level: 'Oracle', range: '850,001-950,000', color: ATOMIC_TRUST_LEVEL_COLORS['Oracle'] },
+    { level: 'Atomic Legend', range: '950,001-1,000,000', color: ATOMIC_TRUST_LEVEL_COLORS['Atomic Legend'] },
   ];
 
   return (

@@ -31,13 +31,16 @@ interface UnifiedReputaOverviewProps {
 }
 
 const ATOMIC_TRUST_BENEFITS: Record<AtomicTrustLevel, { minScore: number; benefits: string[] }> = {
-  'Elite': { minScore: 8500, benefits: ['Priority transaction processing', 'Reduced fees', 'VIP support access', 'Early feature access'] },
-  'Pioneer+': { minScore: 6500, benefits: ['Enhanced transaction limits', 'Priority support', 'Special community badges'] },
-  'Trusted': { minScore: 4500, benefits: ['Higher transaction limits', 'Enhanced security features', 'Community badges'] },
-  'Active': { minScore: 2500, benefits: ['Standard transaction limits', 'Basic features access', 'Regular support'] },
-  'Medium': { minScore: 1000, benefits: ['Standard transaction limits', 'Basic features access'] },
-  'Low Trust': { minScore: 0, benefits: ['Limited features', 'Higher verification requirements'] },
-  'Very Low Trust': { minScore: -1000, benefits: ['Very limited features', 'Full verification required'] },
+  'Atomic Legend': { minScore: 950_001, benefits: ['Ultimate access', 'Exclusive rewards', 'Protocol governance', 'Top 0.1% badge'] },
+  'Oracle': { minScore: 850_001, benefits: ['Protocol review access', 'Advanced analytics', 'Priority governance'] },
+  'Sentinel': { minScore: 750_001, benefits: ['Network guardian role', 'Enhanced security', 'Priority support'] },
+  'Elite': { minScore: 600_001, benefits: ['Priority processing', 'Reduced fees', 'VIP support', 'Early features'] },
+  'Ambassador': { minScore: 450_001, benefits: ['Enhanced limits', 'Priority support', 'Community badges'] },
+  'Trusted': { minScore: 300_001, benefits: ['Higher limits', 'Enhanced security', 'Community badges'] },
+  'Verified': { minScore: 150_001, benefits: ['Standard limits', 'Full features', 'Regular support'] },
+  'Contributor': { minScore: 50_001, benefits: ['Standard limits', 'Basic features access'] },
+  'Explorer': { minScore: 10_001, benefits: ['Limited features', 'Basic access'] },
+  'Novice': { minScore: 0, benefits: ['Very limited features', 'Verification required'] },
 };
 
 function CircularGauge({ score, maxScore, trustLevel }: { score: number; maxScore: number; trustLevel: AtomicTrustLevel }) {
@@ -243,7 +246,7 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
     },
   ], [result, maxScore, language]);
 
-  const trustLevels: AtomicTrustLevel[] = ['Elite', 'Pioneer+', 'Trusted', 'Active', 'Medium', 'Low Trust', 'Very Low Trust'];
+  const trustLevels: AtomicTrustLevel[] = ['Atomic Legend', 'Oracle', 'Sentinel', 'Elite', 'Ambassador', 'Trusted', 'Verified', 'Contributor', 'Explorer', 'Novice'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -388,7 +391,7 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
           </h3>
 
           <div className="grid grid-cols-2 gap-4">
-            {(['Elite', 'Pioneer+', 'Medium', 'Low Trust'] as AtomicTrustLevel[]).map((level, index) => {
+            {(['Atomic Legend', 'Elite', 'Trusted', 'Novice'] as AtomicTrustLevel[]).map((level, index) => {
               const isCurrentTier = level === result.trustLevel;
               const tierColors = TRUST_LEVEL_COLORS[level];
               const tierBenefits = ATOMIC_TRUST_BENEFITS[level];

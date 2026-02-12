@@ -158,16 +158,19 @@ export const SCORING_RULES: Record<string, ScoringRule> = {
 };
 
 export const LEVEL_THRESHOLDS = [
-  { level: 1, minScore: 0, maxScore: 100, rank: 'Very Low Trust' },
-  { level: 2, minScore: 100, maxScore: 500, rank: 'Low Trust' },
-  { level: 3, minScore: 500, maxScore: 1500, rank: 'Medium' },
-  { level: 4, minScore: 1500, maxScore: 3500, rank: 'Active' },
-  { level: 5, minScore: 3500, maxScore: 6000, rank: 'Trusted' },
-  { level: 6, minScore: 6000, maxScore: 8500, rank: 'Pioneer+' },
-  { level: 7, minScore: 8500, maxScore: 10000, rank: 'Elite' },
+  { level: 1,  minScore: 0,       maxScore: 10_000,    rank: 'Novice' },
+  { level: 2,  minScore: 10_001,  maxScore: 50_000,    rank: 'Explorer' },
+  { level: 3,  minScore: 50_001,  maxScore: 150_000,   rank: 'Contributor' },
+  { level: 4,  minScore: 150_001, maxScore: 300_000,   rank: 'Verified' },
+  { level: 5,  minScore: 300_001, maxScore: 450_000,   rank: 'Trusted' },
+  { level: 6,  minScore: 450_001, maxScore: 600_000,   rank: 'Ambassador' },
+  { level: 7,  minScore: 600_001, maxScore: 750_000,   rank: 'Elite' },
+  { level: 8,  minScore: 750_001, maxScore: 850_000,   rank: 'Sentinel' },
+  { level: 9,  minScore: 850_001, maxScore: 950_000,   rank: 'Oracle' },
+  { level: 10, minScore: 950_001, maxScore: 1_000_000, rank: 'Atomic Legend' },
 ];
 
-export const BACKEND_SCORE_CAP = 10000;
+export const BACKEND_SCORE_CAP = 1_000_000;
 
 export function calculatePointsForRule(
   ruleId: string,

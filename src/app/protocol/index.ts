@@ -5,7 +5,44 @@
  */
 
 // Core Functions - يتم تصدير الدوال التي تم ربطها بالبلوكشين والـ SDK
-export { calculateReputationAtomic, getReputationAtomicScoreCap, type ReputationAtomicInput, type ReputationAtomicResult } from './ReputationAtomic';
+export { calculateReputationAtomic, calculateFullReputation, getReputationAtomicScoreCap, type ReputationAtomicInput, type ReputationAtomicResult, type FullReputationInput, type FullReputationResult } from './ReputationAtomic';
+
+// Scoring Rules Constants
+export {
+  TOTAL_SCORE_CAP,
+  CATEGORY_CAPS,
+  GENESIS_SCAN_BONUS,
+  GENESIS_WALLET_AGE_BONUS,
+  GENESIS_LIFETIME_ACTIVITY_BONUS,
+  GENESIS_VOLUME_BONUS,
+  GENESIS_ECOSYSTEM_BONUS,
+  WEEKLY_BLOCKCHAIN_REWARDS,
+  MONTHLY_WALLET_REWARDS,
+  APP_INTERACTION_REWARDS,
+  RECURRING_RULES,
+  APP_RULES,
+  calculateGenesisScore,
+  resolveHighestTier,
+  type GenesisInput,
+  type GenesisResult,
+} from './scoringRules';
+
+// Reward Engine — Snapshot diff, pending rewards, claim
+export {
+  calculateScanRewards,
+  claimPendingRewards,
+  createDailyCheckInReward,
+  createStreakReward,
+  createReferralReward,
+  createTaskReward,
+  createWeeklyClaimBonus,
+  createReferralMilestoneReward,
+  createDefaultRewardState,
+  type PendingReward,
+  type ScanSnapshot,
+  type RewardState,
+  type ClaimResult,
+} from './rewardEngine';
 
 export { fetchWalletData } from './wallet';
 export { analyzeTransaction, analyzeAllTransactions, getTransactionExplanation, flagSuspiciousTransactions } from './transactions'; 
