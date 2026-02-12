@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';   
-import { Calendar, Gift, Play, CheckCircle, Zap, Merge } from 'lucide-react';
+import { Calendar, Gift, Play, CheckCircle, Zap } from 'lucide-react';
 import { reputationService, UserReputationState } from '../services/reputationService';
 import { SCORING_RULES } from '../protocol/scoringRulesEngine';
 import { useReputationEngine } from '../hooks/useReputationEngine';
@@ -17,7 +17,6 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
   const [state, setState] = useState<UserReputationState | null>(null);
   const [canCheckIn, setCanCheckIn] = useState(true);
   const [countdown, setCountdown] = useState('');
-  const [isMerging, setIsMerging] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [reputationUid, setReputationUid] = useState<string>('demo');
   const reputationEngine = useReputationEngine(reputationUid);
@@ -66,29 +65,6 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
     }
   };
 
-  const handleMergePoints = async () => {
-    if (!state || state.dailyCheckInPoints <= 0) return;
-
-    setIsMerging(true);
-    if (totalCheckInDays < MERGE_MIN_DAYS) {
-      // don't allow merging until minimum days reached
-      setIsMerging(false);
-      return;
-    }
-    
-    try {
-      const pointsToMerge = state.dailyCheckInPoints;
-      const result = await reputationService.mergeCheckInPointsToReputation();
-      if (result.success) {
-        setState(result.newState);
-        onPointsEarned?.(pointsToMerge, 'merge');
-      }
-    } catch (error) {
-      console.error('Merge error:', error);
-    }
-    
-    setIsMerging(false);
-  };
 
   if (isLoading) {
     return (
@@ -115,8 +91,6 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
 
   // merge allowed only after a minimum number of check-in days
   const MERGE_MIN_DAYS = 7;
-  const mergeDaysRemaining = Math.max(0, MERGE_MIN_DAYS - totalCheckInDays);
-  const canMerge = dailyCheckInPoints > 0 && totalCheckInDays >= MERGE_MIN_DAYS;
 
   return (
     <div 
@@ -209,31 +183,8 @@ export function DailyCheckIn({ userId, isDemo = false, onPointsEarned }: DailyCh
         </div>
 
         {dailyCheckInPoints > 0 && (
-          <div>
-            {canMerge ? (
-              <button
-                onClick={handleMergePoints}
-                disabled={isMerging}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-xs transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              >
-                {isMerging ? (
-                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Merge className="w-4 h-4" />
-                    Merge {dailyCheckInPoints} pts to Reputation
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                disabled
-                className="w-full py-2.5 rounded-xl bg-white/5 text-gray-300 font-bold text-xs flex items-center justify-center gap-2"
-              >
-                <Merge className="w-4 h-4" />
-                Merge locked — {mergeDaysRemaining} day(s) remaining
-              </button>
-            )}
+          <div className="mt-2 p-2.5 rounded-lg text-[10px] text-amber-300/80 bg-amber-400/10 border border-amber-400/20">
+            Weekly Claim happens in <b>Total Points</b> after 7 check-in days.
           </div>
         )}
 
