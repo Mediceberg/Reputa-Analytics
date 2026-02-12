@@ -50,7 +50,7 @@ import {
   LayoutDashboard, PieChart, Activity, LineChart, Settings, MessageSquare, HelpCircle,
   ArrowLeft, User, Wallet, Shield, Globe, Sparkles, Award, AlertCircle,
   RefreshCw, Network, Zap, FileText, Copy, ExternalLink, Bell, Moon, Sun,
-  Trophy, Info
+  Trophy, Info, BarChart3
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
