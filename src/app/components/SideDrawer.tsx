@@ -144,18 +144,7 @@ export function SideDrawer({
             </button>
           </div>
 
-          {balance !== undefined && (
-            <div 
-              className="mx-4 mt-4 p-3 rounded-xl"
-              style={{
-                background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-                border: '1px solid rgba(0, 217, 255, 0.2)',
-              }}
-            >
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-1">Wallet Balance</p>
-              <p className="text-xl font-black text-cyan-400">{balance.toFixed(2)} <span className="text-sm">π</span></p>
-            </div>
-          )}
+          {/* Wallet Balance removed for cleaner Pi Browser experience */}
 
           <nav className="flex-1 overflow-y-auto py-4 px-2">
             <div className="space-y-1">

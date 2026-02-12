@@ -1,13 +1,16 @@
-import { Menu, Wallet, Bell, Send } from 'lucide-react'; 
+import { Menu, Wallet, Bell, Send, Globe, TestTube } from 'lucide-react'; 
 import { useState } from 'react';
+import { NetworkMode, MODE_IMPACTS } from '../protocol/types';
 
 interface TopBarProps {
   onMenuClick: () => void;
   balance?: number;
   username?: string;
+  networkMode?: NetworkMode;
+  onNetworkToggle?: () => void;
 }
 
-export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
+export function TopBar({ onMenuClick, balance, username, networkMode = 'testnet', onNetworkToggle }: TopBarProps) {
   const [clickCount, setClickCount] = useState(0);
   const [showPayoutIcon, setShowPayoutIcon] = useState(false);
 
@@ -76,6 +79,37 @@ export function TopBar({ onMenuClick, balance, username }: TopBarProps) {
         </button>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Network Switcher - Fast Toggle */}
+          {onNetworkToggle && (
+            <button
+              onClick={onNetworkToggle}
+              className="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg flex items-center gap-1 transition-all active:scale-95 hover:scale-105"
+              style={{
+                background: networkMode === 'mainnet' 
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%)'
+                  : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                border: networkMode === 'mainnet'
+                  ? '1px solid rgba(16, 185, 129, 0.4)'
+                  : '1px solid rgba(245, 158, 11, 0.4)',
+                boxShadow: networkMode === 'mainnet'
+                  ? '0 0 10px rgba(16, 185, 129, 0.2)'
+                  : '0 0 10px rgba(245, 158, 11, 0.2)'
+              }}
+              title={`Switch to ${networkMode === 'mainnet' ? 'Testnet' : 'Mainnet'}`}
+            >
+              {networkMode === 'mainnet' ? (
+                <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-400 flex-shrink-0" />
+              ) : (
+                <TestTube className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 flex-shrink-0" />
+              )}
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style={{
+                color: networkMode === 'mainnet' ? '#10B981' : '#F59E0B'
+              }}>
+                {networkMode === 'mainnet' ? 'MAIN' : 'TEST'}
+              </span>
+            </button>
+          )}
+
           <button 
             onClick={handleLogoClick}
             className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform overflow-visible relative"

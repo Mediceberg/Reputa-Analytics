@@ -52,7 +52,7 @@ export function AccessUpgradeModal({ isOpen, onClose, onUpgrade, currentUser }: 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm w-[90vw] max-h-[85vh] p-0 border-2 border-cyan-500/30 bg-gradient-to-br from-slate-900/98 via-slate-800/98 to-slate-900/98 rounded-3xl shadow-2xl shadow-cyan-500/20 backdrop-blur-xl overflow-y-auto fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+      <DialogContent className="max-w-sm w-[95vw] sm:w-[90vw] max-h-[90vh] sm:max-h-[85vh] p-0 border-2 border-cyan-500/30 bg-gradient-to-br from-slate-900/98 via-slate-800/98 to-slate-900/98 rounded-2xl sm:rounded-3xl shadow-2xl shadow-cyan-500/20 backdrop-blur-xl overflow-y-auto !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !z-[60]">
         <div className="relative min-h-[400px]">
           {/* Background Effects */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-3xl">
