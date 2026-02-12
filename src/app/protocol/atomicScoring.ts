@@ -16,6 +16,7 @@ export interface AtomicScoreItem {
   category: string;
   action: string;
   points: number;
+  decayFactor?: number;
   timestamp: Date;
   explanation: string;
 }

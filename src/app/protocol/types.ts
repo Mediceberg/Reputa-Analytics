@@ -85,7 +85,7 @@ export interface ReputationScores {
 export interface ScoreBreakdown {
   walletAge: {
     days: number;
-    maxScore: 20;
+    maxScore: number;
     earnedScore: number;
     explanation: string;
   };
@@ -94,7 +94,7 @@ export interface ScoreBreakdown {
     internal: number;
     external: number;
     suspicious: number;
-    maxScore: 40;
+    maxScore: number;
     earnedScore: number;
     details: TransactionScore[];
     explanation: string;
@@ -103,14 +103,14 @@ export interface ScoreBreakdown {
     active: boolean;
     amount: number;
     duration: number;
-    maxScore: 30;
+    maxScore: number;
     earnedScore: number;
     explanation: string;
   };
   mining: {
     available: boolean;
     totalDays: number;
-    maxScore: 10;
+    maxScore: number;
     earnedScore: number;
     explanation: string;
   };

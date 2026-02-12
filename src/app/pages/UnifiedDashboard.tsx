@@ -26,6 +26,7 @@ const PointsExplainer = React.lazy(async () => ({ default: (await import('../com
 const ShareReputaCard = React.lazy(async () => ({ default: (await import('../components/ShareReputaCard')).ShareReputaCard }));
 const MiningDaysWidget = React.lazy(async () => ({ default: (await import('../components/MiningDaysWidget')).MiningDaysWidget }));
 const ProfileSection = React.lazy(async () => ({ default: (await import('../components/ProfileSection')).ProfileSection }));
+import { PendingRewardsCounter } from '../components/PendingRewardsCounter';
 import { 
   processTransactionTimeline, 
   processScoreBreakdown, 
@@ -129,6 +130,7 @@ export function UnifiedDashboard({
   const [unifiedScoreData, setUnifiedScoreData] = useState<UnifiedScoreData | null>(null);
   const [reputationUid, setReputationUid] = useState<string>('demo');
   const reputationEngine = useReputationEngine(reputationUid);
+  const [pendingRewards, setPendingRewards] = useState(() => reputationService.getPendingRewards());
   const [userPoints, setUserPoints] = useState({
     total: walletData.reputaScore || 0,
     checkIn: 0,
@@ -181,14 +183,23 @@ export function UnifiedDashboard({
       setUserPoints({
         total: score.totalScore,
         checkIn: score.dailyCheckInPoints || 0,
-        transactions: 0,
-        activity: score.blockchainScore || 0,
+        transactions: score.blockchainScore || 0,
+        activity: score.totalCheckInDays || 0,
         streak: score.streak || 0,
       });
+      setPendingRewards(reputationService.getPendingRewards());
     });
 
     return unsubscribe;
   }, [reputationUid]);
+
+  useEffect(() => {
+    setPendingRewards(reputationService.getPendingRewards());
+  }, [unifiedScoreData]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeSection, networkSubPage]);
 
   useEffect(() => {
     const path = window.location.pathname;
@@ -198,23 +209,35 @@ export function UnifiedDashboard({
     }
   }, []);
 
-  useEffect(() => {
-    const nextPath = sectionPaths[activeSection];
-    if (nextPath && window.location.pathname !== nextPath) {
-      window.history.replaceState({}, '', nextPath);
-    }
-  }, [activeSection]);
-
   const handlePointsEarned = async (points: number, type: 'checkin' | 'ad' | 'merge') => {
     const unified = reputationService.getUnifiedScore();
     setUnifiedScoreData(unified);
     setUserPoints({
       total: unified.totalScore,
       checkIn: unified.dailyCheckInPoints || 0,
-      transactions: 0,
-      activity: unified.blockchainScore || 0,
+      transactions: unified.blockchainScore || 0,
+      activity: unified.totalCheckInDays || 0,
       streak: unified.streak || 0,
     });
+    setPendingRewards(reputationService.getPendingRewards());
+  };
+
+  const handleWeeklyClaim = async () => {
+    try {
+      await reputationService.claimRewards();
+      const unified = reputationService.getUnifiedScore();
+      setUnifiedScoreData(unified);
+      setUserPoints({
+        total: unified.totalScore,
+        checkIn: unified.dailyCheckInPoints || 0,
+        transactions: unified.blockchainScore || 0,
+        activity: unified.totalCheckInDays || 0,
+        streak: unified.streak || 0,
+      });
+      setPendingRewards(reputationService.getPendingRewards());
+    } catch (error) {
+      console.error('Weekly claim failed:', error);
+    }
   };
 
   const profilePageData = useMemo(() => ({
@@ -576,6 +599,23 @@ export function UnifiedDashboard({
                     <p className="text-[9px] font-bold uppercase text-amber-400">Streak</p>
                     <p className="text-sm font-black text-amber-400">{userPoints.streak}</p>
                   </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-400/80">App Points (Weekly Claim)</p>
+                      <p className="text-[10px] text-white/40">App + Daily Check-in points are collected here until weekly claim.</p>
+                    </div>
+                  </div>
+                  <PendingRewardsCounter
+                    rewards={pendingRewards.rewards}
+                    totalPoints={pendingRewards.totalPoints}
+                    recurringPoints={pendingRewards.recurringPoints}
+                    appPoints={pendingRewards.appPoints}
+                    onClaim={handleWeeklyClaim}
+                    isClaimable={userPoints.activity >= 7}
+                  />
                 </div>
               </div>
             </div>
