@@ -39,14 +39,386 @@ const redis = new Redis({
 });
 
 // ====================
-// SHARED TYPES
+// SHARED TYPES & DATABASE SCHEMA
 // ====================
+
+// Live Execution Engine Schema
+interface AtomicUserProfile {
+  uid: string;
+  username: string;
+  walletAddress: string;
+  totalAtomicScore: number;
+  pendingRewards: PendingReward[];
+  lastPagingToken: string | null;
+  isGenesisBonusClaimed: boolean;
+  total_historical_activity: {
+    totalVolumeHistorical: number;
+    totalTransactionsHistorical: number;
+    firstTransactionDate: string | null;
+    lastDeepScanDate: string | null;
+  };
+  genesisBoostData?: {
+    accountAgeScore: number;
+    historicalActivityScore: number;
+    volumeScore: number;
+    totalGenesisScore: number;
+    claimedAt: string;
+  };
+  lastUpdated: string;
+}
+
+interface PendingReward {
+  id: string;
+  category: 'genesis' | 'recurring' | 'app';
+  action: string;
+  points: number;
+  timestamp: string;
+  description: string;
+  metadata?: any;
+}
+
+interface BlockchainScanResult {
+  newTransactionsFound: number;
+  totalVolumeScanned: number;
+  lastPagingToken: string;
+  scanDurationMs: number;
+  isInitialDeepScan: boolean;
+}
 
 declare global {
   namespace Express {
     interface Request {
       pioneerId?: string;
     }
+  }
+}
+
+// ====================
+// LIVE EXECUTION ENGINE - ATOMIC REPUTATION PROCESSOR
+// ====================
+
+/**
+ * 🔥 Initial Deep Crawling - Pagination Scan كامل لجميع معاملات البلوكشين
+ */
+async function performInitialDeepScan(walletAddress: string, username: string): Promise<{
+  success: boolean;
+  genesisBoostData?: any;
+  scanResult?: BlockchainScanResult;
+  error?: string;
+}> {
+  const startTime = Date.now();
+  let allTransactions: any[] = [];
+  let currentPagingToken: string | null = null;
+  let totalVolume = 0;
+  let pageCount = 0;
+  const maxPages = 50; // Safety limit
+
+  try {
+    console.log(`[DEEP SCAN] Starting for wallet: ${walletAddress}`);
+
+    // Pagination Loop - جلب جميع المعاملات من البداية
+    while (pageCount < maxPages) {
+      const apiUrl: string = currentPagingToken
+        ? `https://api.testnet.minepi.com/accounts/${walletAddress}/transactions?cursor=${currentPagingToken}&limit=200`
+        : `https://api.testnet.minepi.com/accounts/${walletAddress}/transactions?limit=200`;
+
+      const fetchResponse = await fetch(apiUrl, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(15000)
+      });
+
+      if (!fetchResponse.ok) {
+        if (fetchResponse.status === 404) {
+          console.log(`[DEEP SCAN] Wallet not found: ${walletAddress}`);
+          break;
+        }
+        throw new Error(`API Error: ${fetchResponse.status}`);
+      }
+
+      const data: any = await fetchResponse.json();
+      const transactions = data._embedded?.records || [];
+      
+      if (transactions.length === 0) break;
+      
+      allTransactions.push(...transactions);
+      
+      // حساب الحجم الإجمالي
+      transactions.forEach((tx: any) => {
+        if (tx.type === 'payment' && tx.amount) {
+          totalVolume += parseFloat(tx.amount) || 0;
+        }
+      });
+
+      // التحضير للصفحة التالية
+      currentPagingToken = data._links?.next?.href?.split('cursor=')[1]?.split('&')[0] || null;
+      pageCount++;
+      
+      if (!currentPagingToken) break;
+      
+      // فترة انتظار قصيرة لتجنب Rate Limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log(`[DEEP SCAN] Completed: ${allTransactions.length} transactions, ${pageCount} pages`);
+
+    // Data Mining - استخراج البيانات التاريخية
+    const historicalData = extractHistoricalData(allTransactions);
+    
+    // Genesis Boost Calculation
+    const genesisBoostData = calculateGenesisBoost(historicalData, walletAddress);
+
+    // حفظ البيانات في قاعدة البيانات
+    const atomicProfile: AtomicUserProfile = {
+      uid: username,
+      username,
+      walletAddress,
+      totalAtomicScore: genesisBoostData.totalGenesisScore,
+      pendingRewards: [],
+      lastPagingToken: currentPagingToken,
+      isGenesisBonusClaimed: true,
+      total_historical_activity: {
+        totalVolumeHistorical: historicalData.totalVolume,
+        totalTransactionsHistorical: historicalData.transactionCount,
+        firstTransactionDate: historicalData.firstTransactionDate,
+        lastDeepScanDate: new Date().toISOString()
+      },
+      genesisBoostData,
+      lastUpdated: new Date().toISOString()
+    };
+
+    // حفظ الملف الشخصي الذري
+    await redis.set(`atomic_profile:${username}`, JSON.stringify(atomicProfile));
+    await redis.zadd('atomic_leaderboard', { score: genesisBoostData.totalGenesisScore, member: username });
+
+    const scanDuration = Date.now() - startTime;
+    console.log(`[DEEP SCAN] Genesis boost complete for ${username}: ${genesisBoostData.totalGenesisScore} points`);
+
+    return {
+      success: true,
+      genesisBoostData,
+      scanResult: {
+        newTransactionsFound: allTransactions.length,
+        totalVolumeScanned: totalVolume,
+        lastPagingToken: currentPagingToken || '',
+        scanDurationMs: scanDuration,
+        isInitialDeepScan: true
+      }
+    };
+
+  } catch (error: any) {
+    console.error('[DEEP SCAN] Error:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 📊 Data Mining - استخراج البيانات التاريخية المفصلة
+ */
+function extractHistoricalData(transactions: any[]) {
+  if (transactions.length === 0) {
+    return {
+      transactionCount: 0,
+      totalVolume: 0,
+      firstTransactionDate: null,
+      lastTransactionDate: null,
+      averageTransactionValue: 0,
+      uniqueCounterparts: 0,
+      internalTxCount: 0,
+      externalTxCount: 0,
+      accountAgeDays: 0
+    };
+  }
+
+  const sortedTx = transactions
+    .filter(tx => tx.created_at)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  
+  const firstTxDate = new Date(sortedTx[0].created_at);
+  const lastTxDate = new Date(sortedTx[sortedTx.length - 1].created_at);
+  const accountAgeDays = Math.floor((Date.now() - firstTxDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  let totalVolume = 0;
+  const counterparts = new Set();
+  let internalTxCount = 0;
+  let externalTxCount = 0;
+  
+  transactions.forEach(tx => {
+    if (tx.type === 'payment' && tx.amount) {
+      const amount = parseFloat(tx.amount) || 0;
+      totalVolume += amount;
+      
+      if (tx.to) counterparts.add(tx.to);
+      if (tx.from) counterparts.add(tx.from);
+      
+      // تصنيف نوع المعاملة
+      const isInternal = !tx.to || !tx.to.includes('external');
+      if (isInternal) {
+        internalTxCount++;
+      } else {
+        externalTxCount++;
+      }
+    }
+  });
+  
+  return {
+    transactionCount: transactions.length,
+    totalVolume,
+    firstTransactionDate: firstTxDate.toISOString(),
+    lastTransactionDate: lastTxDate.toISOString(),
+    averageTransactionValue: totalVolume / Math.max(1, transactions.length),
+    uniqueCounterparts: counterparts.size,
+    internalTxCount,
+    externalTxCount,
+    accountAgeDays
+  };
+}
+
+/**
+ * 🚀 Genesis Boost Calculator - حساب نقاط التأسيس بناءً على السجل الكامل
+ */
+function calculateGenesisBoost(historicalData: any, walletAddress: string) {
+  // العمر (25% من Genesis)
+  const ageScore = Math.min(50000, historicalData.accountAgeDays * 100);
+  
+  // النشاط التاريخي (35% من Genesis) 
+  const activityMultiplier = Math.min(2.0, historicalData.transactionCount / 100);
+  const activityScore = Math.min(75000, historicalData.transactionCount * activityMultiplier * 50);
+  
+  // الحجم الكلي (40% من Genesis)
+  const volumeMultiplier = Math.log10(Math.max(1, historicalData.totalVolume));
+  const volumeScore = Math.min(125000, volumeMultiplier * 15000);
+  
+  const rawTotal = ageScore + activityScore + volumeScore;
+  const cappedGenesis = Math.min(500000, rawTotal); // Genesis cap is 500k
+  
+  return {
+    accountAgeScore: ageScore,
+    historicalActivityScore: activityScore,
+    volumeScore: volumeScore,
+    totalGenesisScore: cappedGenesis,
+    claimedAt: new Date().toISOString(),
+    breakdown: {
+      ageDays: historicalData.accountAgeDays,
+      transactionCount: historicalData.transactionCount,
+      totalVolume: historicalData.totalVolume,
+      uniqueCounterparts: historicalData.uniqueCounterparts
+    }
+  };
+}
+
+/**
+ * ⚡ Incremental Processor - معالج تدريجي للمعاملات الجديدة
+ */
+async function performIncrementalSync(username: string): Promise<{
+  success: boolean;
+  newRewards?: PendingReward[];
+  scanResult?: BlockchainScanResult;
+  error?: string;
+}> {
+  try {
+    // جلب الملف الشخصي الحالي
+    const profileData = await redis.get(`atomic_profile:${username}`);
+    if (!profileData) {
+      return { success: false, error: 'Profile not found - please run initial deep scan first' };
+    }
+    
+    const profile: AtomicUserProfile = JSON.parse(profileData as string);
+    const startTime = Date.now();
+    
+    // جلب المعاملات الجديدة فقط باستخدام lastPagingToken
+    const apiUrl: string = profile.lastPagingToken
+      ? `https://api.testnet.minepi.com/accounts/${profile.walletAddress}/transactions?cursor=${profile.lastPagingToken}&limit=100`
+      : `https://api.testnet.minepi.com/accounts/${profile.walletAddress}/transactions?limit=100`;
+    
+    const fetchResponse = await fetch(apiUrl, {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (!fetchResponse.ok) {
+      throw new Error(`API Error: ${fetchResponse.status}`);
+    }
+    
+    const data: any = await fetchResponse.json();
+    const newTransactions = data._embedded?.records || [];
+    
+    if (newTransactions.length === 0) {
+      return {
+        success: true,
+        newRewards: [],
+        scanResult: {
+          newTransactionsFound: 0,
+          totalVolumeScanned: 0,
+          lastPagingToken: profile.lastPagingToken || '',
+          scanDurationMs: Date.now() - startTime,
+          isInitialDeepScan: false
+        }
+      };
+    }
+    
+    // إنشاء مكافآت للنشاط الجديد
+    const newRewards: PendingReward[] = [];
+    let totalNewVolume = 0;
+    
+    newTransactions.forEach((tx: any, index: number) => {
+      if (tx.type === 'payment') {
+        const amount = parseFloat(tx.amount) || 0;
+        totalNewVolume += amount;
+        
+        // منح نقاط بناءً على نوع المعاملة (Recurring - 20%)
+        const isInternal = !tx.to || !tx.to.includes('external');
+        const points = isInternal ? 40 : 8; // Mainnet: 40, Testnet: 8
+        
+        newRewards.push({
+          id: `tx_${tx.id || index}_${Date.now()}`,
+          category: 'recurring',
+          action: isInternal ? 'mainnet_transaction' : 'testnet_transaction',
+          points,
+          timestamp: tx.created_at || new Date().toISOString(),
+          description: `${isInternal ? 'Mainnet' : 'Testnet'} transaction: ${amount.toFixed(2)} π`,
+          metadata: {
+            transactionId: tx.id,
+            amount,
+            type: tx.type,
+            isInternal
+          }
+        });
+      }
+    });
+    
+    // تحديث الملف الشخصي
+    profile.pendingRewards.push(...newRewards);
+    profile.lastPagingToken = data._links?.next?.href?.split('cursor=')[1]?.split('&')[0] || profile.lastPagingToken;
+    profile.total_historical_activity.totalTransactionsHistorical += newTransactions.length;
+    profile.total_historical_activity.totalVolumeHistorical += totalNewVolume;
+    profile.lastUpdated = new Date().toISOString();
+    
+    await redis.set(`atomic_profile:${username}`, JSON.stringify(profile));
+    
+    const scanDuration = Date.now() - startTime;
+    console.log(`[INCREMENTAL SYNC] Found ${newTransactions.length} new transactions for ${username}`);
+    
+    return {
+      success: true,
+      newRewards,
+      scanResult: {
+        newTransactionsFound: newTransactions.length,
+        totalVolumeScanned: totalNewVolume,
+        lastPagingToken: profile.lastPagingToken || '',
+        scanDurationMs: scanDuration,
+        isInitialDeepScan: false
+      }
+    };
+    
+  } catch (error: any) {
+    console.error('[INCREMENTAL SYNC] Error:', error);
+    return {
+      success: false,
+      error: error.message
+    };
   }
 }
 
@@ -91,7 +463,7 @@ async function handleAdminGetAllUsers(req: Request, res: Response) {
             username: user.pioneerId,
             wallet: 'N/A',
             reputationScore: user.totalReputationScore || 0,
-            trustLevel: protocol.LEVEL_NAMES[user.reputationLevel] || 'Low Trust',
+            trustLevel: protocol.LEVEL_NAMES[user.reputationLevel] || 'Novice',
             lastActiveAt: user.updatedAt || 'N/A',
           });
         }
@@ -117,7 +489,7 @@ async function handleAdminGetAllUsers(req: Request, res: Response) {
             username: entry?.username || rep?.username || 'Unknown',
             wallet: entry?.walletAddress || rep?.walletAddress || 'N/A',
             reputationScore: entry?.reputationScore || rep?.reputationScore || 0,
-            trustLevel: entry?.trustLevel || rep?.trustLevel || 'Low Trust',
+            trustLevel: entry?.trustLevel || rep?.trustLevel || 'Novice',
             lastActiveAt: entry?.lastUpdated || rep?.lastUpdated || 'N/A',
           });
         }
@@ -266,16 +638,19 @@ app.all('/api/wallet', async (req: Request, res: Response) => {
 // USER (REDIS)
 // ====================
 
-type AtomicTrustLevel = 'Very Low Trust' | 'Low Trust' | 'Medium' | 'Active' | 'Trusted' | 'Pioneer+' | 'Elite';
+type AtomicTrustLevel = 'Novice' | 'Explorer' | 'Contributor' | 'Verified' | 'Trusted' | 'Ambassador' | 'Elite' | 'Sentinel' | 'Oracle' | 'Atomic Legend';
 
 function computeTrustLevel(score: number): AtomicTrustLevel {
-  if (score >= 800) return 'Elite';
-  if (score >= 650) return 'Pioneer+';
-  if (score >= 500) return 'Trusted';
-  if (score >= 350) return 'Active';
-  if (score >= 200) return 'Medium';
-  if (score >= 100) return 'Low Trust';
-  return 'Very Low Trust';
+  if (score >= 950_001) return 'Atomic Legend';
+  if (score >= 850_001) return 'Oracle';
+  if (score >= 750_001) return 'Sentinel';
+  if (score >= 600_001) return 'Elite';
+  if (score >= 450_001) return 'Ambassador';
+  if (score >= 300_001) return 'Trusted';
+  if (score >= 150_001) return 'Verified';
+  if (score >= 50_001) return 'Contributor';
+  if (score >= 10_001) return 'Explorer';
+  return 'Novice';
 }
 
 async function handleCheckVip(uid: string | undefined, res: Response) {
@@ -610,6 +985,264 @@ app.post('/api/user', async (req: Request, res: Response) => {
 app.get('/api/check-vip', async (req: Request, res: Response) => handleCheckVip(req.query.uid as string, res));
 app.post('/api/save-pioneer', async (req: Request, res: Response) => handleSavePioneer(req.body, res));
 app.post('/api/save-feedback', async (req: Request, res: Response) => handleSaveFeedback(req.body, res));
+
+// ====================
+// ATOMIC REPUTATION ENGINE API ENDPOINTS
+// ====================
+
+/**
+ * 🔥 POST /api/atomic/deep-scan - Initial Deep Blockchain Crawling
+ */
+app.post('/api/atomic/deep-scan', async (req: Request, res: Response) => {
+  try {
+    const { walletAddress, username } = req.body;
+    
+    if (!walletAddress || !username) {
+      return res.status(400).json({ error: 'walletAddress and username are required' });
+    }
+    
+    // التحقق من عدم وجود مسح سابق
+    const existingProfile = await redis.get(`atomic_profile:${username}`);
+    if (existingProfile) {
+      const profile: AtomicUserProfile = JSON.parse(existingProfile as string);
+      if (profile.isGenesisBonusClaimed) {
+        return res.status(409).json({ 
+          error: 'Genesis boost already claimed for this user',
+          profile: {
+            username: profile.username,
+            totalAtomicScore: profile.totalAtomicScore,
+            genesisBoostData: profile.genesisBoostData
+          }
+        });
+      }
+    }
+    
+    console.log(`[API] Starting deep scan for ${username} - ${walletAddress}`);
+    const result = await performInitialDeepScan(walletAddress, username);
+    
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: 'Deep scan completed successfully',
+        data: {
+          genesisBoostData: result.genesisBoostData,
+          scanResult: result.scanResult
+        }
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Deep scan failed'
+      });
+    }
+    
+  } catch (error: any) {
+    console.error('[API] Deep scan error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * ⚡ POST /api/atomic/sync - Incremental Sync for New Transactions
+ */
+app.post('/api/atomic/sync', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ error: 'username is required' });
+    }
+    
+    console.log(`[API] Running incremental sync for ${username}`);
+    const result = await performIncrementalSync(username);
+    
+    if (result.success) {
+      return res.status(200).json({
+        success: true,
+        message: 'Incremental sync completed',
+        data: {
+          newRewards: result.newRewards,
+          scanResult: result.scanResult
+        }
+      });
+    } else {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Incremental sync failed'
+      });
+    }
+    
+  } catch (error: any) {
+    console.error('[API] Incremental sync error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 💎 GET/POST /api/atomic/profile - Get/Update Atomic Profile
+ */
+app.get('/api/atomic/profile', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.query;
+    
+    if (!username) {
+      return res.status(400).json({ error: 'username is required' });
+    }
+    
+    const profileData = await redis.get(`atomic_profile:${username}`);
+    if (!profileData) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Profile not found',
+        requiresDeepScan: true
+      });
+    }
+    
+    const profile: AtomicUserProfile = JSON.parse(profileData as string);
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        username: profile.username,
+        walletAddress: profile.walletAddress,
+        totalAtomicScore: profile.totalAtomicScore,
+        trustLevel: computeTrustLevel(profile.totalAtomicScore),
+        pendingRewards: profile.pendingRewards,
+        isGenesisBonusClaimed: profile.isGenesisBonusClaimed,
+        totalHistoricalActivity: profile.total_historical_activity,
+        genesisBoostData: profile.genesisBoostData,
+        lastUpdated: profile.lastUpdated
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('[API] Get profile error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 🎁 POST /api/atomic/claim-rewards - Claim Pending Rewards
+ */
+app.post('/api/atomic/claim-rewards', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ error: 'username is required' });
+    }
+    
+    const profileData = await redis.get(`atomic_profile:${username}`);
+    if (!profileData) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+    
+    const profile: AtomicUserProfile = JSON.parse(profileData as string);
+    
+    if (profile.pendingRewards.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'No pending rewards to claim' 
+      });
+    }
+    
+    // حساب المكافآت حسب الفئات
+    const genesisRewards = profile.pendingRewards.filter(r => r.category === 'genesis').reduce((sum, r) => sum + r.points, 0);
+    const recurringRewards = profile.pendingRewards.filter(r => r.category === 'recurring').reduce((sum, r) => sum + r.points, 0);
+    const appRewards = profile.pendingRewards.filter(r => r.category === 'app').reduce((sum, r) => sum + r.points, 0);
+    
+    const totalClaimed = genesisRewards + recurringRewards + appRewards;
+    
+    // تطبيق الحد الأقصى 1,000,000
+    const newTotalScore = Math.min(1_000_000, profile.totalAtomicScore + totalClaimed);
+    const actualClaimed = newTotalScore - profile.totalAtomicScore;
+    
+    // تحديث الملف الشخصي
+    profile.totalAtomicScore = newTotalScore;
+    profile.pendingRewards = []; // مسح المكافآت المطالب بها
+    profile.lastUpdated = new Date().toISOString();
+    
+    await redis.set(`atomic_profile:${username}`, JSON.stringify(profile));
+    await redis.zadd('atomic_leaderboard', { score: newTotalScore, member: username });
+    
+    console.log(`[API] Rewards claimed for ${username}: ${actualClaimed} points (total: ${newTotalScore})`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Rewards claimed successfully',
+      data: {
+        claimedPoints: actualClaimed,
+        breakdown: {
+          genesis: genesisRewards,
+          recurring: recurringRewards,
+          app: appRewards
+        },
+        newTotalScore,
+        trustLevel: computeTrustLevel(newTotalScore)
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('[API] Claim rewards error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * 📊 GET /api/atomic/leaderboard - Atomic Trust Leaderboard
+ */
+app.get('/api/atomic/leaderboard', async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 100, 100);
+    const offset = parseInt(req.query.offset as string) || 0;
+    
+    const topUserIds = await redis.zrange('atomic_leaderboard', offset, offset + limit - 1, { rev: true, withScores: true });
+    
+    if (!topUserIds || topUserIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          users: [],
+          total: 0,
+          limit,
+          offset
+        }
+      });
+    }
+    
+    const users: any[] = [];
+    
+    for (let i = 0; i < topUserIds.length; i += 2) {
+      const username = topUserIds[i] as string;
+      const score = topUserIds[i + 1] as number;
+      
+      users.push({
+        rank: offset + i / 2 + 1,
+        username,
+        totalAtomicScore: score,
+        trustLevel: computeTrustLevel(score),
+        lastUpdated: new Date().toISOString() // يمكن تحسينه بجلب التاريخ الفعلي
+      });
+    }
+    
+    const totalCount = await redis.zcard('atomic_leaderboard');
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        users,
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + limit < totalCount
+      }
+    });
+    
+  } catch (error: any) {
+    console.error('[API] Leaderboard error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
 
 // ====================
 // REFERRAL
