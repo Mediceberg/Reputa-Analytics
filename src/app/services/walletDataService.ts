@@ -330,6 +330,12 @@ class WalletDataService {
 
     const txDates = snapshot.transactions.map(tx => tx.timestamp);
 
+    const totalTxCount = receivedTxs.length + sentTxs.length;
+    const totalVolume = snapshot.totalSent + snapshot.totalReceived;
+    
+    // Determine if this is mainnet or testnet data based on service network
+    const isMainnet = this.network === 'mainnet';
+    
     return {
       accountAgeDays: snapshot.accountAgeDays,
       lastActivityDate,
@@ -352,6 +358,13 @@ class WalletDataService {
       farmingInstances: 0,
       suspiciousLinks: 0,
       txDates,
+      // Separated network data
+      mainnetTxCount: isMainnet ? totalTxCount : 0,
+      mainnetVolume: isMainnet ? totalVolume : 0,
+      testnetTxCount: !isMainnet ? totalTxCount : 0,
+      testnetVolume: !isMainnet ? totalVolume : 0,
+      uniqueContacts: snapshot.uniqueContacts,
+      totalVolume,
     };
   }
 

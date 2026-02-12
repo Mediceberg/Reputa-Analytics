@@ -10,9 +10,9 @@ export interface ReputationEngineData extends UnifiedScoreData {
 function toEngineData(score: UnifiedScoreData): ReputationEngineData {
   return {
     ...score,
-    Mainnet_Points: score.blockchainScore || 0,
-    Testnet_Points: 0,
-    App_Engagement_Points: score.dailyCheckInPoints || 0,
+    Mainnet_Points: score.mainnetScore || 0,
+    Testnet_Points: score.testnetScore || 0,
+    App_Engagement_Points: score.appEngageScore || 0,
   };
 }
 
