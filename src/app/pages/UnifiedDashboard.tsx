@@ -26,6 +26,7 @@ const PointsExplainer = React.lazy(async () => ({ default: (await import('../com
 const ShareReputaCard = React.lazy(async () => ({ default: (await import('../components/ShareReputaCard')).ShareReputaCard }));
 const MiningDaysWidget = React.lazy(async () => ({ default: (await import('../components/MiningDaysWidget')).MiningDaysWidget }));
 const ProfileSection = React.lazy(async () => ({ default: (await import('../components/ProfileSection')).ProfileSection }));
+const ActivityHub = React.lazy(async () => ({ default: (await import('./ActivityHub')).ActivityHub }));
 import { PendingRewardsCounter } from '../components/PendingRewardsCounter';
 import { 
   processTransactionTimeline, 
@@ -76,7 +77,8 @@ type ActiveSection =
   | 'profile'
   | 'settings'
   | 'feedback'
-  | 'help';
+  | 'help'
+  | 'activity-hub';
 type NetworkSubPage = null | 'network-info' | 'top-wallets' | 'reputation';
 
 export function UnifiedDashboard({ 
@@ -449,6 +451,7 @@ export function UnifiedDashboard({
                activeSection === 'wallet' ? 'Wallet' :
                activeSection === 'network' ? 'Network' :
                activeSection === 'earn-points' ? 'Earn Points' :
+               activeSection === 'activity-hub' ? 'Activity Hub' :
                activeSection === 'profile' ? 'Profile' :
                activeSection === 'settings' ? 'Settings' :
                activeSection}
@@ -527,55 +530,36 @@ export function UnifiedDashboard({
               appEngagementPoints={atomicResult.appEngageScore}
             />
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="glass-card p-4 hover:border-purple-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(139, 92, 246, 0.2)' }} onClick={() => setActiveSection('transactions')}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                    <Activity className="w-5 h-5 text-white" />
+            {/* ═══ Unified 6-Card Action Grid ═══ */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { id: 'transactions' as ActiveSection, label: 'TOTAL TX', sub: `${walletData?.totalTransactions || 0} Transactions`, icon: Activity, gradient: 'from-purple-500/20 to-violet-500/20', border: 'rgba(139, 92, 246, 0.25)', text: 'text-purple-400', glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]' },
+                { id: 'analytics' as ActiveSection, label: 'ANALYTICS', sub: 'Charts & Insights', icon: LineChart, gradient: 'from-cyan-500/20 to-blue-500/20', border: 'rgba(0, 217, 255, 0.25)', text: 'text-cyan-400', glow: 'hover:shadow-[0_0_20px_rgba(0,217,255,0.15)]' },
+                { id: 'portfolio' as ActiveSection, label: 'PORTFOLIO', sub: `${tokens.length} Tokens`, icon: PieChart, gradient: 'from-emerald-500/20 to-teal-500/20', border: 'rgba(16, 185, 129, 0.25)', text: 'text-emerald-400', glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
+                { id: 'audit' as ActiveSection, label: 'FULL REPORT', sub: 'Audit & Trust', icon: FileText, gradient: 'from-amber-500/20 to-orange-500/20', border: 'rgba(245, 158, 11, 0.25)', text: 'text-amber-400', glow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
+                { id: 'rank' as ActiveSection, label: 'RANK', sub: 'Leaderboard', icon: Trophy, gradient: 'from-rose-500/20 to-pink-500/20', border: 'rgba(244, 63, 94, 0.25)', text: 'text-rose-400', glow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.15)]' },
+                { id: 'activity-hub' as ActiveSection, label: 'ACTIVITY HUB', sub: 'Claim & Monitor', icon: Zap, gradient: 'from-indigo-500/20 to-purple-500/20', border: 'rgba(99, 102, 241, 0.25)', text: 'text-indigo-400', glow: 'hover:shadow-[0_0_20px_rgba(99,102,241,0.15)]' },
+              ].map((card) => (
+                <button
+                  key={card.id}
+                  onClick={() => setActiveSection(card.id)}
+                  className={`group relative p-4 rounded-xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] ${card.glow}`}
+                  style={{
+                    background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.8) 0%, rgba(20, 24, 32, 0.6) 100%)',
+                    border: `1px solid ${card.border}`,
+                  }}
+                >
+                  <div className="flex flex-col items-center text-center space-y-2.5">
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center border border-white/10 group-hover:border-white/20 transition-all`}>
+                      <card.icon className={`w-5 h-5 ${card.text} group-hover:brightness-125 transition-all`} />
+                    </div>
+                    <div>
+                      <p className={`text-[11px] font-black uppercase tracking-wider ${card.text} group-hover:brightness-125 transition-all`}>{card.label}</p>
+                      <p className="text-[9px] text-gray-500 mt-0.5">{card.sub}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Total Tx</p>
-                    <p className="font-bold text-white">{walletData?.totalTransactions || 0}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass-card p-4 hover:border-cyan-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }} onClick={() => setPointsModalOpen(true)}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center">
-                    <Info className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Analytics</p>
-                    <p className="font-bold text-white">How Points Work</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass-card p-4 hover:border-emerald-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }} onClick={() => setActiveSection('portfolio')}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                    <PieChart className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Portfolio</p>
-                    <p className="font-bold text-white">{tokens.length} Tokens</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass-card p-4 hover:border-amber-500/40 transition-all cursor-pointer" style={{ border: '1px solid rgba(245, 158, 11, 0.2)' }} onClick={() => setActiveSection('audit')}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">Audit</p>
-                    <p className="font-bold text-white">Full Report</p>
-                  </div>
-                </div>
-              </div>
+                </button>
+              ))}
             </div>
 
             <Suspense fallback={null}>
@@ -588,73 +572,6 @@ export function UnifiedDashboard({
                 appEngagementPoints={atomicResult.appEngageScore}
               />
             </Suspense>
-
-            {/* Action Cards Section - TXS, Rank, How it Works etc. */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {/* Transaction Card */}
-              <button
-                onClick={() => setActiveSection('transactions')}
-                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-purple-500/20 hover:border-purple-400/40 group"
-              >
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center border border-purple-500/30">
-                    <Activity className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-purple-400 group-hover:text-purple-300">TXS</p>
-                    <p className="text-[8px] text-gray-500">History</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* Rank Card - New Leaderboard */}
-              <button
-                onClick={() => setActiveSection('rank')}
-                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-amber-500/20 hover:border-amber-400/40 group"
-              >
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
-                    <Trophy className="w-5 h-5 text-amber-400 group-hover:text-amber-300" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-amber-400 group-hover:text-amber-300">RANK</p>
-                    <p className="text-[8px] text-gray-500">Leaderboard</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* Analytics Card */}
-              <button
-                onClick={() => setActiveSection('analytics')}
-                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-cyan-500/20 hover:border-cyan-400/40 group"
-              >
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
-                    <LineChart className="w-5 h-5 text-cyan-400 group-hover:text-cyan-300" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-cyan-400 group-hover:text-cyan-300">CHARTS</p>
-                    <p className="text-[8px] text-gray-500">Analytics</p>
-                  </div>
-                </div>
-              </button>
-
-              {/* How it Works Card */}
-              <button
-                onClick={() => setPointsModalOpen(true)}
-                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-emerald-500/20 hover:border-emerald-400/40 group"
-              >
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center border border-emerald-500/30">
-                    <Info className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-widest text-emerald-400 group-hover:text-emerald-300">HOW</p>
-                    <p className="text-[8px] text-gray-500">It Works</p>
-                  </div>
-                </div>
-              </button>
-            </div>
 
             {/* Daily Check-in & Points Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1062,6 +979,24 @@ export function UnifiedDashboard({
         {activeSection === 'earn-points' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <FutureTasksPage />
+          </div>
+        )}
+
+        {activeSection === 'activity-hub' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <Suspense fallback={<div className="py-12 text-center text-gray-400">Loading Activity Hub...</div>}>
+              <ActivityHub
+                walletAddress={walletData.address}
+                walletData={walletData}
+                atomicResult={atomicResult}
+                isMainnet={mode.mode !== 'testnet'}
+                onScoreUpdate={() => {
+                  const unified = reputationService.getUnifiedScore();
+                  setUnifiedScoreData(unified);
+                }}
+                onBack={() => setActiveSection('overview')}
+              />
+            </Suspense>
           </div>
         )}
 
