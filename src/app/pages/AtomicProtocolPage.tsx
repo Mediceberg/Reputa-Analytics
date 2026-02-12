@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Shield, Zap, TrendingUp, Lock, Unlock, Brain, BookOpen, Clock, Activity } from 'lucide-react';
+import { ArrowLeft, Shield, Zap, TrendingUp, Brain, BookOpen, Clock, Activity, AlertTriangle } from 'lucide-react';
 import { 
   ATOMIC_PROTOCOL_CONFIG, 
   ATOMIC_TRUST_LEVEL_COLORS,
@@ -68,7 +68,7 @@ export function AtomicProtocolPage({ onBack }: AtomicProtocolPageProps) {
     },
     {
       id: 'staking',
-      icon: Lock,
+      icon: Shield,
       label: 'Staking Commitment',
       weight: `${ATOMIC_PROTOCOL_CONFIG.WEIGHTS.STAKING * 100}%`,
       description: 'Long-term token commitment',
@@ -242,7 +242,7 @@ export function AtomicProtocolPage({ onBack }: AtomicProtocolPageProps) {
         {/* Penalties */}
         <div className="mb-8">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Unlock className="w-5 h-5 text-red-400" />
+            <AlertTriangle className="w-5 h-5 text-red-400" />
             Penalty System
           </h2>
 
