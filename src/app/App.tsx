@@ -16,6 +16,11 @@ const AdminConsole = React.lazy(async () => {
   // AdminConsole is default export in file
   return { default: mod.default || mod } as any;
 });
+
+const AdminPortal = React.lazy(async () => {
+  const mod = await import('./pages/admin/AdminPortal');
+  return { default: mod.default || mod } as any;
+});
 import { ShareReputaCard } from './components/ShareReputaCard';
 import { TrustProvider, useTrust } from './protocol/TrustProvider';
 import { fetchWalletData } from './protocol/wallet';
@@ -223,11 +228,18 @@ function ReputaAppContent() {
 
   const syncToAdmin = async (uname: string, waddr: string) => {
     try {
-      await fetch('/api/save-pioneer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: uname, wallet: waddr, timestamp: new Date().toISOString() }),
-      });
+      await Promise.all([
+        fetch('/api/save-pioneer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: uname, wallet: waddr, timestamp: new Date().toISOString() }),
+        }),
+        fetch('/api/track-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: uname, wallet: waddr }),
+        }),
+      ]);
     } catch (e) { console.warn("Admin sync failed"); }
   };
 
@@ -357,6 +369,14 @@ function ReputaAppContent() {
   };
 
   // --- Logic for rendering based on path and data ---
+  if (currentPath === '/reputa-admin-portal') {
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0b0f', color: '#8b5cf6' }}>Loading Admin Portal...</div>}>
+        <AdminPortal />
+      </Suspense>
+    );
+  }
+
   if (currentPath === '/admin-console') {
     return (
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading admin...</div>}>

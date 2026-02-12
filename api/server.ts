@@ -33,14 +33,65 @@ app.use((req, res, next) => {
   next();
 });
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
+// Graceful Redis initialization with fallback
+let redis: any = null;
+try {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    redis = new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    });
+    console.log('✅ Redis client initialized');
+  } else {
+    console.warn('⚠️ Redis credentials missing. Using fallback mode.');
+  }
+} catch (error) {
+  console.warn('⚠️ Redis initialization failed:', error);
+}
 
-// ====================
-// SHARED TYPES & DATABASE SCHEMA
-// ====================
+// Graceful MongoDB connection wrapper
+async function safeGetMongoDb() {
+  try {
+    return await getMongoDb();
+  } catch (error) {
+    console.warn('⚠️ MongoDB connection failed, using fallback mode:', error);
+    return null;
+  }
+}
+
+// Graceful Redis operations wrapper
+async function safeRedisOperation(operation: string, ...args: any[]) {
+  if (!redis) {
+    console.warn('⚠️ Redis not available, skipping operation:', operation);
+    return null;
+  }
+  try {
+    return await redis[operation](...args);
+  } catch (error) {
+    console.warn('⚠️ Redis operation failed:', operation, error);
+    return null;
+  }
+}
+
+// Graceful database operations wrapper
+async function safeDbOperation<T>(operation: () => Promise<T>, fallbackValue?: T): Promise<T | null> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.warn('⚠️ Database operation failed:', error);
+    return fallbackValue || null;
+  }
+}
+
+// Graceful count operation
+async function safeCount(collection: any, query: any): Promise<number> {
+  try {
+    return await collection.countDocuments(query);
+  } catch (error) {
+    console.warn('⚠️ Count operation failed:', error);
+    return 0;
+  }
+}
 
 // Live Execution Engine Schema
 interface AtomicUserProfile {
@@ -1798,6 +1849,29 @@ async function handleComplete(body: any, res: Response) {
 
     console.log('[SUBSCRIPTION UPDATED]', subscriptionData);
 
+    // Trigger VIP update in TrafficUsers (MongoDB permanent storage)
+    if (userIdentifier) {
+      try {
+        const db = await getMongoDb();
+        const trafficCol = db.collection('TrafficUsers');
+        await trafficCol.updateOne(
+          { username: userIdentifier },
+          {
+            $set: {
+              isVip: true,
+              paymentDetails: { paymentId, txid, amount, paidAt: new Date() },
+              updatedAt: new Date(),
+            },
+          },
+          { upsert: true }
+        );
+        await redis.set(`vip_status:${userIdentifier}`, 'active', { ex: 365 * 24 * 60 * 60 });
+        console.log(`[VIP TRIGGER] ${userIdentifier} marked as VIP in TrafficUsers`);
+      } catch (vipErr) {
+        console.warn('[VIP TRIGGER] Failed to update TrafficUsers:', vipErr);
+      }
+    }
+
     return res.status(200).json({
       completed: true,
       success: true,
@@ -3286,12 +3360,7 @@ app.delete('/api/admin/user/:pioneerId', async (req: Request, res: Response) => 
 // ADMIN CONSOLE ROUTES (MONGO)
 // ====================
 
-const safeCount = async (collection: any, filter: any = {}) => {
-  if (!collection) return 0;
-  if (typeof collection.countDocuments === 'function') return collection.countDocuments(filter);
-  const arr = await collection.find(filter).toArray();
-  return Array.isArray(arr) ? arr.length : 0;
-};
+// safeCount function is already declared above
 
 const safeAggregateFirst = async (collection: any, pipeline: any[]) => {
   try {
@@ -3576,13 +3645,258 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
+// ====================
+// HEALTH CHECK - Database Connectivity Status
+// ====================
+
+app.get('/api/health-check', async (req: Request, res: Response) => {
+  const status: any = {
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    mongodb: { status: 'disconnected', latency: null as number | null },
+    upstash: { status: 'disconnected', latency: null as number | null },
+  };
+
+  // Test MongoDB
+  try {
+    const mongoStart = Date.now();
+    const db = await getMongoDb();
+    await db.command({ ping: 1 });
+    status.mongodb = { status: 'connected', latency: Date.now() - mongoStart };
+    console.log('[DATABASE] MongoDB Connected Successfully');
+  } catch (e: any) {
+    status.mongodb = { status: 'error', error: e.message, latency: null };
+  }
+
+  // Test Upstash/Redis
+  try {
+    const redisStart = Date.now();
+    await redis.set('health_check_ping', 'pong', { ex: 10 });
+    const pong = await redis.get('health_check_ping');
+    if (pong === 'pong') {
+      status.upstash = { status: 'connected', latency: Date.now() - redisStart };
+      console.log('[CACHE] Upstash/Redis Ready');
+    } else {
+      status.upstash = { status: 'noop-fallback', latency: Date.now() - redisStart };
+    }
+  } catch (e: any) {
+    status.upstash = { status: 'error', error: e.message, latency: null };
+  }
+
+  const allHealthy = status.mongodb.status === 'connected' && (status.upstash.status === 'connected' || status.upstash.status === 'noop-fallback');
+  res.status(allHealthy ? 200 : 503).json({ success: allHealthy, ...status });
+});
+
+// ====================
+// USER TRACKING - Track visits, wallets, VIP status
+// ====================
+
+async function ensureTrafficCollection() {
+  const db = await getMongoDb();
+  const collectionName = 'TrafficUsers';
+  try {
+    await db.createCollection(collectionName);
+  } catch (e: any) {
+    if (e.code !== 48) throw e; // 48 = already exists
+  }
+  const col = db.collection(collectionName);
+  await col.createIndex({ username: 1 }, { unique: true });
+  await col.createIndex({ isVip: 1 });
+  await col.createIndex({ createdAt: -1 });
+  await col.createIndex({ visitCount: -1 });
+  return col;
+}
+
+app.post('/api/track-user', async (req: Request, res: Response) => {
+  try {
+    const { username, wallet } = req.body;
+    if (!username) return res.status(400).json({ error: 'username is required' });
+
+    const col = await ensureTrafficCollection();
+    const now = new Date();
+
+    // Cache visit in Upstash for speed
+    const visitKey = `visit:${username}`;
+    await redis.incr(visitKey);
+    await redis.set(`last_seen:${username}`, now.toISOString(), { ex: 86400 * 30 });
+
+    // Upsert in MongoDB for permanent storage
+    const existing = await col.findOne({ username });
+    if (!existing) {
+      await col.insertOne({
+        username,
+        wallets: wallet ? [wallet] : [],
+        visitCount: 1,
+        isVip: false,
+        paymentDetails: null,
+        reputaScore: 0,
+        firstSeen: now,
+        lastSeen: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else {
+      const updateOps: any = {
+        $inc: { visitCount: 1 },
+        $set: { lastSeen: now, updatedAt: now },
+      };
+      if (wallet && !existing.wallets?.includes(wallet)) {
+        updateOps.$addToSet = { wallets: wallet };
+      }
+      await col.updateOne({ username }, updateOps);
+    }
+
+    console.log(`[TRACK] User: ${username}, Wallet: ${wallet || 'N/A'}`);
+    return res.status(200).json({ success: true });
+  } catch (e: any) {
+    console.error('[TRACK ERROR]', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// ====================
+// ADMIN PORTAL API - Protected endpoints for /reputa-admin-portal
+// ====================
+
+function verifyAdminPassword(req: Request): boolean {
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const headerPw = req.headers['x-admin-password'] as string;
+  const queryPw = req.query.password as string;
+  const bodyPw = req.body?.password;
+  return (headerPw || queryPw || bodyPw) === adminPassword;
+}
+
+app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const trafficCol = db.collection('TrafficUsers');
+    const usersV3Col = db.collection('final_users_v3');
+
+    // Unique users from TrafficUsers
+    let totalUniqueUsers = 0;
+    try { totalUniqueUsers = await trafficCol.countDocuments({}); } catch { /* empty */ }
+
+    // Also count from final_users_v3 if TrafficUsers is empty
+    if (totalUniqueUsers === 0) {
+      try { totalUniqueUsers = await usersV3Col.countDocuments({}); } catch { /* empty */ }
+    }
+
+    // Total visits (sum of visitCount)
+    let totalVisits = 0;
+    try {
+      const visitAgg = await trafficCol.aggregate([
+        { $group: { _id: null, total: { $sum: '$visitCount' } } }
+      ]).toArray();
+      totalVisits = visitAgg[0]?.total || 0;
+    } catch { /* empty */ }
+
+    // VIP users (paid)
+    let totalVipUsers = 0;
+    try { totalVipUsers = await trafficCol.countDocuments({ isVip: true }); } catch { /* empty */ }
+
+    return res.json({
+      success: true,
+      stats: { totalUniqueUsers, totalVisits, totalVipUsers },
+    });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const trafficCol = db.collection('TrafficUsers');
+    const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
+    const skip = parseInt(req.query.skip as string) || 0;
+    const search = req.query.search as string;
+
+    let filter: any = {};
+    if (search) {
+      filter.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { wallets: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const users = await trafficCol.find(filter)
+      .sort({ lastSeen: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    const total = await trafficCol.countDocuments(filter);
+
+    return res.json({ success: true, users, total });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const trafficCol = db.collection('TrafficUsers');
+
+    const paidUsers = await trafficCol.find({ isVip: true })
+      .sort({ updatedAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({ success: true, paidUsers });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// Trigger VIP update when payment completes - hook into existing payment flow
+app.post('/api/admin-portal/mark-vip', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const { username, paymentId, txid, amount } = req.body;
+    if (!username) return res.status(400).json({ error: 'username required' });
+
+    const col = await ensureTrafficCollection();
+    await col.updateOne(
+      { username },
+      {
+        $set: {
+          isVip: true,
+          paymentDetails: {
+            paymentId: paymentId || 'manual',
+            txid: txid || 'manual',
+            amount: amount || 0,
+            paidAt: new Date(),
+          },
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+
+    // Also update Upstash for speed
+    await redis.set(`vip_status:${username}`, 'active', { ex: 365 * 24 * 60 * 60 });
+
+    return res.json({ success: true, message: `${username} marked as VIP` });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 const PORT_FINAL = Number(process.env.PORT) || 3001;
 
 const entryArg = process.argv[1] ?? '';
-const isDevStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts'));
+const isDevStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.includes('api\\server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('\\server.ts'));
 
 if (isDevStart) {
-  startUnifiedServer(app, PORT);
+  startUnifiedServer(app, PORT_FINAL);
 }
 
 export default app;
