@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Network, Globe, Lock, Unlock, Users, RefreshCw, Activity, TrendingUp, Coins } from 'lucide-react';
+import { Network, Globe, Shield, Unlock, Users, RefreshCw, Activity, TrendingUp, Coins } from 'lucide-react';
 import { fetchNetworkMetrics, NetworkMetrics, subscribeToMetrics, startAutoRefresh, stopAutoRefresh } from '../../services/piNetworkData';
 import { useLanguage } from '../../hooks/useLanguage';
 
@@ -133,7 +133,7 @@ export function NetworkInfoWidget({ isMainnet = true, refreshInterval = 30000 }:
           {/* Currently Locked Mining Rewards */}
           <div className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between group hover:border-purple-500/20 transition-all">
             <div className="flex items-center gap-3">
-              <Lock className="w-4 h-4 text-purple-400" />
+              <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Currently Locked Mining</span>
             </div>
             <span className="text-sm font-black text-white">{formatNumberFull(metrics.lockedMiningRewards)} <span className="text-purple-400">π</span></span>

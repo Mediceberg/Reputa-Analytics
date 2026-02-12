@@ -1,5 +1,5 @@
 import { useState } from 'react'; 
-import { Pickaxe, Info, X, Calendar, TrendingUp, Lock, Unlock } from 'lucide-react'; 
+import { Pickaxe, Info, X, Calendar, TrendingUp, Shield, Unlock } from 'lucide-react'; 
 import { useLanguage } from '../hooks/useLanguage';
 
 interface MiningDaysWidgetProps {
@@ -132,7 +132,7 @@ export function MiningDaysWidget({
                 
                 <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Lock className="w-4 h-4 text-purple-400" />
+                    <Shield className="w-4 h-4 text-purple-400" />
                     <span className="text-[10px] font-bold uppercase text-purple-400">Locked</span>
                   </div>
                   <p className="text-lg font-black text-white">{estimatedLocked.toLocaleString()} π</p>
@@ -158,7 +158,7 @@ export function MiningDaysWidget({
                     <span>More mining days indicate longer commitment to the Pi ecosystem</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <Lock className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                    <Shield className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
                     <span>Locked Pi is part of the lockup mechanism to support network stability</span>
                   </li>
                 </ul>
