@@ -27,6 +27,23 @@ export async function createVIPPayment(uid: string, onSuccess: () => void) {
   try {
     await initializePiSDK();
     
+    // Request payments scope authorization first
+    if (window.Pi && window.Pi.authenticate) {
+      try {
+        await window.Pi.authenticate(['payments'], () => {
+          console.log('Incomplete authentication');
+          alert('Authentication required for payments');
+        });
+        console.log('[Payment] Authentication with payments scope succeeded');
+      } catch (authErr: any) {
+        console.error('[Payment] Authentication error:', authErr);
+        alert('Failed to authenticate: ' + (authErr.message || 'Authorization denied'));
+        return;
+      }
+    } else {
+      console.error('[Payment] Pi.authenticate is not available');
+    }
+    
     console.log('[Payment] Creating VIP payment for UID:', uid);
     
     await window.Pi.createPayment({

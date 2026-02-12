@@ -111,21 +111,7 @@ export function TopBar({ onMenuClick, balance, username, networkMode = 'testnet'
             </button>
           )}
 
-          {/* إزالة عرض الرصيد في Pi Browser - تم الاستبدال بأيقونة بسيطة */}
-          <button 
-            onClick={handleLogoClick}
-            className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform overflow-visible relative"
-            style={{
-              background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%)',
-              border: '1px solid rgba(0, 217, 255, 0.25)',
-              zIndex: 60
-            }}
-          >
-            <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 flex-shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-cyan-400">
-              π
-            </span>
-          </button>
+          {/* تمت إزالة أيقونة الرصيد من شريط القائمة العلوية بشكل كامل */}
 
           {showPayoutIcon && (
             <button
