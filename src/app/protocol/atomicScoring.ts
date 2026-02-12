@@ -187,7 +187,9 @@ export function calculateAtomicReputation(data: WalletActivityData, now: Date = 
   // 1️⃣ MAINNET SILO (Weight: 50%) — Real blockchain data only
   // ═══════════════════════════════════════════════════════════════════
   
-  const ageMonths = Math.floor(data.accountAgeDays / 30);
+  // Safety: clamp accountAgeDays to max 10 years (3650 days) to prevent astronomical values
+  const safeAccountAgeDays = Math.min(Math.max(0, Math.floor(data.accountAgeDays || 0)), 3650);
+  const ageMonths = Math.floor(safeAccountAgeDays / 30);
   const walletAgeBonus = resolveHighestTier(GENESIS_WALLET_AGE_BONUS, ageMonths, 'minMonths');
   
   const mainnetTxCount = data.mainnetTxCount ?? data.internalTxCount;
@@ -269,7 +271,7 @@ export function calculateAtomicReputation(data: WalletActivityData, now: Date = 
   
   // Build detailed items
   const allItems: AtomicScoreItem[] = [
-    { category: 'mainnet', action: 'wallet_age', points: walletAgeBonus, timestamp: now, explanation: `Wallet age: ${ageMonths} months` },
+    { category: 'mainnet', action: 'wallet_age', points: walletAgeBonus, timestamp: now, explanation: `Wallet age: ${ageMonths} months (${safeAccountAgeDays} days)` },
     { category: 'mainnet', action: 'lifetime_activity', points: lifetimeActivityBonus, timestamp: now, explanation: `Lifetime transactions: ${mainnetTxCount}` },
     { category: 'mainnet', action: 'scan_bonus', points: scanBonus, timestamp: now, explanation: 'Wallet link + first analysis' },
     { category: 'mainnet', action: 'mainnet_tx', points: mainnetTxPoints, timestamp: now, explanation: `Mainnet transactions: ${mainnetTxCount}` },

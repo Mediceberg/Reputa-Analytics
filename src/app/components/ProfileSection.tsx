@@ -29,6 +29,7 @@ interface ProfileSectionProps {
   };
   onPointsEarned: (points: number, type: 'checkin' | 'merge') => void;
   activityData?: WalletActivityData;
+  sharedAtomicResult?: AtomicReputationResult;
 }
 
 function formatAddress(address: string): string {
@@ -69,13 +70,16 @@ export function ProfileSection({
   mode,
   userPoints,
   onPointsEarned,
-  activityData
+  activityData,
+  sharedAtomicResult
 }: ProfileSectionProps) {
   const { t, language } = useLanguage();
   const isRTL = language === 'ar';
   const scoreCap = getBackendScoreCap();
 
   const atomicResult = useMemo<AtomicReputationResult>(() => {
+    // Use shared result from parent (single source of truth) if available
+    if (sharedAtomicResult) return sharedAtomicResult;
     if (activityData) {
       return calculateAtomicReputation(activityData);
     }
@@ -85,7 +89,7 @@ export function ProfileSection({
     demoData.dailyCheckins = 0;
     demoData.adBonuses = 0;
     return calculateAtomicReputation(demoData);
-  }, [activityData, walletData.accountAge, walletData.transactions?.length]);
+  }, [sharedAtomicResult, activityData, walletData.accountAge, walletData.transactions?.length]);
 
   const levelProgress = useMemo(() => {
     return getLevelProgress(atomicResult.adjustedScore);

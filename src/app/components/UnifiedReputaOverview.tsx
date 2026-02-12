@@ -134,6 +134,15 @@ function CategoryProgressBar({
   );
 }
 
+function formatStatValue(value: string | number): string {
+  if (typeof value === 'number') {
+    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+    if (value >= 10_000) return `${(value / 1_000).toFixed(1)}K`;
+    return value.toLocaleString();
+  }
+  return value;
+}
+
 function QuickStatCard({ 
   icon: Icon, 
   label, 
@@ -145,13 +154,18 @@ function QuickStatCard({
   value: string | number; 
   color: string;
 }) {
+  const displayValue = formatStatValue(value);
+  const isLong = displayValue.length > 8;
+
   return (
-    <div className="p-5 rounded-xl bg-white/5 border border-white/10">
-      <div className="flex items-center gap-3 mb-2">
-        <Icon className="w-5 h-5" style={{ color }} />
-        <span className="text-xs text-gray-500 uppercase">{label}</span>
+    <div className="p-4 sm:p-5 rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" style={{ color }} />
+        <span className="text-[10px] sm:text-xs text-gray-500 uppercase truncate">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-white">{value}</p>
+      <p className={`font-bold text-white truncate ${isLong ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
+        {displayValue}
+      </p>
     </div>
   );
 }
@@ -162,52 +176,54 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
   const colors = TRUST_LEVEL_COLORS[result.trustLevel];
 
   const scoreBreakdown = useMemo(() => {
-    const totalPositive = Math.max(1, 
-      result.piNetwork.totalPoints + 
-      result.walletAge.totalPoints + 
-      result.interaction.totalPoints + 
-      result.piDex.totalPoints + 
-      result.staking.totalPoints
-    );
+    // Use the weighted silo scores (50/30/20) from atomicResult.breakdown
+    const bd = result.breakdown;
+    const mainnetPct = bd?.mainnetPercent ?? 0;
+    const testnetPct = bd?.testnetPercent ?? 0;
+    const appPct = bd?.appPercent ?? 0;
 
+    // Show 3 main silos with their weight-based percentages
+    // Mainnet (50%) includes: Wallet Age + Transactions + DEX + Staking
+    // App (30%) includes: Check-ins + Ad Bonuses + Reports + Tools
+    // Testnet (20%) includes: Testnet Transactions + SDK + Weekly Activity
     return [
       { 
-        id: 'pi_network',
-        label: language === 'ar' ? 'معاملات Pi Network' : 'Pi Network Transactions', 
-        value: result.piNetwork.totalPoints, 
-        max: totalPositive, 
+        id: 'mainnet',
+        label: language === 'ar' ? 'Mainnet (50%)' : 'Mainnet (50%)', 
+        value: mainnetPct, 
+        max: 100, 
         icon: ArrowRightLeft, 
         color: '#00D9FF' 
+      },
+      { 
+        id: 'app_engage',
+        label: language === 'ar' ? 'تفاعل التطبيق (30%)' : 'App Engagement (30%)', 
+        value: appPct, 
+        max: 100, 
+        icon: Zap, 
+        color: '#F97316' 
+      },
+      { 
+        id: 'testnet',
+        label: language === 'ar' ? 'Testnet (20%)' : 'Testnet (20%)', 
+        value: testnetPct, 
+        max: 100, 
+        icon: TrendingUp, 
+        color: '#8B5CF6' 
       },
       { 
         id: 'wallet_age',
         label: language === 'ar' ? 'عمر المحفظة' : 'Wallet Age', 
         value: result.walletAge.totalPoints, 
-        max: totalPositive, 
+        max: Math.max(1, result.walletAge.totalPoints + result.piNetwork.totalPoints), 
         icon: Clock, 
-        color: '#8B5CF6' 
-      },
-      { 
-        id: 'interaction',
-        label: language === 'ar' ? 'تفاعل التطبيق' : 'App Interaction', 
-        value: result.interaction.totalPoints, 
-        max: totalPositive, 
-        icon: Zap, 
-        color: '#F97316' 
-      },
-      { 
-        id: 'pi_dex',
-        label: language === 'ar' ? 'نشاط Pi Dex' : 'Pi Dex Activity', 
-        value: result.piDex.totalPoints, 
-        max: totalPositive, 
-        icon: TrendingUp, 
         color: '#10B981' 
       },
       { 
         id: 'staking',
         label: language === 'ar' ? 'Staking' : 'Staking Status', 
         value: result.staking.totalPoints, 
-        max: totalPositive, 
+        max: Math.max(1, result.staking.totalPoints + 50000), 
         icon: Shield, 
         color: '#F59E0B' 
       },
@@ -233,7 +249,7 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
       id: 'activity_level',
       icon: Zap, 
       label: language === 'ar' ? 'مستوى النشاط' : 'Activity Level', 
-      value: `${result.breakdown?.appPercent ?? Math.min(100, Math.round((result.interaction.totalPoints / Math.max(1, result.adjustedScore)) * 100))}%`,
+      value: `${Math.min(100, Math.round((result.adjustedScore / maxScore) * 100))}%`,
       color: '#F59E0B'
     },
     { 
