@@ -109,6 +109,8 @@ export function UnifiedDashboard({
     'feedback': '/feedback',
     'help': '/help',
   };
+
+  const weeklyDaysRemaining = Math.max(0, 7 - userPoints.activity);
   const activeSectionLabel = useMemo(() => {
     const sectionLabels: Record<string, string> = {
       'overview': 'Reputa Score',
@@ -615,6 +617,7 @@ export function UnifiedDashboard({
                     appPoints={pendingRewards.appPoints}
                     onClaim={handleWeeklyClaim}
                     isClaimable={userPoints.activity >= 7}
+                    daysRemaining={weeklyDaysRemaining}
                   />
                 </div>
               </div>

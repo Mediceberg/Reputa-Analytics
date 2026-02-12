@@ -39,6 +39,7 @@ interface PendingRewardsCounterProps {
   appPoints: number;
   onClaim: () => void;
   isClaimable: boolean;
+  daysRemaining: number;
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ export function PendingRewardsCounter({
   appPoints,
   onClaim,
   isClaimable,
+  daysRemaining,
 }: PendingRewardsCounterProps) {
   const [expanded, setExpanded] = useState(false);
   const [justClaimed, setJustClaimed] = useState(false);
@@ -128,22 +130,26 @@ export function PendingRewardsCounter({
             <button
               onClick={handleClaim}
               disabled={!isClaimable || totalPoints <= 0}
-              className="px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-[10px] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`px-5 py-2.5 rounded-xl font-black uppercase tracking-wider text-[10px] transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isClaimable ? 'animate-pulse' : ''}`}
               style={{
                 background: justClaimed
                   ? 'rgba(34, 197, 94, 0.2)'
                   : 'linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(251, 191, 36, 0.3) 100%)',
                 border: `1px solid ${justClaimed ? 'rgba(34, 197, 94, 0.4)' : 'rgba(251, 191, 36, 0.4)'}`,
                 color: justClaimed ? '#22C55E' : '#FBBF24',
-                boxShadow: justClaimed ? '0 0 15px rgba(34, 197, 94, 0.2)' : '0 0 15px rgba(251, 191, 36, 0.15)',
+                boxShadow: isClaimable
+                  ? '0 0 18px rgba(34, 197, 94, 0.35), 0 0 30px rgba(251, 191, 36, 0.2)'
+                  : justClaimed
+                    ? '0 0 15px rgba(34, 197, 94, 0.2)'
+                    : '0 0 15px rgba(251, 191, 36, 0.15)',
               }}
             >
-              {justClaimed ? 'Claimed!' : 'Claim'}
+              {justClaimed ? 'Claimed!' : isClaimable ? 'Weekly Claim Ready' : 'Weekly Claim'}
             </button>
           </div>
 
           {/* Mini breakdown */}
-          <div className="flex items-center gap-4 mt-2.5 ml-[52px]">
+          <div className="flex flex-wrap items-center gap-4 mt-2.5 ml-[52px]">
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
               <span className="text-[9px] text-white/40">Blockchain: <span className="text-cyan-400 font-bold">+{recurringPoints}</span></span>
@@ -151,6 +157,15 @@ export function PendingRewardsCounter({
             <div className="flex items-center gap-1">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
               <span className="text-[9px] text-white/40">App: <span className="text-emerald-400 font-bold">+{appPoints}</span></span>
+            </div>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider"
+              style={{
+                background: isClaimable ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.06)',
+                color: isClaimable ? '#22C55E' : 'rgba(255,255,255,0.5)',
+                border: `1px solid ${isClaimable ? 'rgba(34, 197, 94, 0.35)' : 'rgba(255,255,255,0.1)'}`,
+              }}
+            >
+              {isClaimable ? 'Ready' : `${daysRemaining}d left`}
             </div>
             <button onClick={() => setExpanded(!expanded)} className="ml-auto text-[9px] text-white/30 flex items-center gap-0.5 hover:text-white/50 transition-colors">
               Details

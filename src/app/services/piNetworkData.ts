@@ -6,15 +6,20 @@
  */
 
 /**
- * DEPRECATED
- * The legacy reputation calculation utilities previously included in this file
- * are deprecated in favor of the unified `atomicScoring` protocol and
- * `reputationService`. Do not add new scoring logic here — migrate any
- * remaining callers to `src/app/protocol/atomicScoring` and
- * `src/app/services/reputationService`.
+ * 🚀 Live Execution Engine - Pi Network Data Service
+ * 
+ * المعالج الآلي لبيانات شبكة Pi مع دعم:
+ * - Deep Scanning للمعاملات التاريخية 
+ * - Incremental Sync للمعاملات الجديدة
+ * - Genesis Boost Calculation
+ * - Auto Sync on Login/Refresh
+ * 
+ * DEPRECATED:
+ * Legacy reputation calculation utilities are deprecated in favor of
+ * the unified Live Execution Engine. Use calculateLiveAtomicReputation instead.
  */
 
-import { calculateReputationAtomic } from '../protocol/ReputationAtomic';
+import { calculateReputationAtomic, calculateLiveAtomicReputation, type LiveAtomicInput, type LiveAtomicResult } from '../protocol/ReputationAtomic';
 
 const PI_TESTNET_API = 'https://api.testnet.minepi.com';  
 const PI_MAINNET_API = 'https://api.mainnet.minepi.com';
@@ -595,6 +600,217 @@ function calculateReputationAtomicScore(data: {
   return result.totalScore;
 }
 
+/**
+ * 🔥 Live Execution Engine Integration
+ */
+
+// Auto Sync State Management
+let lastSyncTime = 0;
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+let syncInProgress = false;
+let syncListeners: ((result: any) => void)[] = [];
+
+export interface AtomicSyncResult {
+  success: boolean;
+  isInitialScan: boolean;
+  genesisBoostData?: any;
+  newRewards?: any[];
+  totalScore: number;
+  trustLevel: string;
+  error?: string;
+}
+
+/**
+ * 🚀 Auto Sync Wallet Activity - تشغيل تلقائي عند تسجيل الدخول أو Refresh
+ */
+export async function syncWalletActivity(
+  walletAddress: string,
+  username: string,
+  forceDeepScan: boolean = false
+): Promise<AtomicSyncResult> {
+  if (syncInProgress) {
+    return {
+      success: false,
+      isInitialScan: false,
+      totalScore: 0,
+      trustLevel: 'Novice',
+      error: 'Sync already in progress'
+    };
+  }
+
+  syncInProgress = true;
+  console.log(`[AUTO SYNC] Starting for ${username} (${walletAddress})`);
+
+  try {
+    // التحقق من وجود ملف شخصي موجود
+    const profileResponse = await fetch('/api/atomic/profile?' + new URLSearchParams({ username }));
+    const profileExists = profileResponse.ok;
+    const profileData = profileExists ? await profileResponse.json() : null;
+
+    let result: AtomicSyncResult;
+
+    if (!profileExists || forceDeepScan) {
+      // Initial Deep Scan - أول مسح شامل
+      console.log(`[AUTO SYNC] Performing initial deep scan for ${username}`);
+      
+      const deepScanResponse = await fetch('/api/atomic/deep-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, username })
+      });
+
+      if (deepScanResponse.ok) {
+        const deepScanData = await deepScanResponse.json();
+        result = {
+          success: true,
+          isInitialScan: true,
+          genesisBoostData: deepScanData.data.genesisBoostData,
+          totalScore: deepScanData.data.genesisBoostData.totalGenesisScore,
+          trustLevel: determineTrustLevel(deepScanData.data.genesisBoostData.totalGenesisScore)
+        };
+      } else {
+        const errorData = await deepScanResponse.json();
+        result = {
+          success: false,
+          isInitialScan: true,
+          totalScore: 0,
+          trustLevel: 'Novice',
+          error: errorData.error || 'Deep scan failed'
+        };
+      }
+    } else {
+      // Incremental Sync - مسح تدريجي للمعاملات الجديدة
+      console.log(`[AUTO SYNC] Performing incremental sync for ${username}`);
+      
+      const incrementalResponse = await fetch('/api/atomic/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+
+      if (incrementalResponse.ok) {
+        const incrementalData = await incrementalResponse.json();
+        result = {
+          success: true,
+          isInitialScan: false,
+          newRewards: incrementalData.data.newRewards,
+          totalScore: profileData.data.totalAtomicScore,
+          trustLevel: profileData.data.trustLevel
+        };
+      } else {
+        result = {
+          success: false,
+          isInitialScan: false,
+          totalScore: profileData?.data?.totalAtomicScore || 0,
+          trustLevel: profileData?.data?.trustLevel || 'Novice',
+          error: 'Incremental sync failed'
+        };
+      }
+    }
+
+    lastSyncTime = Date.now();
+    notifySyncListeners(result);
+    
+    console.log(`[AUTO SYNC] Completed for ${username}:`, {
+      success: result.success,
+      isInitialScan: result.isInitialScan,
+      totalScore: result.totalScore,
+      trustLevel: result.trustLevel
+    });
+
+    return result;
+
+  } catch (error: any) {
+    console.error('[AUTO SYNC] Error:', error);
+    return {
+      success: false,
+      isInitialScan: false,
+      totalScore: 0,
+      trustLevel: 'Novice',
+      error: error.message
+    };
+  } finally {
+    syncInProgress = false;
+  }
+}
+
+/**
+ * 📱 Subscribe to Auto Sync Events
+ */
+export function subscribeToSyncUpdates(callback: (result: AtomicSyncResult) => void): () => void {
+  syncListeners.push(callback);
+  return () => {
+    syncListeners = syncListeners.filter(cb => cb !== callback);
+  };
+}
+
+function notifySyncListeners(result: AtomicSyncResult) {
+  syncListeners.forEach(callback => {
+    try {
+      callback(result);
+    } catch (error) {
+      console.error('[AUTO SYNC] Listener error:', error);
+    }
+  });
+}
+
+/**
+ * 🎯 Atomic Trust Level Determination
+ */
+function determineTrustLevel(score: number): string {
+  if (score >= 950_001) return 'Atomic Legend';
+  if (score >= 850_001) return 'Oracle';
+  if (score >= 750_001) return 'Sentinel';
+  if (score >= 600_001) return 'Elite';
+  if (score >= 450_001) return 'Ambassador';
+  if (score >= 300_001) return 'Trusted';
+  if (score >= 150_001) return 'Verified';
+  if (score >= 50_001) return 'Contributor';
+  if (score >= 10_001) return 'Explorer';
+  return 'Novice';
+}
+
+/**
+ * 🔄 Auto Sync on App Load/Refresh
+ */
+export function initializeAutoSync() {
+  if (typeof window !== 'undefined') {
+    // Auto sync on page load
+    window.addEventListener('load', () => {
+      const userData = getUserDataFromStorage();
+      if (userData?.walletAddress && userData?.username) {
+        setTimeout(() => {
+          syncWalletActivity(userData.walletAddress, userData.username, false);
+        }, 1000); // Delay to let other systems initialize
+      }
+    });
+
+    // Auto sync on focus (when user returns to tab)
+    window.addEventListener('focus', () => {
+      const now = Date.now();
+      if (now - lastSyncTime > SYNC_INTERVAL) {
+        const userData = getUserDataFromStorage();
+        if (userData?.walletAddress && userData?.username) {
+          syncWalletActivity(userData.walletAddress, userData.username, false);
+        }
+      }
+    });
+  }
+}
+
+function getUserDataFromStorage() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem('pi_user_data');
+      return stored ? JSON.parse(stored) : null;
+    }
+  } catch (error) {
+    console.error('[AUTO SYNC] Error reading user data:', error);
+  }
+  return null;
+}
+
+// Legacy compatibility function
 function getTrustLevel(score: number): 'Low' | 'Medium' | 'High' | 'Elite' {
   if (score >= 800) return 'Elite';
   if (score >= 500) return 'High';
