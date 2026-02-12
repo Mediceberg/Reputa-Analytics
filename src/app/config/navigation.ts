@@ -79,6 +79,7 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: 'Network',
     icon: Globe,
     section: 'transaction',
+    showInMobileBottomNav: true,
   },
   {
     id: 'profile',
@@ -106,7 +107,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const MOBILE_BOTTOM_ORDER = ['dashboard', 'wallet', 'analytics', 'earn-points'];
+const MOBILE_BOTTOM_ORDER = ['dashboard', 'wallet', 'network', 'analytics', 'earn-points'];
 
 export const getNavItems = () =>
   NAV_ITEMS.filter((item) => (item.isEnabled ? item.isEnabled() : true));

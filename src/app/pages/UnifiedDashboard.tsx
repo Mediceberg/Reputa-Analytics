@@ -47,11 +47,10 @@ import {
 import { reputationService, UnifiedScoreData } from '../services/reputationService';
 import { useReputationEngine } from '../hooks/useReputationEngine';
 import { 
-  ArrowLeft, Globe, User, Wallet, Shield, TrendingUp, 
-  Activity, Clock, Zap, Sparkles, BarChart3, FileText,
-  PieChart, LineChart, AlertTriangle, Coins, RefreshCw, Lock,
-  Languages, ChevronDown, Calendar, CheckCircle, Award, Star,
-  Settings, MessageSquare, HelpCircle, FileText as FileTextIcon, TestTube, AlertCircle, Info
+  LayoutDashboard, PieChart, Activity, LineChart, Settings, MessageSquare, HelpCircle,
+  ArrowLeft, User, Wallet, Shield, Globe, Sparkles, Award, AlertCircle,
+  RefreshCw, Network, Zap, FileText, Copy, ExternalLink, Bell, Moon, Sun,
+  Trophy, Info
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
@@ -72,6 +71,7 @@ type ActiveSection =
   | 'portfolio'
   | 'wallet'
   | 'network'
+  | 'rank'
   | 'earn-points'
   | 'profile'
   | 'settings'
@@ -103,6 +103,7 @@ export function UnifiedDashboard({
     'portfolio': '/portfolio',
     'wallet': '/wallet',
     'network': '/network',
+    'rank': '/rank',
     'earn-points': '/earn-points',
     'profile': '/profile',
     'settings': '/settings',
@@ -110,7 +111,6 @@ export function UnifiedDashboard({
     'help': '/help',
   };
 
-  const weeklyDaysRemaining = Math.max(0, 7 - userPoints.activity);
   const activeSectionLabel = useMemo(() => {
     const sectionLabels: Record<string, string> = {
       'overview': 'Reputa Score',
@@ -120,6 +120,7 @@ export function UnifiedDashboard({
       'portfolio': 'Portfolio',
       'wallet': 'Wallet',
       'network': 'Network',
+      'rank': 'Leaderboard',
       'earn-points': 'Earn Points',
       'settings': 'Settings'
     };
@@ -140,6 +141,7 @@ export function UnifiedDashboard({
     activity: 0,
     streak: 0,
   });
+  const weeklyDaysRemaining = Math.max(0, 7 - userPoints.activity);
   
   useEffect(() => {
     async function loadUnifiedScore() {
@@ -327,6 +329,12 @@ export function UnifiedDashboard({
     handleModeChange(modes[nextIndex]);
   };
 
+  const handleFastNetworkToggle = () => {
+    // Fast toggle between mainnet and testnet only (skip demo)
+    const newMode = mode.mode === 'mainnet' ? 'testnet' : 'mainnet';
+    handleModeChange(newMode);
+  };
+
 
   const handlePeriodChange = (newPeriod: 'day' | 'week' | 'month') => {
     const mapToState = (p: 'day' | 'week' | 'month') => p === 'day' ? '7d' : p === 'week' ? '30d' : '90d';
@@ -389,6 +397,8 @@ export function UnifiedDashboard({
         onMenuClick={() => setIsSideDrawerOpen(true)}
         balance={walletData.balance}
         username={username}
+        networkMode={mode.mode}
+        onNetworkToggle={handleFastNetworkToggle}
       />
       
       {/* Desktop Sidebar - hidden on mobile */}
@@ -561,6 +571,73 @@ export function UnifiedDashboard({
                 appEngagementPoints={reputationEngine.App_Engagement_Points}
               />
             </Suspense>
+
+            {/* Action Cards Section - TXS, Rank, How it Works etc. */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              {/* Transaction Card */}
+              <button
+                onClick={() => setActiveSection('transactions')}
+                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-purple-500/20 hover:border-purple-400/40 group"
+              >
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center border border-purple-500/30">
+                    <Activity className="w-5 h-5 text-purple-400 group-hover:text-purple-300" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-purple-400 group-hover:text-purple-300">TXS</p>
+                    <p className="text-[8px] text-gray-500">History</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Rank Card - New Leaderboard */}
+              <button
+                onClick={() => setActiveSection('rank')}
+                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-amber-500/20 hover:border-amber-400/40 group"
+              >
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center border border-amber-500/30">
+                    <Trophy className="w-5 h-5 text-amber-400 group-hover:text-amber-300" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-400 group-hover:text-amber-300">RANK</p>
+                    <p className="text-[8px] text-gray-500">Leaderboard</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Analytics Card */}
+              <button
+                onClick={() => setActiveSection('analytics')}
+                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-cyan-500/20 hover:border-cyan-400/40 group"
+              >
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center border border-cyan-500/30">
+                    <LineChart className="w-5 h-5 text-cyan-400 group-hover:text-cyan-300" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-cyan-400 group-hover:text-cyan-300">CHARTS</p>
+                    <p className="text-[8px] text-gray-500">Analytics</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* How it Works Card */}
+              <button
+                onClick={() => setPointsModalOpen(true)}
+                className="glass-card p-4 transition-all hover:scale-[1.02] active:scale-[0.98] border border-emerald-500/20 hover:border-emerald-400/40 group"
+              >
+                <div className="flex flex-col items-center text-center space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 flex items-center justify-center border border-emerald-500/30">
+                    <Info className="w-5 h-5 text-emerald-400 group-hover:text-emerald-300" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-emerald-400 group-hover:text-emerald-300">HOW</p>
+                    <p className="text-[8px] text-gray-500">It Works</p>
+                  </div>
+                </div>
+              </button>
+            </div>
 
             {/* Daily Check-in & Points Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -825,6 +902,19 @@ export function UnifiedDashboard({
               testnetPoints={reputationEngine.Testnet_Points}
               appEngagementPoints={reputationEngine.App_Engagement_Points}
             />
+          </div>
+        )}
+
+        {activeSection === 'rank' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <Suspense fallback={<div className="py-12 text-center">Loading leaderboard...</div>}>
+              <TopWalletsWidget 
+                username={username} 
+                initialLimit={50}
+                language={language}
+                showFullLeaderboard={true}
+              />
+            </Suspense>
           </div>
         )}
 

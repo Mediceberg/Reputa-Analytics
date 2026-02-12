@@ -103,9 +103,9 @@ reputa-score.vercel.app`;
         return;
       }
 
-      // Set canvas dimensions (540x600 optimized for mobile and sharing)
-      canvas.width = 540;
-      canvas.height = 600;
+      // Set canvas dimensions (400x500 optimized for mobile sharing)
+      canvas.width = 400;
+      canvas.height = 500;
 
       // Fill background
       const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -234,20 +234,44 @@ reputa-score.vercel.app`;
       setIsGenerating(true);
       const imageBlob = await generateCardImage();
 
-      // Check if browser supports native download via share API
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([imageBlob], `reputa-${username}.png`)] })) {
+      // Enhanced native share support for Pi Browser and Android
+      const imageFile = new File([imageBlob], `reputa-${username}.png`, { type: 'image/png' });
+      
+      if (navigator.share) {
         try {
-          await navigator.share({
-            files: [new File([imageBlob], `reputa-${username}.png`, { type: 'image/png' })],
-            title: 'My Reputa Score',
-            text: shareText
-          });
-        } catch (error) {
-          // User cancelled share, fall back to download
-          throw new Error('share_cancelled');
+          // Check if files sharing is supported
+          if (navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+            await navigator.share({
+              files: [imageFile],
+              title: 'My Reputa Score',
+              text: shareText
+            });
+            setShareSuccess(true);
+            setTimeout(() => setShareSuccess(false), 3000);
+            return;
+          } else {
+            // Fallback to text-only sharing
+            await navigator.share({
+              title: 'My Reputa Score',
+              text: shareText,
+              url: 'https://reputa-score.vercel.app'
+            });
+            setShareSuccess(true);
+            setTimeout(() => setShareSuccess(false), 3000);
+            return;
+          }
+        } catch (error: any) {
+          if (error.name === 'AbortError') {
+            // User cancelled, don't show error
+            return;
+          }
+          // Continue to download fallback
         }
-      } else {
-        // Standard download for non-supporting browsers
+      }
+      
+      // Standard download fallback
+      {
+        // Download fallback for non-supporting browsers or when sharing fails
         const url = URL.createObjectURL(imageBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -258,8 +282,10 @@ reputa-score.vercel.app`;
         URL.revokeObjectURL(url);
       }
 
-      setShareSuccess(true);
-      setTimeout(() => setShareSuccess(false), 3000);
+      if (!navigator.share) {
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 3000);
+      }
     } catch (error) {
       console.error('Download error:', error);
       setShareError('فشل التنزيل. يرجى المحاولة مرة أخرى');
@@ -332,7 +358,7 @@ reputa-score.vercel.app`;
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-3"
       style={{ 
         background: 'rgba(0, 0, 0, 0.95)',
         paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
@@ -345,7 +371,7 @@ reputa-score.vercel.app`;
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-xs animate-in zoom-in duration-300 my-auto"
+        className="relative w-full max-w-[350px] animate-in zoom-in duration-300 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button - Always Visible */}
