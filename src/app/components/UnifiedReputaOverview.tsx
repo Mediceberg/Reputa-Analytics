@@ -163,9 +163,9 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
 
   const scoreBreakdown = useMemo(() => {
     const totalPositive = Math.max(1, 
+      result.piNetwork.totalPoints + 
       result.walletAge.totalPoints + 
       result.interaction.totalPoints + 
-      result.piNetwork.totalPoints + 
       result.piDex.totalPoints + 
       result.staking.totalPoints
     );
@@ -189,7 +189,7 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
       },
       { 
         id: 'interaction',
-        label: language === 'ar' ? 'التفاعل' : 'Interaction', 
+        label: language === 'ar' ? 'تفاعل التطبيق' : 'App Interaction', 
         value: result.interaction.totalPoints, 
         max: totalPositive, 
         icon: Zap, 
@@ -233,7 +233,7 @@ export function UnifiedReputaOverview({ result, isVerified = false, language = '
       id: 'activity_level',
       icon: Zap, 
       label: language === 'ar' ? 'مستوى النشاط' : 'Activity Level', 
-      value: `${Math.min(100, Math.round((result.interaction.totalPoints / 50) * 100))}%`,
+      value: `${result.breakdown?.appPercent ?? Math.min(100, Math.round((result.interaction.totalPoints / Math.max(1, result.adjustedScore)) * 100))}%`,
       color: '#F59E0B'
     },
     { 

@@ -36,6 +36,8 @@ export interface WalletData {
   trustLevel?: TrustLevel;
   consistencyScore?: number;
   networkTrust?: number;
+  mainnetTxCount?: number;
+  testnetTxCount?: number;
 }
 
 export type TrustLevel = 'Elite' | 'High' | 'Medium' | 'Low';

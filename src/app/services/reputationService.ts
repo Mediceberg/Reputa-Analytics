@@ -828,6 +828,9 @@ export class ReputationService {
       pendingRewardsTotal: pending.totalPoints,
       genesisCompleted: this.currentState.genesisCompleted || false,
       genesisScore: this.currentState.genesisScore || 0,
+      mainnetScore: this.currentState.blockchainScore || 0,
+      testnetScore: 0,
+      appEngageScore: this.currentState.dailyCheckInPoints || 0,
     };
   }
 
@@ -869,6 +872,9 @@ export class ReputationService {
         pendingRewardsTotal: pendingTotal,
         genesisCompleted: parsed.genesisCompleted || false,
         genesisScore: parsed.genesisScore || 0,
+        mainnetScore: parsed.blockchainScore || 0,
+        testnetScore: 0,
+        appEngageScore: parsed.dailyCheckInPoints || 0,
       };
     } catch (e) {
       return null;
@@ -898,6 +904,9 @@ export class ReputationService {
       pendingRewardsTotal: 0,
       genesisCompleted: false,
       genesisScore: 0,
+      mainnetScore: 0,
+      testnetScore: 0,
+      appEngageScore: 0,
     };
   }
 
@@ -1191,6 +1200,10 @@ export interface UnifiedScoreData {
   pendingRewardsTotal: number;
   genesisCompleted: boolean;
   genesisScore: number;
+  // Separated silo scores for display
+  mainnetScore: number;
+  testnetScore: number;
+  appEngageScore: number;
 }
 
 export const reputationService = ReputationService.getInstance();

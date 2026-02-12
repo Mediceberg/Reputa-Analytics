@@ -1,4 +1,15 @@
 import { calculateReputationAtomic, getReputationAtomicScoreCap } from './ReputationAtomic';
+import {
+  GENESIS_WALLET_AGE_BONUS,
+  GENESIS_LIFETIME_ACTIVITY_BONUS,
+  GENESIS_SCAN_BONUS,
+  GENESIS_ECOSYSTEM_BONUS,
+  WEEKLY_BLOCKCHAIN_REWARDS,
+  APP_INTERACTION_REWARDS,
+  CATEGORY_CAPS,
+  TOTAL_SCORE_CAP,
+  resolveHighestTier,
+} from './scoringRules';
 
 export type AtomicTrustLevel =
   | 'Novice'
@@ -51,6 +62,13 @@ export interface WalletActivityData {
   farmingInstances: number;
   suspiciousLinks: number;
   txDates?: Date[];
+  // Separated network data
+  mainnetTxCount?: number;
+  mainnetVolume?: number;
+  testnetTxCount?: number;
+  testnetVolume?: number;
+  uniqueContacts?: number;
+  totalVolume?: number;
 }
 
 export interface AtomicReputationResult {
@@ -66,9 +84,47 @@ export interface AtomicReputationResult {
   suspiciousPenalty: SuspiciousBehaviorPenalty;
   allItems: AtomicScoreItem[];
   lastUpdated: Date;
+  // Separated silo scores for display
+  mainnetScore: number;
+  testnetScore: number;
+  appEngageScore: number;
+  // Weighted final score
+  weightedTotal: number;
+  // Breakdown for UI
+  breakdown: {
+    mainnetRaw: number;
+    mainnetPercent: number;
+    testnetRaw: number;
+    testnetPercent: number;
+    appRaw: number;
+    appPercent: number;
+  };
 }
 
 const BACKEND_SCORE_CAP = getReputationAtomicScoreCap();
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * 🎯 PERCENTAGE-BASED AGGREGATION SYSTEM
+ * ═══════════════════════════════════════════════════════════════
+ * 
+ * Mainnet Weight  = 50% of 1,000,000 = 500,000 max
+ * App Engage Weight = 30% of 1,000,000 = 300,000 max
+ * Testnet Weight  = 20% of 1,000,000 = 200,000 max
+ * 
+ * Each silo calculates a performance percentage (0-100%),
+ * then multiplied by its weight to produce the final score.
+ * ═══════════════════════════════════════════════════════════════
+ */
+
+const WEIGHT_MAINNET = 0.50;
+const WEIGHT_APP     = 0.30;
+const WEIGHT_TESTNET = 0.20;
+
+// Internal caps for performance calculation within each silo
+const MAINNET_PERF_CAP  = 500_000;  // max raw points possible in mainnet silo
+const TESTNET_PERF_CAP  = 200_000;  // max raw points possible in testnet silo
+const APP_PERF_CAP      = 300_000;  // max raw points possible in app silo
 
 /** النظام العشري الذري — 10 مستويات من 0 إلى 1,000,000 */
 const TRUST_LEVEL_THRESHOLDS: { min: number; max: number; level: AtomicTrustLevel; index: number }[] = [
@@ -90,7 +146,7 @@ export function getBackendScoreCap(): number {
 
 export function getLevelProgress(rawScore: number) {
   const backendScore = Math.min(rawScore, BACKEND_SCORE_CAP);
-  let currentThreshold = TRUST_LEVEL_THRESHOLDS[1];
+  let currentThreshold = TRUST_LEVEL_THRESHOLDS[0];
 
   for (const threshold of TRUST_LEVEL_THRESHOLDS) {
     if (backendScore >= threshold.min && backendScore < threshold.max) {
@@ -118,135 +174,184 @@ function getTrustLevel(score: number): AtomicTrustLevel {
   return getLevelProgress(score).currentLevel;
 }
 
+/**
+ * 🎯 MAIN CALCULATION — Percentage-Based Weighted Aggregation
+ * 
+ * Mainnet (50%): Wallet age + historical tx + balance + staking + DEX
+ * Testnet (20%): Testnet transactions + testnet interactions
+ * App     (30%): Daily check-ins + ad bonuses + report views + tool usage + streaks
+ */
 export function calculateAtomicReputation(data: WalletActivityData, now: Date = new Date()): AtomicReputationResult {
-  /**
-   * 🎯 بروتوكول حساب السمعة الرسمي - قاعدة 50/20/30
-   * 
-   * Genesis  (50%) = 500,000 max - نقاط التأسيس (أول فحص)
-   * Recurring(20%) = 200,000 max - نشاط البلوكشين المتكرر  
-   * App      (30%) = 300,000 max - تفاعل التطبيق اليومي
-   * ─────────────────────────────────────────────────────
-   * Total          = 1,000,000 max
-   */
 
   // ═══════════════════════════════════════════════════════════════════
-  // 1️⃣ GENESIS SCORE (50%) - نقاط التأسيس - تُحسب مرة واحدة
+  // 1️⃣ MAINNET SILO (Weight: 50%) — Real blockchain data only
   // ═══════════════════════════════════════════════════════════════════
   
-  // عمر المحفظة: حسب الجدول الرسمي
-  let walletAgeBonus = 0;
   const ageMonths = Math.floor(data.accountAgeDays / 30);
-  if (ageMonths >= 48) walletAgeBonus = 100_000;      // > 4 سنوات
-  else if (ageMonths >= 36) walletAgeBonus = 70_000;  // > 3 سنوات
-  else if (ageMonths >= 24) walletAgeBonus = 50_000;  // > 2 سنوات
-  else if (ageMonths >= 12) walletAgeBonus = 20_000;  // > 1 سنة
-  else if (ageMonths >= 6) walletAgeBonus = 10_000;   // > 6 أشهر
-  else walletAgeBonus = ageMonths * 500;              // أقل من 6 أشهر
+  const walletAgeBonus = resolveHighestTier(GENESIS_WALLET_AGE_BONUS, ageMonths, 'minMonths');
   
-  // النشاط التاريخي: حسب عدد المعاملات الإجمالي
-  const totalTxCount = data.internalTxCount + data.appInteractions + data.sdkPayments;
-  let lifetimeActivityBonus = 0;
-  if (totalTxCount >= 1000) lifetimeActivityBonus = 100_000;
-  else if (totalTxCount >= 500) lifetimeActivityBonus = 50_000;
-  else if (totalTxCount >= 200) lifetimeActivityBonus = 30_000;
-  else if (totalTxCount >= 50) lifetimeActivityBonus = 10_000;
-  else if (totalTxCount >= 1) lifetimeActivityBonus = 5_000;
+  const mainnetTxCount = data.mainnetTxCount ?? data.internalTxCount;
+  const mainnetVolume = data.mainnetVolume ?? data.totalVolume ?? 0;
+  const lifetimeActivityBonus = resolveHighestTier(GENESIS_LIFETIME_ACTIVITY_BONUS, mainnetTxCount, 'minTx');
   
-  // مكافأة ربط المحفظة والتحليل الأول
-  const scanBonus = 5_000 + 1_000; // WALLET_LINK + FIRST_ANALYSIS
+  const scanBonus = GENESIS_SCAN_BONUS.WALLET_LINK + GENESIS_SCAN_BONUS.FIRST_ANALYSIS + GENESIS_SCAN_BONUS.MAINNET_LINK;
   
-  // مكافأة الشبكة (Mainnet/Testnet)
-  const networkBonus = 5_000; // افتراضي للشبكة الحالية
+  const mainnetTxPoints = mainnetTxCount * WEEKLY_BLOCKCHAIN_REWARDS.NEW_TRANSACTION;
+  const dexPoints = data.normalTrades * WEEKLY_BLOCKCHAIN_REWARDS.DEX_TRADE;
   
-  // إجمالي Genesis (حد أقصى 500,000)
-  const rawGenesisScore = walletAgeBonus + lifetimeActivityBonus + scanBonus + networkBonus;
-  const genesisScore = Math.min(500_000, rawGenesisScore);
+  let stakingPoints = 0;
+  let stakingTier: 'none' | 'short' | 'medium' | 'long' = 'none';
+  if (data.stakingDays > 365) { stakingPoints = 50_000; stakingTier = 'long'; }
+  else if (data.stakingDays > 90) { stakingPoints = 20_000; stakingTier = 'medium'; }
+  else if (data.stakingDays > 0) { stakingPoints = 5_000; stakingTier = 'short'; }
+  
+  const ecosystemBonus = (data.uniqueTokens || 0) * GENESIS_ECOSYSTEM_BONUS.PER_TOKEN_DISCOVERED;
+  
+  const rawMainnetScore = walletAgeBonus + lifetimeActivityBonus + scanBonus + mainnetTxPoints + dexPoints + stakingPoints + ecosystemBonus;
+  const cappedMainnetScore = Math.min(MAINNET_PERF_CAP, rawMainnetScore);
+  
+  // Performance percentage for mainnet
+  const mainnetPerformance = Math.min(1, cappedMainnetScore / MAINNET_PERF_CAP);
 
   // ═══════════════════════════════════════════════════════════════════
-  // 2️⃣ RECURRING SCORE (20%) - نشاط البلوكشين المتكرر
+  // 2️⃣ TESTNET SILO (Weight: 20%) — Testnet blockchain data only
   // ═══════════════════════════════════════════════════════════════════
   
-  // معاملات جديدة: 20 نقطة لكل معاملة
-  const newTxPoints = (data.internalTxCount * 20) + (data.appInteractions * 20);
+  const testnetTxCount = data.testnetTxCount ?? data.appInteractions ?? 0;
+  const testnetTxPoints = testnetTxCount * WEEKLY_BLOCKCHAIN_REWARDS.NEW_TRANSACTION;
+  const testnetSdkPoints = data.sdkPayments * WEEKLY_BLOCKCHAIN_REWARDS.DEX_TRADE;
+  const testnetWeeklyActivity = data.regularActivityWeeks * 500;
+  const testnetLinkBonus = GENESIS_SCAN_BONUS.TESTNET_LINK;
   
-  // تداول Dex: 50 نقطة لكل تداول
-  const dexPoints = data.normalTrades * 50;
+  const rawTestnetScore = testnetTxPoints + testnetSdkPoints + testnetWeeklyActivity + testnetLinkBonus;
+  const cappedTestnetScore = Math.min(TESTNET_PERF_CAP, rawTestnetScore);
   
-  // SDK Payments: 100 نقطة لكل دفعة
-  const sdkPoints = data.sdkPayments * 100;
-  
-  // نشاط أسبوعي منتظم: 500 نقطة لكل أسبوع
-  const weeklyActivityPoints = data.regularActivityWeeks * 500;
-  
-  // إجمالي Recurring (حد أقصى 200,000)
-  const rawRecurringScore = newTxPoints + dexPoints + sdkPoints + weeklyActivityPoints;
-  const recurringScore = Math.min(200_000, rawRecurringScore);
+  // Performance percentage for testnet
+  const testnetPerformance = Math.min(1, cappedTestnetScore / TESTNET_PERF_CAP);
 
   // ═══════════════════════════════════════════════════════════════════
-  // 3️⃣ APP SCORE (30%) - تفاعل التطبيق اليومي
+  // 3️⃣ APP ENGAGE SILO (Weight: 30%) — App interaction only
   // ═══════════════════════════════════════════════════════════════════
   
-  // تسجيل دخول يومي: 30 نقطة لكل يوم
-  const checkinPoints = data.dailyCheckins * 30;
-  
-  // مشاهدة إعلانات: 20 نقطة لكل إعلان
-  const adPoints = data.adBonuses * 20;
-  
-  // مشاهدة تقارير: 25 نقطة لكل تقرير
+  const checkinPoints = data.dailyCheckins * APP_INTERACTION_REWARDS.DAILY_CHECKIN;
+  const adPoints = data.adBonuses * (APP_INTERACTION_REWARDS.DAILY_CHECKIN_WITH_AD - APP_INTERACTION_REWARDS.DAILY_CHECKIN);
   const reportPoints = data.reportViews * 25;
-  
-  // استخدام أدوات: 20 نقطة لكل استخدام
   const toolPoints = data.toolUsage * 20;
+  const streakBonus = data.regularActivityWeeks * APP_INTERACTION_REWARDS.STREAK_PER_DAY * 7;
   
-  // سلسلة أيام متتالية: 4 نقاط × عدد الأيام
-  const streakBonus = data.regularActivityWeeks * 4 * 7; // تقريبي
-  
-  // إجمالي App (حد أقصى 300,000)
   const rawAppScore = checkinPoints + adPoints + reportPoints + toolPoints + streakBonus;
-  const appScore = Math.min(300_000, rawAppScore);
+  const cappedAppScore = Math.min(APP_PERF_CAP, rawAppScore);
+  
+  // Performance percentage for app
+  const appPerformance = Math.min(1, cappedAppScore / APP_PERF_CAP);
 
   // ═══════════════════════════════════════════════════════════════════
-  // 📊 الإجمالي النهائي
+  // 📊 WEIGHTED TOTAL — Performance × Weight × 1,000,000
   // ═══════════════════════════════════════════════════════════════════
   
-  const protocol = calculateReputationAtomic({
-    Mainnet_Points: genesisScore,      // Genesis (50%)
-    Testnet_Points: recurringScore,    // Recurring (20%)
-    App_Engagement_Points: appScore,   // App (30%)
-  });
-
+  const mainnetWeighted = Math.round(mainnetPerformance * WEIGHT_MAINNET * TOTAL_SCORE_CAP);
+  const testnetWeighted = Math.round(testnetPerformance * WEIGHT_TESTNET * TOTAL_SCORE_CAP);
+  const appWeighted     = Math.round(appPerformance * WEIGHT_APP * TOTAL_SCORE_CAP);
+  
+  const weightedTotal = Math.min(TOTAL_SCORE_CAP, mainnetWeighted + testnetWeighted + appWeighted);
+  
+  // Penalties
+  const penaltyTotal = 
+    (data.smallExternalTransfers * 2) + 
+    (data.frequentExternalTransfers * 5) + 
+    (data.suddenExits * 10) +
+    (data.spamCount * 3) +
+    (data.farmingInstances * 5);
+  
+  const finalScore = Math.max(0, weightedTotal - penaltyTotal);
+  
+  const trustLevel = getTrustLevel(finalScore);
+  
+  // Build detailed items
   const allItems: AtomicScoreItem[] = [
-    { category: 'mainnet', action: 'mainnet_points', points: protocol.Mainnet_Points, timestamp: now, explanation: 'Mainnet_Points' },
-    { category: 'testnet', action: 'testnet_points', points: protocol.Testnet_Points, timestamp: now, explanation: 'Testnet_Points' },
-    { category: 'app_engagement', action: 'app_engagement_points', points: protocol.App_Engagement_Points, timestamp: now, explanation: 'App_Engagement_Points' },
+    { category: 'mainnet', action: 'wallet_age', points: walletAgeBonus, timestamp: now, explanation: `Wallet age: ${ageMonths} months` },
+    { category: 'mainnet', action: 'lifetime_activity', points: lifetimeActivityBonus, timestamp: now, explanation: `Lifetime transactions: ${mainnetTxCount}` },
+    { category: 'mainnet', action: 'scan_bonus', points: scanBonus, timestamp: now, explanation: 'Wallet link + first analysis' },
+    { category: 'mainnet', action: 'mainnet_tx', points: mainnetTxPoints, timestamp: now, explanation: `Mainnet transactions: ${mainnetTxCount}` },
+    { category: 'mainnet', action: 'dex_trades', points: dexPoints, timestamp: now, explanation: `DEX trades: ${data.normalTrades}` },
+    { category: 'mainnet', action: 'staking', points: stakingPoints, timestamp: now, explanation: `Staking: ${data.stakingDays} days` },
+    { category: 'testnet', action: 'testnet_tx', points: testnetTxPoints, timestamp: now, explanation: `Testnet transactions: ${testnetTxCount}` },
+    { category: 'testnet', action: 'sdk_payments', points: testnetSdkPoints, timestamp: now, explanation: `SDK payments: ${data.sdkPayments}` },
+    { category: 'testnet', action: 'weekly_activity', points: testnetWeeklyActivity, timestamp: now, explanation: `Active weeks: ${data.regularActivityWeeks}` },
+    { category: 'app_engagement', action: 'daily_checkins', points: checkinPoints, timestamp: now, explanation: `Check-ins: ${data.dailyCheckins}` },
+    { category: 'app_engagement', action: 'ad_bonuses', points: adPoints, timestamp: now, explanation: `Ad bonuses: ${data.adBonuses}` },
+    { category: 'app_engagement', action: 'reports', points: reportPoints, timestamp: now, explanation: `Reports viewed: ${data.reportViews}` },
+    { category: 'app_engagement', action: 'tools', points: toolPoints, timestamp: now, explanation: `Tools used: ${data.toolUsage}` },
   ];
 
-  const trustLevel = getTrustLevel(protocol.totalScore);
+  // Breakdown percentages
+  const safeTotal = finalScore > 0 ? finalScore : 1;
 
   return {
-    rawScore: protocol.totalScore,
-    adjustedScore: protocol.totalScore,
+    rawScore: finalScore,
+    adjustedScore: finalScore,
     trustLevel,
-    walletAge: { activeMonths: 0, inactivityPenalty: 0, totalPoints: 0, items: [] },
+    mainnetScore: mainnetWeighted,
+    testnetScore: testnetWeighted,
+    appEngageScore: appWeighted,
+    weightedTotal: finalScore,
+    breakdown: {
+      mainnetRaw: cappedMainnetScore,
+      mainnetPercent: Math.round(mainnetPerformance * 100),
+      testnetRaw: cappedTestnetScore,
+      testnetPercent: Math.round(testnetPerformance * 100),
+      appRaw: cappedAppScore,
+      appPercent: Math.round(appPerformance * 100),
+    },
+    walletAge: { 
+      activeMonths: ageMonths, 
+      inactivityPenalty: 0, 
+      totalPoints: walletAgeBonus, 
+      items: allItems.filter(i => i.action === 'wallet_age'),
+    },
     interaction: {
       dailyCheckins: data.dailyCheckins,
       adBonuses: data.adBonuses,
       reportViews: data.reportViews,
       toolUsage: data.toolUsage,
-      totalPoints: protocol.App_Engagement_Points,
-      items: [allItems[2]],
+      totalPoints: cappedAppScore,
+      items: allItems.filter(i => i.category === 'app_engagement'),
     },
     piNetwork: {
-      internalTxCount: data.internalTxCount,
-      appInteractions: data.appInteractions,
+      internalTxCount: mainnetTxCount,
+      appInteractions: testnetTxCount,
       sdkPayments: data.sdkPayments,
-      totalPoints: protocol.Mainnet_Points + protocol.Testnet_Points,
-      items: [allItems[0], allItems[1]],
+      totalPoints: cappedMainnetScore + cappedTestnetScore,
+      items: allItems.filter(i => i.category === 'mainnet' || i.category === 'testnet'),
     },
-    piDex: { normalTrades: data.normalTrades, tokenDiversity: data.uniqueTokens, regularActivity: data.regularActivityWeeks, totalPoints: 0, items: [] },
-    staking: { stakingDays: data.stakingDays, tier: 'none', totalPoints: 0, items: [] },
-    externalPenalty: { smallTransfers: 0, frequentTransfers: 0, suddenExits: 0, continuousDrain: 0, totalPenalty: 0, items: [] },
-    suspiciousPenalty: { spamActivity: 0, farmingBehavior: 0, suspiciousLinks: 0, totalPenalty: 0, items: [] },
+    piDex: { 
+      normalTrades: data.normalTrades, 
+      tokenDiversity: data.uniqueTokens, 
+      regularActivity: data.regularActivityWeeks, 
+      totalPoints: dexPoints + ecosystemBonus, 
+      items: allItems.filter(i => i.action === 'dex_trades'),
+    },
+    staking: { 
+      stakingDays: data.stakingDays, 
+      tier: stakingTier, 
+      totalPoints: stakingPoints, 
+      items: allItems.filter(i => i.action === 'staking'),
+    },
+    externalPenalty: { 
+      smallTransfers: data.smallExternalTransfers, 
+      frequentTransfers: data.frequentExternalTransfers, 
+      suddenExits: data.suddenExits, 
+      continuousDrain: data.continuousDrain, 
+      totalPenalty: penaltyTotal, 
+      items: [],
+    },
+    suspiciousPenalty: { 
+      spamActivity: data.spamCount, 
+      farmingBehavior: data.farmingInstances, 
+      suspiciousLinks: data.suspiciousLinks, 
+      totalPenalty: (data.spamCount * 3) + (data.farmingInstances * 5), 
+      items: [],
+    },
     allItems,
     lastUpdated: now,
   };
@@ -274,6 +379,12 @@ export function generateDemoActivityData(): WalletActivityData {
     spamCount: 0,
     farmingInstances: 0,
     suspiciousLinks: 0,
+    mainnetTxCount: 450,
+    mainnetVolume: 5000,
+    testnetTxCount: 90,
+    testnetVolume: 200,
+    uniqueContacts: 30,
+    totalVolume: 5200,
   };
 }
 

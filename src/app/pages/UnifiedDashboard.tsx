@@ -135,7 +135,7 @@ export function UnifiedDashboard({
   const reputationEngine = useReputationEngine(reputationUid);
   const [pendingRewards, setPendingRewards] = useState(() => reputationService.getPendingRewards());
   const [userPoints, setUserPoints] = useState({
-    total: walletData.reputaScore || 0,
+    total: 0,
     checkIn: 0,
     transactions: 0,
     activity: 0,
@@ -158,10 +158,10 @@ export function UnifiedDashboard({
       if (cached) {
         setUnifiedScoreData(cached);
         setUserPoints({
-          total: cached.totalScore,
+          total: cached.appEngageScore || cached.dailyCheckInPoints || 0,
           checkIn: cached.dailyCheckInPoints || 0,
-          transactions: 0,
-          activity: cached.blockchainScore || 0,
+          transactions: cached.totalCheckInDays || 0,
+          activity: cached.totalCheckInDays || 0,
           streak: cached.streak || 0,
         });
       }
@@ -170,10 +170,10 @@ export function UnifiedDashboard({
       const unified = reputationService.getUnifiedScore();
       setUnifiedScoreData(unified);
       setUserPoints({
-        total: unified.totalScore,
+        total: unified.appEngageScore || unified.dailyCheckInPoints || 0,
         checkIn: unified.dailyCheckInPoints || 0,
-        transactions: 0,
-        activity: unified.blockchainScore || 0,
+        transactions: unified.totalCheckInDays || 0,
+        activity: unified.totalCheckInDays || 0,
         streak: unified.streak || 0,
       });
     }
@@ -185,9 +185,9 @@ export function UnifiedDashboard({
       if (score.uid && score.uid !== reputationUid) return;
       setUnifiedScoreData(score);
       setUserPoints({
-        total: score.totalScore,
+        total: score.appEngageScore || score.dailyCheckInPoints || 0,
         checkIn: score.dailyCheckInPoints || 0,
-        transactions: score.blockchainScore || 0,
+        transactions: score.totalCheckInDays || 0,
         activity: score.totalCheckInDays || 0,
         streak: score.streak || 0,
       });
@@ -217,9 +217,9 @@ export function UnifiedDashboard({
     const unified = reputationService.getUnifiedScore();
     setUnifiedScoreData(unified);
     setUserPoints({
-      total: unified.totalScore,
+      total: unified.appEngageScore || unified.dailyCheckInPoints || 0,
       checkIn: unified.dailyCheckInPoints || 0,
-      transactions: unified.blockchainScore || 0,
+      transactions: unified.totalCheckInDays || 0,
       activity: unified.totalCheckInDays || 0,
       streak: unified.streak || 0,
     });
@@ -232,9 +232,9 @@ export function UnifiedDashboard({
       const unified = reputationService.getUnifiedScore();
       setUnifiedScoreData(unified);
       setUserPoints({
-        total: unified.totalScore,
+        total: unified.appEngageScore || unified.dailyCheckInPoints || 0,
         checkIn: unified.dailyCheckInPoints || 0,
-        transactions: unified.blockchainScore || 0,
+        transactions: unified.totalCheckInDays || 0,
         activity: unified.totalCheckInDays || 0,
         streak: unified.streak || 0,
       });
@@ -282,24 +282,41 @@ export function UnifiedDashboard({
   }, [period]);
 
   const atomicResult = useMemo(() => {
+    const activityData = generateDemoActivityData();
+    activityData.accountAgeDays = walletData.accountAge || 180;
+    
+    // Use real wallet data for transaction counts
+    const txCount = walletData.transactions?.length || 0;
+    const receivedTx = walletData.transactions?.filter((t: any) => t.type === 'internal').length || 0;
+    const sentTx = walletData.transactions?.filter((t: any) => t.type === 'external').length || 0;
+    
+    activityData.internalTxCount = receivedTx;
+    activityData.appInteractions = sentTx;
+    activityData.mainnetTxCount = walletData.mainnetTxCount ?? txCount;
+    activityData.testnetTxCount = walletData.testnetTxCount ?? txCount;
+    activityData.totalVolume = walletData.balance || 0;
+    activityData.uniqueContacts = Math.min(Math.floor(txCount / 3), 30);
+    activityData.regularActivityWeeks = Math.min(Math.floor((walletData.accountAge || 0) / 7), 52);
+    
+    // App engagement from reputation service
     if (unifiedScoreData) {
-      const demoData = generateDemoActivityData();
-      demoData.accountAgeDays = walletData.accountAge || 180;
-      demoData.internalTxCount = unifiedScoreData.blockchainScore || 0;
-      demoData.appInteractions = unifiedScoreData.totalCheckInDays || 0;
-      demoData.sdkPayments = 0;
-      demoData.normalTrades = 0;
-      demoData.dailyCheckins = unifiedScoreData.dailyCheckInPoints || 0;
-      demoData.adBonuses = 0;
-      demoData.reportViews = 0;
-      demoData.toolUsage = 0;
-      return calculateAtomicReputation(demoData);
+      activityData.dailyCheckins = unifiedScoreData.totalCheckInDays || 0;
+      activityData.adBonuses = 0;
+      activityData.reportViews = 0;
+      activityData.toolUsage = 0;
+    } else {
+      activityData.dailyCheckins = 0;
+      activityData.adBonuses = 0;
+      activityData.reportViews = 0;
+      activityData.toolUsage = 0;
     }
-    const demoData = generateDemoActivityData();
-    demoData.accountAgeDays = walletData.accountAge || 180;
-    demoData.internalTxCount = walletData.transactions?.length || 25;
-    return calculateAtomicReputation(demoData);
-  }, [walletData.accountAge, walletData.transactions?.length, unifiedScoreData]);
+    
+    activityData.sdkPayments = 0;
+    activityData.normalTrades = 0;
+    activityData.stakingDays = 0;
+    
+    return calculateAtomicReputation(activityData);
+  }, [walletData.accountAge, walletData.transactions?.length, walletData.balance, unifiedScoreData]);
 
   const levelProgress = useMemo(() => {
     return getLevelProgress(atomicResult.adjustedScore);
@@ -505,9 +522,9 @@ export function UnifiedDashboard({
               trustLevel={gaugeLevel}
               consistencyScore={walletData.consistencyScore ?? 85}
               networkTrust={walletData.networkTrust ?? 90}
-              mainnetPoints={reputationEngine.Mainnet_Points}
-              testnetPoints={reputationEngine.Testnet_Points}
-              appEngagementPoints={reputationEngine.App_Engagement_Points}
+              mainnetPoints={atomicResult.mainnetScore}
+              testnetPoints={atomicResult.testnetScore}
+              appEngagementPoints={atomicResult.appEngageScore}
             />
 
             {/* Quick Stats Grid */}
@@ -566,9 +583,9 @@ export function UnifiedDashboard({
                 controlledOpen={pointsModalOpen}
                 setControlledOpen={setPointsModalOpen}
                 currentPoints={userPoints.total}
-                mainnetPoints={reputationEngine.Mainnet_Points}
-                testnetPoints={reputationEngine.Testnet_Points}
-                appEngagementPoints={reputationEngine.App_Engagement_Points}
+                mainnetPoints={atomicResult.mainnetScore}
+                testnetPoints={atomicResult.testnetScore}
+                appEngagementPoints={atomicResult.appEngageScore}
               />
             </Suspense>
 
@@ -864,22 +881,22 @@ export function UnifiedDashboard({
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-2">Atomic Score</p>
-                    <p className="text-2xl font-black neon-text-purple">{reputationEngine.totalScore} <span className="text-gray-500 text-sm">/ {getBackendScoreCap().toLocaleString()}</span></p>
+                    <p className="text-2xl font-black neon-text-purple">{atomicResult.adjustedScore.toLocaleString()} <span className="text-gray-500 text-sm">/ {getBackendScoreCap().toLocaleString()}</span></p>
                   </div>
 
                   <div className="p-4 rounded-xl" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.15)' }}>
                     <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mb-3">Atomic Breakdown</p>
                     <div className="grid grid-cols-3 gap-2">
                       <div className="text-center">
-                        <p className="text-lg font-black text-purple-300">{reputationEngine.Mainnet_Points}</p>
+                        <p className="text-lg font-black text-purple-300">{atomicResult.mainnetScore.toLocaleString()}</p>
                         <p className="text-[8px] font-bold uppercase text-gray-500">Mainnet</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-lg font-black text-cyan-300">{reputationEngine.Testnet_Points}</p>
+                        <p className="text-lg font-black text-cyan-300">{atomicResult.testnetScore.toLocaleString()}</p>
                         <p className="text-[8px] font-bold uppercase text-gray-500">Testnet</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-lg font-black text-emerald-300">{reputationEngine.App_Engagement_Points}</p>
+                        <p className="text-lg font-black text-emerald-300">{atomicResult.appEngageScore.toLocaleString()}</p>
                         <p className="text-[8px] font-bold uppercase text-gray-500">App Engage</p>
                       </div>
                     </div>
@@ -898,9 +915,9 @@ export function UnifiedDashboard({
               trustLevel={gaugeLevel}
               consistencyScore={walletData.consistencyScore ?? 85}
               networkTrust={walletData.networkTrust ?? 90}
-              mainnetPoints={reputationEngine.Mainnet_Points}
-              testnetPoints={reputationEngine.Testnet_Points}
-              appEngagementPoints={reputationEngine.App_Engagement_Points}
+              mainnetPoints={atomicResult.mainnetScore}
+              testnetPoints={atomicResult.testnetScore}
+              appEngagementPoints={atomicResult.appEngageScore}
             />
           </div>
         )}
