@@ -3837,6 +3837,230 @@ app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const searchQuery = req.query.search as string || '';
+
+    // Build unified aggregation pipeline
+    const pipeline: any[] = [];
+
+    // Start with final_users_v3 as base
+    const baseProject = {
+      $project: {
+        username: 1,
+        walletAddress: 1,
+        pioneerId: 1,
+        email: 1,
+        createdAt: 1,
+        lastActiveAt: 1,
+        referralCount: 1,
+        paymentDetails: 1,
+        protocolVersion: { $literal: 'v3' },
+        source: { $literal: 'final_users_v3' }
+      }
+    };
+
+    // Union with other collections
+    const unionStages = [];
+    
+    // Add final_users
+    try {
+      const finalUsersCount = await db.collection('final_users').countDocuments();
+      if (finalUsersCount > 0) {
+        unionStages.push({
+          $unionWith: {
+            coll: 'final_users',
+            pipeline: [{
+              $project: {
+                username: 1,
+                walletAddress: 1,
+                createdAt: 1,
+                lastActiveAt: 1,
+                referralCount: 1,
+                protocolVersion: { $literal: 'legacy' },
+                source: { $literal: 'final_users' }
+              }
+            }]
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('final_users collection not found:', e);
+    }
+
+    // Add userv3
+    try {
+      const userv3Count = await db.collection('userv3').countDocuments();
+      if (userv3Count > 0) {
+        unionStages.push({
+          $unionWith: {
+            coll: 'userv3',
+            pipeline: [{
+              $project: {
+                username: 1,
+                walletAddress: 1,
+                createdAt: 1,
+                lastActiveAt: 1,
+                protocolVersion: { $literal: 'userv3' },
+                source: { $literal: 'userv3' }
+              }
+            }]
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('userv3 collection not found:', e);
+    }
+
+    // Group by username to consolidate
+    const groupStage = {
+      $group: {
+        _id: '$username',
+        username: { $first: '$username' },
+        walletAddresses: { $addToSet: '$walletAddress' },
+        pioneerIds: { $addToSet: '$pioneerId' },
+        emails: { $addToSet: '$email' },
+        sources: { $addToSet: '$source' },
+        createdAt: { $min: '$createdAt' },
+        lastActiveAt: { $max: '$lastActiveAt' },
+        referralCounts: { $addToSet: '$referralCount' },
+        paymentDetails: { $first: '$paymentDetails' },
+        protocolVersions: { $addToSet: '$protocolVersion' },
+        recordCount: { $sum: 1 }
+      }
+    };
+
+    // Project final consolidated data
+    const projectStage = {
+      $project: {
+        _id: 0,
+        username: 1,
+        primaryWallet: { $arrayElemAt: ['$walletAddresses', 0] },
+        allWallets: '$walletAddresses',
+        primaryPioneerId: { $arrayElemAt: ['$pioneerIds', 0] },
+        allPioneerIds: '$pioneerIds',
+        primaryEmail: { $arrayElemAt: ['$emails', 0] },
+        sources: 1,
+        createdAt: 1,
+        lastActiveAt: 1,
+        maxReferralCount: { $max: '$referralCounts' },
+        paymentDetails: 1,
+        protocolVersions: 1,
+        recordCount: 1,
+        isConsolidated: { $gt: ['$recordCount', 1] }
+      }
+    };
+
+    // Build full pipeline
+    const fullPipeline = [baseProject, ...unionStages, groupStage, projectStage];
+
+    // Add search filter if provided
+    if (searchQuery) {
+      fullPipeline.push({
+        $match: {
+          $or: [
+            { username: { $regex: searchQuery, $options: 'i' } },
+            { primaryWallet: { $regex: searchQuery, $options: 'i' } },
+            { primaryEmail: { $regex: searchQuery, $options: 'i' } }
+          ]
+        }
+      });
+    }
+
+    fullPipeline.push({ $sort: { lastActiveAt: -1 } });
+
+    // Execute aggregation
+    const consolidatedUsers = await db.collection('final_users_v3').aggregate(fullPipeline).toArray();
+
+    // Hydration with additional collections
+    const usernames = consolidatedUsers.map(u => u.username);
+    
+    // Get reputation scores
+    let reputationScores = [];
+    try {
+      reputationScores = await db.collection('ReputationScores')
+        .find({ pioneerId: { $in: consolidatedUsers.flatMap(u => u.allPioneerIds).filter(Boolean) } })
+        .toArray();
+    } catch (e) {
+      console.warn('ReputationScores collection not found:', e);
+    }
+
+    // Get feedback data
+    let feedbackData = [];
+    try {
+      feedbackData = await db.collection('all_feedbacks')
+        .find({ username: { $in: usernames } })
+        .toArray();
+    } catch (e) {
+      console.warn('all_feedbacks collection not found:', e);
+    }
+
+    // Create lookup maps
+    const scoresMap = new Map(
+      reputationScores.map((score: any) => [score.pioneerId, score.totalReputationScore || 0])
+    );
+
+    const feedbackMap = new Map();
+    feedbackData.forEach((feedback: any) => {
+      if (!feedbackMap.has(feedback.username)) {
+        feedbackMap.set(feedback.username, []);
+      }
+      feedbackMap.get(feedback.username).push(feedback);
+    });
+
+    // Final data transformation
+    const transformedUsers = consolidatedUsers.map((user: any) => {
+      const userScores = user.allPioneerIds.map((id: any) => scoresMap.get(id) || 0);
+      const maxScore = Math.max(...userScores, 0);
+      const feedbacks = feedbackMap.get(user.username) || [];
+
+      return {
+        ...user,
+        reputaScore: maxScore,
+        feedbackCount: feedbacks.length,
+        hasFeedback: feedbacks.length > 0,
+        checkinCount: 0, // TODO: Implement when DailyCheckin is available
+        activityScore: feedbacks.length + (user.maxReferralCount || 0),
+        dataCompleteness: {
+          hasWallet: !!user.primaryWallet,
+          hasPioneerId: !!user.primaryPioneerId,
+          hasEmail: !!user.primaryEmail,
+          hasPayment: !!user.paymentDetails,
+          hasReputation: maxScore > 0
+        }
+      };
+    });
+
+    // Sort by activity score and last active
+    transformedUsers.sort((a: any, b: any) => {
+      const activityCompare = b.activityScore - a.activityScore;
+      if (activityCompare !== 0) return activityCompare;
+      
+      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+    });
+
+    return res.json({
+      success: true,
+      users: transformedUsers,
+      count: transformedUsers.length,
+      meta: {
+        totalRecords: transformedUsers.reduce((sum: number, u: any) => sum + u.recordCount, 0),
+        consolidatedUsers: transformedUsers.filter((u: any) => u.isConsolidated).length,
+        usersWithScores: transformedUsers.filter((u: any) => u.reputaScore > 0).length,
+        usersWithFeedback: transformedUsers.filter((u: any) => u.hasFeedback).length,
+        searchQuery: searchQuery || null
+      }
+    });
+
+  } catch (e: any) {
+    console.error('Consolidated API error:', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
   if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
 
