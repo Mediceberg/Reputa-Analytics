@@ -79,37 +79,39 @@ export function TopBar({ onMenuClick, balance, username, networkMode = 'testnet'
         </button>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Network Switcher - Fast Toggle */}
+          {/* Network Switcher - Fast Toggle - محسن للهواتف */}
           {onNetworkToggle && (
             <button
               onClick={onNetworkToggle}
-              className="h-8 sm:h-9 px-2 sm:px-2.5 rounded-lg flex items-center gap-1 transition-all active:scale-95 hover:scale-105"
+              className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 hover:scale-105 shadow-lg"
               style={{
                 background: networkMode === 'mainnet' 
-                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%)'
-                  : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%)',
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.15) 100%)'
+                  : 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0.15) 100%)',
                 border: networkMode === 'mainnet'
-                  ? '1px solid rgba(16, 185, 129, 0.4)'
-                  : '1px solid rgba(245, 158, 11, 0.4)',
+                  ? '1px solid rgba(16, 185, 129, 0.5)'
+                  : '1px solid rgba(245, 158, 11, 0.5)',
                 boxShadow: networkMode === 'mainnet'
-                  ? '0 0 10px rgba(16, 185, 129, 0.2)'
-                  : '0 0 10px rgba(245, 158, 11, 0.2)'
+                  ? '0 0 15px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
+                  : '0 0 15px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255,255,255,0.1)'
               }}
-              title={`Switch to ${networkMode === 'mainnet' ? 'Testnet' : 'Mainnet'}`}
+              title={`تبديل إلى ${networkMode === 'mainnet' ? 'Testnet' : 'Mainnet'}`}
             >
               {networkMode === 'mainnet' ? (
-                <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-400 flex-shrink-0" />
+                <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
               ) : (
-                <TestTube className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 flex-shrink-0" />
+                <TestTube className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 flex-shrink-0" />
               )}
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider" style={{
-                color: networkMode === 'mainnet' ? '#10B981' : '#F59E0B'
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider" style={{
+                color: networkMode === 'mainnet' ? '#10B981' : '#F59E0B',
+                textShadow: '0 0 8px rgba(0,0,0,0.3)'
               }}>
                 {networkMode === 'mainnet' ? 'MAIN' : 'TEST'}
               </span>
             </button>
           )}
 
+          {/* إزالة عرض الرصيد في Pi Browser - تم الاستبدال بأيقونة بسيطة */}
           <button 
             onClick={handleLogoClick}
             className="h-8 sm:h-9 px-2.5 sm:px-3 rounded-lg flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform overflow-visible relative"
@@ -121,7 +123,7 @@ export function TopBar({ onMenuClick, balance, username, networkMode = 'testnet'
           >
             <Wallet className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400 flex-shrink-0" />
             <span className="text-xs sm:text-sm font-bold text-cyan-400">
-              {balance !== undefined ? `${balance.toFixed(2)} π` : '-- π'}
+              π
             </span>
           </button>
 
