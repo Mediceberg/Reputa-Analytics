@@ -6,7 +6,7 @@ import {
   Zap, 
   ArrowRightLeft, 
   TrendingUp, 
-  Lock, 
+  
   AlertTriangle, 
   ChevronDown,
   ChevronUp,
@@ -31,7 +31,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'interaction': <Zap className="w-4 h-4" />,
   'pi_network': <ArrowRightLeft className="w-4 h-4" />,
   'pi_dex': <TrendingUp className="w-4 h-4" />,
-  'staking': <Lock className="w-4 h-4" />,
+  'staking': <Shield className="w-4 h-4" />,
   'external_penalty': <AlertTriangle className="w-4 h-4" />,
   'suspicious': <AlertTriangle className="w-4 h-4" />,
 };

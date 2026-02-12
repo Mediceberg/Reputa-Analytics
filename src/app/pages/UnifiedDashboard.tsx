@@ -50,7 +50,7 @@ import {
   LayoutDashboard, PieChart, Activity, LineChart, Settings, MessageSquare, HelpCircle,
   ArrowLeft, User, Wallet, Shield, Globe, Sparkles, Award, AlertCircle,
   RefreshCw, Network, Zap, FileText, Copy, ExternalLink, Bell, Moon, Sun,
-  Trophy, Info, BarChart3
+  Trophy, Info, BarChart3, TrendingUp, TestTube, ChevronDown
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
@@ -792,7 +792,7 @@ export function UnifiedDashboard({
                       boxShadow: '0 0 30px rgba(139, 92, 246, 0.3)',
                     }}
                   >
-                    <Lock className="w-6 h-6" style={{ color: '#8B5CF6' }} />
+                    <Shield className="w-6 h-6" style={{ color: '#8B5CF6' }} />
                   </div>
                   <h3 className="text-sm font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255, 255, 255, 0.95)' }}>
                     Detailed Audit Locked

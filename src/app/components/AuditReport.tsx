@@ -1,4 +1,4 @@
-import { Sparkles, Lock, TrendingUp, Activity, Clock, Shield, Zap, Brain } from 'lucide-react';   
+import { Sparkles, TrendingUp, Activity, Clock, Shield, Zap, Brain } from 'lucide-react';   
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
@@ -109,7 +109,7 @@ export function AuditReport({ walletData, isProUser, onUpgradePrompt }: AuditRep
                   Upgrade to Pro Access
                 </Button>
                 <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-500">
-                  <Lock className="w-3.5 h-3.5" />
+                  <Shield className="w-3.5 h-3.5" />
                   <span>One-time payment via Pi Network</span>
                 </div>
               </div>

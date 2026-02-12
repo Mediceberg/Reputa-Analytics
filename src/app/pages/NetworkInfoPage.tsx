@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'; 
-import { ArrowLeft, Globe, TrendingUp, Lock, Unlock, Users, Database, RefreshCw, Activity, Zap, Clock, Server } from 'lucide-react';
+import { ArrowLeft, Globe, TrendingUp, Shield, FileCheck, Users, Database, RefreshCw, Activity, Zap, Clock, Server } from 'lucide-react';
 import { fetchNetworkMetrics, NetworkMetrics } from '../services/piNetworkData';
 
 interface NetworkInfoPageProps {
@@ -57,7 +57,7 @@ export function NetworkInfoPage({ onBack }: NetworkInfoPageProps) {
       description: 'Total Pi currently in circulation on the network',
     },
     {
-      icon: Lock,
+      icon: Shield,
       label: 'Locked Mining Rewards',
       value: formatNumber(metrics.lockedMiningRewards),
       fullValue: formatFullNumber(metrics.lockedMiningRewards) + ' π',
@@ -66,7 +66,7 @@ export function NetworkInfoPage({ onBack }: NetworkInfoPageProps) {
       description: 'Mining rewards locked for future distribution',
     },
     {
-      icon: Unlock,
+      icon: FileCheck,
       label: 'Unlocked Mining',
       value: formatNumber(metrics.unlockedMiningRewards),
       fullValue: formatFullNumber(metrics.unlockedMiningRewards) + ' π',
