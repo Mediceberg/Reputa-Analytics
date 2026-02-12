@@ -22,6 +22,7 @@ import { fetchWalletData } from './protocol/wallet';
 import { initializePiSDK, authenticateUser, isPiBrowser, loginWithPi, PiUser } from './services/piSdk';
 import { initializeUnifiedReputationOnLogin, getCachedReputation, migrateLegacyReputationCache } from './services/reputationInitializer';
 import { initializeReferralOnLogin, captureReferralCodeFromUrl, dispatchWalletAnalysisCompleteEvent } from './services/referralService';
+import { reputationService } from './services/reputationService';
 import logoImage from '../assets/logo-new.png';
 
 function FeedbackSection({ username }: { username: string }) {
@@ -321,14 +322,38 @@ function ReputaAppContent() {
     try {
       const data = await fetchWalletData(address);
       if (data) {
-        setWalletData({ ...data, trustLevel: (data.reputaScore ?? 0) >= 600 ? 'Elite' : 'Verified' });
+        // Sync blockchain data to reputation service for accurate scoring
+        const uid = currentUser?.uid || `wallet_${address.slice(0, 8)}`;
+        await reputationService.loadUserReputation(uid, address);
+        const syncResult = await reputationService.syncBlockchainData(address);
+        
+        // Use the calculated blockchain score from reputation service
+        const unifiedScore = reputationService.getUnifiedScore();
+        const finalScore = unifiedScore.totalScore > 0 ? unifiedScore.totalScore : data.reputaScore;
+        
+        setWalletData({ 
+          ...data, 
+          reputaScore: finalScore,
+          trustLevel: unifiedScore.trustRank || ((finalScore ?? 0) >= 600 ? 'Elite' : 'Verified')
+        });
+        
         syncToAdmin(currentUser?.username || 'Guest', address);
         refreshWallet(address).catch(() => null);
         
         // Dispatch event to confirm referral after wallet analysis
         dispatchWalletAnalysisCompleteEvent();
+        
+        console.log('[App] Wallet scan complete:', {
+          address,
+          blockchainScore: syncResult.newScore,
+          totalScore: finalScore,
+          trustRank: unifiedScore.trustRank
+        });
       }
-    } catch (error) { alert("Blockchain sync error."); } finally { setIsLoading(false); }
+    } catch (error) { 
+      console.error('[App] Wallet scan error:', error);
+      alert("Blockchain sync error."); 
+    } finally { setIsLoading(false); }
   };
 
   // --- Logic for rendering based on path and data ---

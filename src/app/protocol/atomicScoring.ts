@@ -119,10 +119,100 @@ function getTrustLevel(score: number): AtomicTrustLevel {
 }
 
 export function calculateAtomicReputation(data: WalletActivityData, now: Date = new Date()): AtomicReputationResult {
+  /**
+   * 🎯 بروتوكول حساب السمعة الرسمي - قاعدة 50/20/30
+   * 
+   * Genesis  (50%) = 500,000 max - نقاط التأسيس (أول فحص)
+   * Recurring(20%) = 200,000 max - نشاط البلوكشين المتكرر  
+   * App      (30%) = 300,000 max - تفاعل التطبيق اليومي
+   * ─────────────────────────────────────────────────────
+   * Total          = 1,000,000 max
+   */
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 1️⃣ GENESIS SCORE (50%) - نقاط التأسيس - تُحسب مرة واحدة
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // عمر المحفظة: حسب الجدول الرسمي
+  let walletAgeBonus = 0;
+  const ageMonths = Math.floor(data.accountAgeDays / 30);
+  if (ageMonths >= 48) walletAgeBonus = 100_000;      // > 4 سنوات
+  else if (ageMonths >= 36) walletAgeBonus = 70_000;  // > 3 سنوات
+  else if (ageMonths >= 24) walletAgeBonus = 50_000;  // > 2 سنوات
+  else if (ageMonths >= 12) walletAgeBonus = 20_000;  // > 1 سنة
+  else if (ageMonths >= 6) walletAgeBonus = 10_000;   // > 6 أشهر
+  else walletAgeBonus = ageMonths * 500;              // أقل من 6 أشهر
+  
+  // النشاط التاريخي: حسب عدد المعاملات الإجمالي
+  const totalTxCount = data.internalTxCount + data.appInteractions + data.sdkPayments;
+  let lifetimeActivityBonus = 0;
+  if (totalTxCount >= 1000) lifetimeActivityBonus = 100_000;
+  else if (totalTxCount >= 500) lifetimeActivityBonus = 50_000;
+  else if (totalTxCount >= 200) lifetimeActivityBonus = 30_000;
+  else if (totalTxCount >= 50) lifetimeActivityBonus = 10_000;
+  else if (totalTxCount >= 1) lifetimeActivityBonus = 5_000;
+  
+  // مكافأة ربط المحفظة والتحليل الأول
+  const scanBonus = 5_000 + 1_000; // WALLET_LINK + FIRST_ANALYSIS
+  
+  // مكافأة الشبكة (Mainnet/Testnet)
+  const networkBonus = 5_000; // افتراضي للشبكة الحالية
+  
+  // إجمالي Genesis (حد أقصى 500,000)
+  const rawGenesisScore = walletAgeBonus + lifetimeActivityBonus + scanBonus + networkBonus;
+  const genesisScore = Math.min(500_000, rawGenesisScore);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 2️⃣ RECURRING SCORE (20%) - نشاط البلوكشين المتكرر
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // معاملات جديدة: 20 نقطة لكل معاملة
+  const newTxPoints = (data.internalTxCount * 20) + (data.appInteractions * 20);
+  
+  // تداول Dex: 50 نقطة لكل تداول
+  const dexPoints = data.normalTrades * 50;
+  
+  // SDK Payments: 100 نقطة لكل دفعة
+  const sdkPoints = data.sdkPayments * 100;
+  
+  // نشاط أسبوعي منتظم: 500 نقطة لكل أسبوع
+  const weeklyActivityPoints = data.regularActivityWeeks * 500;
+  
+  // إجمالي Recurring (حد أقصى 200,000)
+  const rawRecurringScore = newTxPoints + dexPoints + sdkPoints + weeklyActivityPoints;
+  const recurringScore = Math.min(200_000, rawRecurringScore);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 3️⃣ APP SCORE (30%) - تفاعل التطبيق اليومي
+  // ═══════════════════════════════════════════════════════════════════
+  
+  // تسجيل دخول يومي: 30 نقطة لكل يوم
+  const checkinPoints = data.dailyCheckins * 30;
+  
+  // مشاهدة إعلانات: 20 نقطة لكل إعلان
+  const adPoints = data.adBonuses * 20;
+  
+  // مشاهدة تقارير: 25 نقطة لكل تقرير
+  const reportPoints = data.reportViews * 25;
+  
+  // استخدام أدوات: 20 نقطة لكل استخدام
+  const toolPoints = data.toolUsage * 20;
+  
+  // سلسلة أيام متتالية: 4 نقاط × عدد الأيام
+  const streakBonus = data.regularActivityWeeks * 4 * 7; // تقريبي
+  
+  // إجمالي App (حد أقصى 300,000)
+  const rawAppScore = checkinPoints + adPoints + reportPoints + toolPoints + streakBonus;
+  const appScore = Math.min(300_000, rawAppScore);
+
+  // ═══════════════════════════════════════════════════════════════════
+  // 📊 الإجمالي النهائي
+  // ═══════════════════════════════════════════════════════════════════
+  
   const protocol = calculateReputationAtomic({
-    Mainnet_Points: data.internalTxCount,
-    Testnet_Points: data.appInteractions + data.sdkPayments + data.normalTrades,
-    App_Engagement_Points: data.dailyCheckins + data.adBonuses + data.reportViews + data.toolUsage,
+    Mainnet_Points: genesisScore,      // Genesis (50%)
+    Testnet_Points: recurringScore,    // Recurring (20%)
+    App_Engagement_Points: appScore,   // App (30%)
   });
 
   const allItems: AtomicScoreItem[] = [
