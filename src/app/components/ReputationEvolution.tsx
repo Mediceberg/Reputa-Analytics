@@ -42,7 +42,7 @@ export const ReputationEvolution: React.FC<ReputationEvolutionProps> = ({
   onRefresh,
   isRefreshing = false,
 }) => {
-  const colors = TRUST_LEVEL_COLORS[trustLevel] || TRUST_LEVEL_COLORS['Medium'];
+  const colors = TRUST_LEVEL_COLORS[trustLevel] || TRUST_LEVEL_COLORS['Novice'];
   const progress = getLevelProgress(reputationScore);
 
   const formatTimeAgo = (timestamp: string | Date) => {

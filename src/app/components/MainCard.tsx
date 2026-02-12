@@ -16,13 +16,16 @@ interface MainCardProps {
 }
 
 const TRUST_LABELS: Record<AtomicTrustLevel, { label: string; nextLabel: string }> = {
-  'Very Low Trust': { label: 'VERY LOW', nextLabel: 'Low' },
-  'Low Trust': { label: 'LOW TRUST', nextLabel: 'Medium' },
-  'Medium': { label: 'MEDIUM', nextLabel: 'Active' },
-  'Active': { label: 'ACTIVE', nextLabel: 'Trusted' },
-  'Trusted': { label: 'TRUSTED', nextLabel: 'Pioneer+' },
-  'Pioneer+': { label: 'PIONEER+', nextLabel: 'Elite' },
-  'Elite': { label: 'ELITE', nextLabel: 'Max' },
+  'Novice': { label: 'NOVICE', nextLabel: 'Explorer' },
+  'Explorer': { label: 'EXPLORER', nextLabel: 'Contributor' },
+  'Contributor': { label: 'CONTRIBUTOR', nextLabel: 'Verified' },
+  'Verified': { label: 'VERIFIED', nextLabel: 'Trusted' },
+  'Trusted': { label: 'TRUSTED', nextLabel: 'Ambassador' },
+  'Ambassador': { label: 'AMBASSADOR', nextLabel: 'Elite' },
+  'Elite': { label: 'ELITE', nextLabel: 'Sentinel' },
+  'Sentinel': { label: 'SENTINEL', nextLabel: 'Oracle' },
+  'Oracle': { label: 'ORACLE', nextLabel: 'Atomic Legend' },
+  'Atomic Legend': { label: 'ATOMIC LEGEND', nextLabel: 'Max' },
 };
 
 export function MainCard({

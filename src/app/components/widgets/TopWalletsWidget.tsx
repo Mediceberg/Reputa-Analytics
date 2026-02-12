@@ -47,7 +47,7 @@ export function TopWalletsWidget({ initialLimit = 10 }: TopWalletsWidgetProps) {
   };
 
   const getDemoUsers = (): TopReputaUser[] => {
-    const trustLevels: AtomicTrustLevel[] = ['Elite', 'Elite', 'Pioneer+', 'Pioneer+', 'Trusted', 'Trusted', 'Active', 'Active', 'Active', 'Medium'];
+    const trustLevels: AtomicTrustLevel[] = ['Atomic Legend', 'Oracle', 'Sentinel', 'Elite', 'Ambassador', 'Trusted', 'Verified', 'Contributor', 'Explorer', 'Novice'];
     const demoScores = [892, 756, 684, 632, 578, 521, 467, 412, 358, 305];
     
     return demoScores.map((score, i) => ({

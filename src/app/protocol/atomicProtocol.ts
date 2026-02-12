@@ -76,13 +76,16 @@ export const ATOMIC_PROTOCOL_CONFIG = {
   
   // Trust Level Thresholds
   TRUST_THRESHOLDS: {
-    'Very Low Trust': { min: 0, max: 1000 },
-    'Low Trust': { min: 1000, max: 2000 },
-    'Medium': { min: 2000, max: 4000 },
-    'Active': { min: 4000, max: 6000 },
-    'Trusted': { min: 6000, max: 7500 },
-    'Pioneer+': { min: 7500, max: 8500 },
-    'Elite': { min: 8500, max: 10000 },
+    'Novice': { min: 0, max: 10_000 },
+    'Explorer': { min: 10_001, max: 50_000 },
+    'Contributor': { min: 50_001, max: 150_000 },
+    'Verified': { min: 150_001, max: 300_000 },
+    'Trusted': { min: 300_001, max: 450_000 },
+    'Ambassador': { min: 450_001, max: 600_000 },
+    'Elite': { min: 600_001, max: 750_000 },
+    'Sentinel': { min: 750_001, max: 850_000 },
+    'Oracle': { min: 850_001, max: 950_000 },
+    'Atomic Legend': { min: 950_001, max: 1_000_000 },
   },
 };
 
@@ -167,13 +170,16 @@ export function formatAtomicScore(score: number): string {
  * Get trust level color
  */
 export const ATOMIC_TRUST_LEVEL_COLORS: Record<AtomicTrustLevel, string> = {
-  'Very Low Trust': '#EF4444',   // red-500
-  'Low Trust': '#F97316',        // orange-500
-  'Medium': '#EAB308',           // yellow-500
-  'Active': '#3B82F6',           // blue-500
-  'Trusted': '#10B981',          // emerald-500
-  'Pioneer+': '#8B5CF6',         // purple-500
-  'Elite': '#FFD700',            // gold
+  'Novice': '#9CA3AF',           // gray-400
+  'Explorer': '#F97316',         // orange-500
+  'Contributor': '#EAB308',      // yellow-500
+  'Verified': '#22C55E',         // green-500
+  'Trusted': '#3B82F6',          // blue-500
+  'Ambassador': '#8B5CF6',       // purple-500
+  'Elite': '#EC4899',            // pink-500
+  'Sentinel': '#A855F7',         // purple-500
+  'Oracle': '#FBBF24',           // amber-400
+  'Atomic Legend': '#00D9FF',    // cyan
 };
 
 /**
@@ -181,13 +187,16 @@ export const ATOMIC_TRUST_LEVEL_COLORS: Record<AtomicTrustLevel, string> = {
  */
 export function getTrustLevelIcon(trustLevel: AtomicTrustLevel): string {
   const iconMap: Record<AtomicTrustLevel, string> = {
-    'Very Low Trust': 'AlertCircle',
-    'Low Trust': 'AlertTriangle',
-    'Medium': 'HelpCircle',
-    'Active': 'Activity',
-    'Trusted': 'CheckCircle',
-    'Pioneer+': 'Star',
-    'Elite': 'Crown',
+    'Novice': 'Shield',
+    'Explorer': 'Compass',
+    'Contributor': 'Users',
+    'Verified': 'CheckCircle',
+    'Trusted': 'ShieldCheck',
+    'Ambassador': 'Star',
+    'Elite': 'Zap',
+    'Sentinel': 'Shield',
+    'Oracle': 'Eye',
+    'Atomic Legend': 'Crown',
   };
   return iconMap[trustLevel] || 'Shield';
 }

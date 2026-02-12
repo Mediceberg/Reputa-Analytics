@@ -41,13 +41,16 @@ export interface WalletData {
 export type TrustLevel = 'Elite' | 'High' | 'Medium' | 'Low';
 
 export type AtomicTrustLevel = 
-  | 'Very Low Trust' 
-  | 'Low Trust' 
-  | 'Medium' 
-  | 'Active' 
-  | 'Trusted' 
-  | 'Pioneer+' 
-  | 'Elite';
+  | 'Novice'
+  | 'Explorer'
+  | 'Contributor'
+  | 'Verified'
+  | 'Trusted'
+  | 'Ambassador'
+  | 'Elite'
+  | 'Sentinel'
+  | 'Oracle'
+  | 'Atomic Legend';
 
 export interface StakingData {
   amount: number;
