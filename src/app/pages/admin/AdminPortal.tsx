@@ -10,6 +10,9 @@ interface StatsData {
   totalUniqueUsers: number;
   totalVisits: number;
   totalVipUsers: number;
+  totalReputationScores?: number;
+  paidVipUsers?: number;
+  referralVipUsers?: number;
 }
 
 interface TrafficUser {
@@ -23,10 +26,39 @@ interface TrafficUser {
     txid: string;
     amount: number;
     paidAt: string;
+    method?: string;
   } | null;
   reputaScore: number;
   firstSeen: string;
   lastSeen: string;
+  email?: string;
+  referralCount?: number;
+  protocolVersion?: string;
+}
+
+interface ConsolidatedUser extends TrafficUser {
+  primaryWallet: string;
+  allWallets: string[];
+  primaryPioneerId?: string;
+  allPioneerIds: string[];
+  primaryEmail?: string;
+  sources: string[];
+  maxReferralCount: number;
+  protocolVersions: string[];
+  recordCount: number;
+  isConsolidated: boolean;
+  feedbackCount: number;
+  hasFeedback: boolean;
+  checkinCount: number;
+  lastCheckin?: number;
+  activityScore: number;
+  dataCompleteness: {
+    hasWallet: boolean;
+    hasPioneerId: boolean;
+    hasEmail: boolean;
+    hasPayment: boolean;
+    hasReputation: boolean;
+  };
 }
 
 interface HealthStatus {
@@ -195,11 +227,11 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
   const [stats, setStats] = useState<StatsData | null>(null);
   const [users, setUsers] = useState<TrafficUser[]>([]);
   const [paidUsers, setPaidUsers] = useState<TrafficUser[]>([]);
+  const [consolidatedUsers, setConsolidatedUsers] = useState<ConsolidatedUser[]>([]);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'users' | 'paid'>('users');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'consolidated' | 'paid'>('overview');
   const [sortField, setSortField] = useState<'lastSeen' | 'visitCount' | 'firstSeen'>('lastSeen');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -208,33 +240,27 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
     
     try {
-      const [statsRes, usersRes, paidRes, healthRes] = await Promise.all([
+      const [statsRes, usersRes, paidRes, consolidatedRes, healthRes] = await Promise.all([
         fetch('/api/admin-portal/stats', { headers }),
         fetch(`/api/admin-portal/users?search=${encodeURIComponent(searchQuery)}`, { headers }),
         fetch('/api/admin-portal/paid-users', { headers }),
+        fetch(`/api/admin-portal/consolidated?search=${encodeURIComponent(searchQuery)}`, { headers }),
         fetch('/api/health-check'),
       ]);
 
       // Check for HTTP errors
-      if (!statsRes.ok) {
-        throw new Error(`Stats API failed: ${statsRes.status}`);
-      }
-      if (!usersRes.ok) {
-        throw new Error(`Users API failed: ${usersRes.status}`);
-      }
-      if (!paidRes.ok) {
-        throw new Error(`Paid users API failed: ${paidRes.status}`);
-      }
-      if (!healthRes.ok) {
-        throw new Error(`Health check API failed: ${healthRes.status}`);
-      }
+      if (!statsRes.ok) throw new Error(`Stats API failed: ${statsRes.status}`);
+      if (!usersRes.ok) throw new Error(`Users API failed: ${usersRes.status}`);
+      if (!paidRes.ok) throw new Error(`Paid users API failed: ${paidRes.status}`);
+      if (!consolidatedRes.ok) throw new Error(`Consolidated API failed: ${consolidatedRes.status}`);
+      if (!healthRes.ok) throw new Error(`Health check API failed: ${healthRes.status}`);
 
       const statsData = await statsRes.json();
       const usersData = await usersRes.json();
       const paidData = await paidRes.json();
+      const consolidatedData = await consolidatedRes.json();
       const healthData = await healthRes.json();
 
       // Check API response success
@@ -252,6 +278,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
       setStats(statsData.stats);
       setUsers(usersData.users || []);
       setPaidUsers(paidData.paidUsers || []);
+      setConsolidatedUsers(consolidatedData.users || []);
       setHealth(healthData);
       setLastRefresh(new Date());
 
@@ -416,6 +443,18 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
               All Users ({users.length})
             </button>
             <button
+              onClick={() => setActiveTab('consolidated')}
+              className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
+              style={{
+                background: activeTab === 'consolidated' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${activeTab === 'consolidated' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255,255,255,0.05)'}`,
+                color: activeTab === 'consolidated' ? '#22c55e' : '#64748b',
+              }}
+            >
+              <Database className="w-3 h-3 inline mr-1.5" />
+              Consolidated ({consolidatedUsers.length})
+            </button>
+            <button
               onClick={() => setActiveTab('paid')}
               className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all"
               style={{
@@ -534,6 +573,103 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
                         <span className="text-[10px] text-slate-500 flex items-center justify-end gap-1">
                           <Clock className="w-3 h-3" />
                           {formatDate(user.lastSeen)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Consolidated Users Table */}
+        {activeTab === 'consolidated' && (
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(15, 17, 23, 0.8)', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
+            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <h2 className="text-[11px] font-black uppercase tracking-[0.15em] text-green-400 flex items-center gap-2">
+                <Database className="w-4 h-4" />
+                Global Data Consolidation
+              </h2>
+              <span className="text-[9px] text-slate-500">{consolidatedUsers.length} unified records</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <th className="text-left text-[9px] font-black uppercase tracking-wider text-slate-500 px-5 py-3">User</th>
+                    <th className="text-left text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-3">Wallet</th>
+                    <th className="text-center text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-3">Source</th>
+                    <th className="text-center text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-3">Activity</th>
+                    <th className="text-center text-[9px] font-black uppercase tracking-wider text-slate-500 px-3 py-3">Score</th>
+                    <th className="text-right text-[9px] font-black uppercase tracking-wider text-slate-500 px-5 py-3">Last Seen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {consolidatedUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16 text-slate-500 text-[11px] uppercase tracking-widest">
+                        No consolidated data available
+                      </td>
+                    </tr>
+                  )}
+                  {consolidatedUsers.map((user, idx) => (
+                    <tr key={user.username + idx} className="transition-colors hover:bg-white/[0.02]" style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e' }}>
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-[11px] font-bold text-white">{user.username}</div>
+                            {user.primaryPioneerId && (
+                              <div className="text-[8px] text-slate-500 font-mono">{user.primaryPioneerId.slice(0, 8)}...</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="font-mono text-[9px] text-cyan-400">
+                          {user.primaryWallet ? truncateWallet(user.primaryWallet) : 'N/A'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex flex-col gap-1">
+                          {user.sources.map((source, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase" 
+                                  style={{ 
+                                    background: source === 'final_users_v3' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(245, 158, 11, 0.15)', 
+                                    color: source === 'final_users_v3' ? '#8b5cf6' : '#f59e0b',
+                                    border: `1px solid ${source === 'final_users_v3' ? 'rgba(139, 92, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`
+                                  }}>
+                              {source.replace('final_users_', '').replace('user', '')}
+                            </span>
+                          ))}
+                        </div>
+                        {user.isConsolidated && (
+                          <div className="text-[7px] text-green-400 font-bold mt-1">MERGED</div>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-center gap-2">
+                            {user.hasFeedback && <span className="text-[8px] text-blue-400">💬</span>}
+                            <span className="text-[9px] text-slate-300">{user.feedbackCount}</span>
+                          </div>
+                          <div className="text-[7px] text-slate-500">{user.checkinCount} check-ins</div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-purple-400">{user.reputaScore.toLocaleString()}</span>
+                          <div className="text-[7px] text-slate-500">Activity: {user.activityScore}</div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <span className="text-[10px] text-slate-500 flex items-center justify-end gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatRelativeTime(user.lastActiveAt)}
                         </span>
                       </td>
                     </tr>
