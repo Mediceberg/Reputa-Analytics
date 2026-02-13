@@ -12,8 +12,9 @@ async function startServer() {
   const app = express();
   
   app.use(cors({
-    origin: true,
-    credentials: true,
+    origin: '*',
+    methods: '*',
+    allowedHeaders: '*'
   }));
   
   app.use(express.json());
@@ -34,7 +35,7 @@ async function startServer() {
 
   app.use(vite.middlewares);
 
-  const PORT = 5000;
+  const PORT = 5001;
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Dev server running at http://0.0.0.0:${PORT}`);
     console.log(`📡 API routes mounted at /api/*`);

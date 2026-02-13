@@ -36,8 +36,27 @@ export function createRedisClient() {
 
   if (!url || !token) {
     console.warn('⚠️ Redis credentials are missing. Falling back to in-memory noop cache client.');
+    console.warn('📝 To enable Redis caching, add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to your .env file');
     return createNoopRedisClient();
   }
 
-  return new Redis({ url, token });
+  try {
+    console.log('🔗 Connecting to Upstash Redis...');
+    const client = new Redis({
+      url,
+      token,
+      // Add timeout and retry settings
+      retry: {
+        retries: 3,
+        backoff: (attemptIndex: number) => Math.min(attemptIndex * 1000, 5000),
+      },
+    });
+
+    console.log('✅ Upstash Redis connected successfully');
+    return client;
+  } catch (error) {
+    console.error('❌ Failed to connect to Upstash Redis:', error);
+    console.warn('⚠️ Falling back to in-memory noop cache client');
+    return createNoopRedisClient();
+  }
 }

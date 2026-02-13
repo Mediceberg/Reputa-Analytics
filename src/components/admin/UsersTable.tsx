@@ -14,6 +14,10 @@ interface User {
   joined_date: string;
   app_score: number;
   email: string;
+  totalActivity: number;
+  visitCount: number;
+  sessionCount: number;
+  sourceTables: string[];
 }
 
 interface UsersTableProps {
@@ -155,6 +159,9 @@ export function UsersTable({ users, onUserClick }: UsersTableProps) {
                 </button>
               </th>
               <th className="px-6 py-3 text-left">المحفظة</th>
+              <th className="px-6 py-3 text-left">النشاط الكلي</th>
+              <th className="px-6 py-3 text-left">الزيارات</th>
+              <th className="px-6 py-3 text-left">الجلسات</th>
               <th className="px-6 py-3 text-left">
                 <button
                   onClick={() => handleSort('vip_status')}
@@ -164,6 +171,7 @@ export function UsersTable({ users, onUserClick }: UsersTableProps) {
                   <SortIcon columnKey="vip_status" />
                 </button>
               </th>
+              <th className="px-6 py-3 text-left">المصادر</th>
               <th className="px-6 py-3 text-left">تاريخ الانضمام</th>
               <th className="px-6 py-3 text-center">الإجراء</th>
             </tr>
@@ -193,6 +201,17 @@ export function UsersTable({ users, onUserClick }: UsersTableProps) {
                   </p>
                 </td>
                 <td className="px-6 py-4">
+                  <span className="text-lg font-bold text-blue-400">
+                    {user.totalActivity.toLocaleString()}
+                  </span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-green-400 font-medium">{user.visitCount}</span>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="text-yellow-400 font-medium">{user.sessionCount}</span>
+                </td>
+                <td className="px-6 py-4">
                   {user.vip_status ? (
                     <span className="inline-block bg-purple-500/20 border border-purple-500/50 text-purple-300 px-3 py-1 rounded-lg text-xs font-medium">
                       ✨ VIP
@@ -200,6 +219,15 @@ export function UsersTable({ users, onUserClick }: UsersTableProps) {
                   ) : (
                     <span className="text-gray-500 text-xs">عادي</span>
                   )}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-wrap gap-1 max-w-xs">
+                    {user.sourceTables.map(table => (
+                      <span key={table} className="px-2 py-1 bg-slate-700 text-xs rounded text-slate-300">
+                        {table}
+                      </span>
+                    ))}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-gray-400 text-xs">
                   {new Date(user.joined_date).toLocaleDateString('ar-SA')}

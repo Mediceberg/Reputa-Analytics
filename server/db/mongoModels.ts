@@ -9,6 +9,11 @@ import { MongoClient, Db, Collection, ObjectId } from 'mongodb';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'reputa-v3';
 
+console.log('🔗 MongoDB Connection Info:');
+console.log('   URI:', MONGODB_URI ? MONGODB_URI.replace(/:[^:]*@/, ':***@') : 'NOT SET');
+console.log('   DB Name:', MONGODB_DB_NAME);
+console.log('   Using Atlas:', MONGODB_URI?.startsWith('mongodb+srv://') ? 'Yes' : 'No (Local MongoDB)');
+
 let mongoClient: MongoClient | null = null;
 let db: Db | null = null;
 

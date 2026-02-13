@@ -24,6 +24,10 @@ interface User {
   joined_date: string;
   app_score: number;
   email: string;
+  totalActivity: number;
+  visitCount: number;
+  sessionCount: number;
+  sourceTables: string[];
 }
 
 interface DashboardData {
