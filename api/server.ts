@@ -3952,7 +3952,22 @@ app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
   } catch (e: any) {
     console.error('[ADMIN STATS] Error:', e);
 
-  return (headerPw || queryPw || bodyPw) === adminPassword;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const headerPw = req.headers['x-admin-password'] as string;
+  const queryPw = req.query.password as string;
+  const bodyPw = req.body?.password;
+
+  console.log('[ADMIN AUTH DEBUG]', {
+    adminPassword: adminPassword ? '***' : 'not set',
+    headerPw: headerPw ? '***' : 'not provided',
+    queryPw: queryPw ? '***' : 'not provided',
+    bodyPw: bodyPw ? '***' : 'not provided',
+    method: req.method,
+    url: req.url
+  });
+
+  const suppliedPassword = headerPw || queryPw || bodyPw;
+  return suppliedPassword === adminPassword;
 }
 
 app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
@@ -4158,17 +4173,19 @@ app.post('/api/admin-portal/consolidate', async (req: Request, res: Response) =>
       ];
     }
 
-    const users = await trafficCol.find(filter)
-      .sort({ lastSeen: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
-
-    const total = await trafficCol.countDocuments(filter);
+    const [users, total] = await Promise.all([
+      trafficCol.find(filter)
+        .sort({ lastSeen: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      trafficCol.countDocuments(filter)
+    ]);
 
     return res.json({ success: true, users, total });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
+  } catch (error: any) {
+    console.error('Error in /api/admin-portal/users:', error);
+    return res.status(500).json({ error: error.message });
   }
 });
 
@@ -4316,21 +4333,25 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
     const usernames = consolidatedUsers.map(u => u.username);
     
     // Get reputation scores
-    let reputationScores: Array<{pioneerId: string; totalReputationScore?: number}> = [];
+    type ReputationScore = { pioneerId: string; totalReputationScore?: number };
+    let reputationScores: ReputationScore[] = [];
     try {
-      reputationScores = await db.collection('ReputationScores')
+      const scores = await db.collection<ReputationScore>('ReputationScores')
         .find({ pioneerId: { $in: consolidatedUsers.flatMap((u: any) => u.allPioneerIds).filter(Boolean) } })
         .toArray();
+      reputationScores = scores as ReputationScore[];
     } catch (e) {
       console.warn('ReputationScores collection not found:', e);
     }
 
     // Get feedback data
-    let feedbackData: Array<{username: string; [key: string]: any}> = [];
+    type FeedbackData = { username: string; [key: string]: any };
+    let feedbackData: FeedbackData[] = [];
     try {
-      feedbackData = await db.collection('all_feedbacks')
+      const feedback = await db.collection<FeedbackData>('all_feedbacks')
         .find({ username: { $in: usernames } })
         .toArray();
+      feedbackData = feedback as FeedbackData[];
     } catch (e) {
       console.warn('all_feedbacks collection not found:', e);
     }
