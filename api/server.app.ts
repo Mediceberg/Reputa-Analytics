@@ -165,8 +165,9 @@ app.all('/api/admin', handleAdminGetAllUsers);
 async function handleAdminDashboard(req: Request, res: Response) {
   try {
     // Get collections
-    const usersCollection = await getUsersCollection();
-    const reputationCollection = await getReputationScoresCollection();
+    const db = await getMongoDb();
+    const usersCollection = db.collection('final_users_v3');
+    const reputationCollection = db.collection('reputation_scores');
     // Get total users
     const totalUsers = await usersCollection.countDocuments();
     // Get all users with reputation data
