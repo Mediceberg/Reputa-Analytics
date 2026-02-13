@@ -36,6 +36,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 // HIGH PRIORITY REAL DATA ROUTE - Big Bang Data Restore
 app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
   // Prevent browser caching for real-time data
@@ -169,10 +170,67 @@ const redis = new Redis({
   url: process.env.KV_REST_API_URL || '',
   token: process.env.KV_REST_API_TOKEN || '',
 });
+=======
+// Graceful Redis initialization with fallback
+let redis: any = null;
+try {
+  if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+    redis = new Redis({
+      url: process.env.KV_REST_API_URL,
+      token: process.env.KV_REST_API_TOKEN,
+    });
+    console.log('✅ Redis client initialized');
+  } else {
+    console.warn('⚠️ Redis credentials missing. Using fallback mode.');
+  }
+} catch (error) {
+  console.warn('⚠️ Redis initialization failed:', error);
+}
 
-// ====================
-// SHARED TYPES & DATABASE SCHEMA
-// ====================
+
+// Graceful MongoDB connection wrapper
+async function safeGetMongoDb() {
+  try {
+    return await getMongoDb();
+  } catch (error) {
+    console.warn('⚠️ MongoDB connection failed, using fallback mode:', error);
+    return null;
+  }
+}
+
+// Graceful Redis operations wrapper
+async function safeRedisOperation(operation: string, ...args: any[]) {
+  if (!redis) {
+    console.warn('⚠️ Redis not available, skipping operation:', operation);
+    return null;
+  }
+  try {
+    return await redis[operation](...args);
+  } catch (error) {
+    console.warn('⚠️ Redis operation failed:', operation, error);
+    return null;
+  }
+}
+
+// Graceful database operations wrapper
+async function safeDbOperation<T>(operation: () => Promise<T>, fallbackValue?: T): Promise<T | null> {
+  try {
+    return await operation();
+  } catch (error) {
+    console.warn('⚠️ Database operation failed:', error);
+    return fallbackValue || null;
+  }
+}
+
+// Graceful count operation
+async function safeCount(collection: any, query: any): Promise<number> {
+  try {
+    return await collection.countDocuments(query);
+  } catch (error) {
+    console.warn('⚠️ Count operation failed:', error);
+    return 0;
+  }
+}
 
 // Live Execution Engine Schema
 interface AtomicUserProfile {
@@ -3441,12 +3499,7 @@ app.delete('/api/admin/user/:pioneerId', async (req: Request, res: Response) => 
 // ADMIN CONSOLE ROUTES (MONGO)
 // ====================
 
-const safeCount = async (collection: any, filter: any = {}) => {
-  if (!collection) return 0;
-  if (typeof collection.countDocuments === 'function') return collection.countDocuments(filter);
-  const arr = await collection.find(filter).toArray();
-  return Array.isArray(arr) ? arr.length : 0;
-};
+// safeCount function is already declared above
 
 const safeAggregateFirst = async (collection: any, pipeline: any[]) => {
   try {
@@ -3850,6 +3903,7 @@ function verifyAdminPassword(req: Request): boolean {
   const queryPw = req.query.password as string;
   const bodyPw = req.body?.password;
 
+
   console.log('[ADMIN AUTH DEBUG]', {
     adminPassword,
     headerPw,
@@ -3903,11 +3957,52 @@ app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
     });
   } catch (e: any) {
     console.error('[ADMIN STATS] Error:', e);
+
+  return (headerPw || queryPw || bodyPw) === adminPassword;
+}
+
+app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const trafficCol = db.collection('TrafficUsers');
+    const usersV3Col = db.collection('final_users_v3');
+
+    // Unique users from TrafficUsers
+    let totalUniqueUsers = 0;
+    try { totalUniqueUsers = await trafficCol.countDocuments({}); } catch { /* empty */ }
+
+    // Also count from final_users_v3 if TrafficUsers is empty
+    if (totalUniqueUsers === 0) {
+      try { totalUniqueUsers = await usersV3Col.countDocuments({}); } catch { /* empty */ }
+    }
+
+    // Total visits (sum of visitCount)
+    let totalVisits = 0;
+    try {
+      const visitAgg = await trafficCol.aggregate([
+        { $group: { _id: null, total: { $sum: '$visitCount' } } }
+      ]).toArray();
+      totalVisits = visitAgg[0]?.total || 0;
+    } catch { /* empty */ }
+
+    // VIP users (paid)
+    let totalVipUsers = 0;
+    try { totalVipUsers = await trafficCol.countDocuments({ isVip: true }); } catch { /* empty */ }
+
+    return res.json({
+      success: true,
+      stats: { totalUniqueUsers, totalVisits, totalVipUsers },
+    });
+  } catch (e: any) {
+
     return res.status(500).json({ error: e.message });
   }
 });
 
 app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
+
   // Prevent browser caching for real-time data
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
@@ -4051,6 +4146,276 @@ app.post('/api/admin-portal/consolidate', async (req: Request, res: Response) =>
       message: `Consolidated ${result.uniqueUsers} users`,
       data: result
     });
+
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const trafficCol = db.collection('TrafficUsers');
+    const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
+    const skip = parseInt(req.query.skip as string) || 0;
+    const search = req.query.search as string;
+
+    let filter: any = {};
+    if (search) {
+      filter.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { wallets: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const users = await trafficCol.find(filter)
+      .sort({ lastSeen: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    const total = await trafficCol.countDocuments(filter);
+
+    return res.json({ success: true, users, total });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const searchQuery = req.query.search as string || '';
+
+    // Build unified aggregation pipeline
+    const pipeline: any[] = [];
+
+    // Start with final_users_v3 as base
+    const baseProject = {
+      $project: {
+        username: 1,
+        walletAddress: 1,
+        pioneerId: 1,
+        email: 1,
+        createdAt: 1,
+        lastActiveAt: 1,
+        referralCount: 1,
+        paymentDetails: 1,
+        protocolVersion: { $literal: 'v3' },
+        source: { $literal: 'final_users_v3' }
+      }
+    };
+
+    // Union with other collections
+    const unionStages = [];
+    
+    // Add final_users
+    try {
+      const finalUsersCount = await db.collection('final_users').countDocuments();
+      if (finalUsersCount > 0) {
+        unionStages.push({
+          $unionWith: {
+            coll: 'final_users',
+            pipeline: [{
+              $project: {
+                username: 1,
+                walletAddress: 1,
+                createdAt: 1,
+                lastActiveAt: 1,
+                referralCount: 1,
+                protocolVersion: { $literal: 'legacy' },
+                source: { $literal: 'final_users' }
+              }
+            }]
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('final_users collection not found:', e);
+    }
+
+    // Add userv3
+    try {
+      const userv3Count = await db.collection('userv3').countDocuments();
+      if (userv3Count > 0) {
+        unionStages.push({
+          $unionWith: {
+            coll: 'userv3',
+            pipeline: [{
+              $project: {
+                username: 1,
+                walletAddress: 1,
+                createdAt: 1,
+                lastActiveAt: 1,
+                protocolVersion: { $literal: 'userv3' },
+                source: { $literal: 'userv3' }
+              }
+            }]
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('userv3 collection not found:', e);
+    }
+
+    // Group by username to consolidate
+    const groupStage = {
+      $group: {
+        _id: '$username',
+        username: { $first: '$username' },
+        walletAddresses: { $addToSet: '$walletAddress' },
+        pioneerIds: { $addToSet: '$pioneerId' },
+        emails: { $addToSet: '$email' },
+        sources: { $addToSet: '$source' },
+        createdAt: { $min: '$createdAt' },
+        lastActiveAt: { $max: '$lastActiveAt' },
+        referralCounts: { $addToSet: '$referralCount' },
+        paymentDetails: { $first: '$paymentDetails' },
+        protocolVersions: { $addToSet: '$protocolVersion' },
+        recordCount: { $sum: 1 }
+      }
+    };
+
+    // Project final consolidated data
+    const projectStage = {
+      $project: {
+        _id: 0,
+        username: 1,
+        primaryWallet: { $arrayElemAt: ['$walletAddresses', 0] },
+        allWallets: '$walletAddresses',
+        primaryPioneerId: { $arrayElemAt: ['$pioneerIds', 0] },
+        allPioneerIds: '$pioneerIds',
+        primaryEmail: { $arrayElemAt: ['$emails', 0] },
+        sources: 1,
+        createdAt: 1,
+        lastActiveAt: 1,
+        maxReferralCount: { $max: '$referralCounts' },
+        paymentDetails: 1,
+        protocolVersions: 1,
+        recordCount: 1,
+        isConsolidated: { $gt: ['$recordCount', 1] }
+      }
+    };
+
+    // Build full pipeline
+    const fullPipeline = [baseProject, ...unionStages, groupStage, projectStage];
+
+    // Add search filter if provided
+    if (searchQuery) {
+      fullPipeline.push({
+        $match: {
+          $or: [
+            { username: { $regex: searchQuery, $options: 'i' } },
+            { primaryWallet: { $regex: searchQuery, $options: 'i' } },
+            { primaryEmail: { $regex: searchQuery, $options: 'i' } }
+          ]
+        }
+      });
+    }
+
+    fullPipeline.push({ $sort: { lastActiveAt: -1 } });
+
+    // Execute aggregation
+    const consolidatedUsers = await db.collection('final_users_v3').aggregate(fullPipeline).toArray();
+
+    // Hydration with additional collections
+    const usernames = consolidatedUsers.map(u => u.username);
+    
+    // Get reputation scores
+    let reputationScores = [];
+    try {
+      reputationScores = await db.collection('ReputationScores')
+        .find({ pioneerId: { $in: consolidatedUsers.flatMap(u => u.allPioneerIds).filter(Boolean) } })
+        .toArray();
+    } catch (e) {
+      console.warn('ReputationScores collection not found:', e);
+    }
+
+    // Get feedback data
+    let feedbackData = [];
+    try {
+      feedbackData = await db.collection('all_feedbacks')
+        .find({ username: { $in: usernames } })
+        .toArray();
+    } catch (e) {
+      console.warn('all_feedbacks collection not found:', e);
+    }
+
+    // Create lookup maps
+    const scoresMap = new Map(
+      reputationScores.map((score: any) => [score.pioneerId, score.totalReputationScore || 0])
+    );
+
+    const feedbackMap = new Map();
+    feedbackData.forEach((feedback: any) => {
+      if (!feedbackMap.has(feedback.username)) {
+        feedbackMap.set(feedback.username, []);
+      }
+      feedbackMap.get(feedback.username).push(feedback);
+    });
+
+    // Final data transformation
+    const transformedUsers = consolidatedUsers.map((user: any) => {
+      const userScores = user.allPioneerIds.map((id: any) => scoresMap.get(id) || 0);
+      const maxScore = Math.max(...userScores, 0);
+      const feedbacks = feedbackMap.get(user.username) || [];
+
+      return {
+        ...user,
+        reputaScore: maxScore,
+        feedbackCount: feedbacks.length,
+        hasFeedback: feedbacks.length > 0,
+        checkinCount: 0, // TODO: Implement when DailyCheckin is available
+        activityScore: feedbacks.length + (user.maxReferralCount || 0),
+        dataCompleteness: {
+          hasWallet: !!user.primaryWallet,
+          hasPioneerId: !!user.primaryPioneerId,
+          hasEmail: !!user.primaryEmail,
+          hasPayment: !!user.paymentDetails,
+          hasReputation: maxScore > 0
+        }
+      };
+    });
+
+    // Sort by activity score and last active
+    transformedUsers.sort((a: any, b: any) => {
+      const activityCompare = b.activityScore - a.activityScore;
+      if (activityCompare !== 0) return activityCompare;
+      
+      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+    });
+
+    return res.json({
+      success: true,
+      users: transformedUsers,
+      count: transformedUsers.length,
+      meta: {
+        totalRecords: transformedUsers.reduce((sum: number, u: any) => sum + u.recordCount, 0),
+        consolidatedUsers: transformedUsers.filter((u: any) => u.isConsolidated).length,
+        usersWithScores: transformedUsers.filter((u: any) => u.reputaScore > 0).length,
+        usersWithFeedback: transformedUsers.filter((u: any) => u.hasFeedback).length,
+        searchQuery: searchQuery || null
+      }
+    });
+
+  } catch (e: any) {
+    console.error('Consolidated API error:', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getMongoDb();
+    const trafficCol = db.collection('TrafficUsers');
+
+    const paidUsers = await trafficCol.find({ isVip: true })
+      .sort({ updatedAt: -1 })
+      .limit(200)
+      .toArray();
+
+    return res.json({ success: true, paidUsers });
+
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
@@ -4094,10 +4459,10 @@ app.post('/api/admin-portal/mark-vip', async (req: Request, res: Response) => {
 const PORT_FINAL = Number(process.env.PORT) || 3001;
 
 const entryArg = process.argv[1] ?? '';
-const isDevStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.endsWith('/server.ts'));
+const isDevStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.includes('api\\server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('\\server.ts'));
 
 if (isDevStart) {
-  startUnifiedServer(app, PORT);
+  startUnifiedServer(app, PORT_FINAL);
 }
 
 export default app;

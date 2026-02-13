@@ -35,12 +35,23 @@ export function createRedisClient() {
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
+
     console.warn('⚠️ Redis credentials are missing. Falling back to in-memory noop cache client.');
     console.warn('📝 To enable Redis caching, add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to your .env file');
+
+    console.warn('⚠️ Redis credentials are missing. Using fallback mode.');
+    console.warn('⚠️ To enable Redis caching, set these environment variables:');
+    console.warn('   - KV_REST_API_URL=https://<your-vercel-kv-url>.upstash.io');
+    console.warn('   - KV_REST_API_TOKEN=<your-vercel-kv-token>');
+    console.warn('   OR alternatively:');
+    console.warn('   - UPSTASH_REDIS_REST_URL=https://<your-upstash-redis-url>.upstash.io');
+    console.warn('   - UPSTASH_REDIS_REST_TOKEN=<your-upstash-redis-token>');
+
     return createNoopRedisClient();
   }
 
   try {
+
     console.log('🔗 Connecting to Upstash Redis...');
     const client = new Redis({
       url,
@@ -56,6 +67,17 @@ export function createRedisClient() {
     return client;
   } catch (error) {
     console.error('❌ Failed to connect to Upstash Redis:', error);
+
+    const redis = new Redis({ 
+      url, 
+      token,
+    });
+
+    console.log('✅ Vercel KV/Redis client initialized');
+    return redis;
+  } catch (error) {
+    console.error('❌ Failed to initialize Redis client:', error);
+
     console.warn('⚠️ Falling back to in-memory noop cache client');
     return createNoopRedisClient();
   }
