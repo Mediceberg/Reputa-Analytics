@@ -10,12 +10,15 @@ import { getMongoDb, getReputationScoresCollection } from '../server/db/mongoMod
 import * as reputationService from '../server/services/reputationService';
 import protocol from '../server/config/reputaProtocol';
 
+console.log('DATABASE_URL_CHECK:', process.env.MONGODB_URI ? 'CONNECTED TO ATLAS' : 'LOCAL DETECTED');
+console.log('UPSTASH_CHECK:', (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ? 'UPSTASH CONFIGURED' : 'UPSTASH MISSING');
+
 const PORT = Number(process.env.PORT) || 3001;
 
 
 
 
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ origin: '*', methods: '*', allowedHeaders: '*' }));
 app.use(express.json());
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -33,6 +36,141 @@ app.use((req, res, next) => {
   next();
 });
 
+
+// HIGH PRIORITY REAL DATA ROUTE - Big Bang Data Restore
+app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
+  // Prevent browser caching for real-time data
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
+  console.log(' [API] /api/admin-portal/users request received');
+  console.log(' [API] Query params:', req.query);
+
+  if (!verifyAdminPassword(req)) {
+    console.error(' [API] Admin password verification failed');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  console.log(' [API] Admin password verified');
+  console.log('Frontend is calling me at /api/admin-portal/users');
+  console.log("CRITICAL: I AM RUNNING THE REAL VERSION NOW");
+
+  try {
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = 50; // Fixed 50 users per page as requested
+    const skip = (page - 1) * limit;
+    const search = req.query.search as string;
+
+    console.log(` [API] Requesting page ${page}, limit ${limit}, search: "${search || 'none'}"`);
+
+    // REAL DATA RESTORE - Pull from MongoDB and Upstash with deep merging
+    console.log(' [API] Restoring real data from MongoDB and Upstash...');
+
+    const { createMasterRegistry } = await import('../server/services/upstashConsolidationService.js');
+    const { masterRegistry, uniqueUsers, totalRecords, sourceStats } = await createMasterRegistry();
+
+    console.log(` [API] Master registry created: ${masterRegistry.length} users`);
+
+    // Apply search filter if provided
+    let filteredUsers = masterRegistry;
+    if (search) {
+      console.log(` [API] Applying search filter: "${search}"`);
+      const searchLower = search.toLowerCase();
+      filteredUsers = masterRegistry.filter(user =>
+        user.username.toLowerCase().includes(searchLower) ||
+        user.email?.toLowerCase().includes(searchLower) ||
+        user.wallets.some((wallet: string) => wallet.toLowerCase().includes(searchLower))
+      );
+      console.log(` [API] Search results: ${filteredUsers.length} users`);
+    }
+
+    // Apply pagination
+    const totalFiltered = filteredUsers.length;
+    const paginatedUsers = filteredUsers.slice(skip, skip + limit);
+    const totalPages = Math.ceil(totalFiltered / limit);
+
+    console.log(` [API] Pagination: page ${page}/${totalPages}, showing ${paginatedUsers.length} users (${skip + 1}-${skip + paginatedUsers.length} of ${totalFiltered})`);
+
+    const responseData = {
+      success: true,
+      users: paginatedUsers,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalUsers: totalFiltered,
+        usersPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      stats: {
+        uniqueUsers,
+        totalRecords,
+        mongodbCollections: sourceStats.mongodbCollections.length,
+        upstashKeys: sourceStats.upstashKeys,
+        upstashError: sourceStats.upstashError
+      },
+      cache: {
+        source: 'master_aggregator',
+        searchApplied: !!search,
+        lastUpdate: new Date().toISOString(),
+        processingTimeMs: Date.now() - Date.now() // Placeholder
+      }
+    };
+
+    console.log(' [API] Response prepared successfully');
+    console.log('CRITICAL DEBUG: Sending to Frontend ->', responseData.users.length, 'users');
+    res.header("Content-Type", "application/json");
+    return res.json(responseData);
+
+  } catch (error: any) {
+    console.error(' [API] CRITICAL ERROR in /api/admin-portal/users:');
+    console.error(' [API] Error message:', error.message);
+    console.error(' [API] Error stack:', error.stack);
+    console.error(' [API] Error code:', error.code);
+    console.error(' [API] Error name:', error.name);
+
+    // Check for specific error types
+    if (error.message.includes('MongoDB') || error.message.includes('mongoose')) {
+      console.error(' [API] MongoDB connection error detected');
+    } else if (error.message.includes('Redis') || error.message.includes('Upstash')) {
+      console.error(' [API] Upstash Redis error detected');
+    } else if (error.message.includes('timeout')) {
+      console.error(' [API] Timeout error detected');
+    } else if (error.message.includes('network') || error.message.includes('ECONNREFUSED')) {
+      console.error(' [API] Network connectivity error detected');
+    }
+
+    // Return error response with available data if possible
+    try {
+      console.log(' [API] Attempting to return partial data...');
+      return res.status(500).json({
+        error: error.message,
+        success: false,
+        partialData: {
+          errorType: 'network_error',
+          timestamp: new Date().toISOString(),
+          availableStats: {
+            hasMongoDB: process.env.MONGODB_URI ? true : false,
+            hasUpstash: (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ? true : false
+          }
+        }
+      });
+    } catch (fallbackError) {
+      console.error(' [API] Even fallback response failed:', fallbackError);
+      return res.status(500).json({
+        error: 'Critical system error',
+        success: false
+      });
+    }
+  }
+});
+
+const redis = new Redis({
+  url: process.env.KV_REST_API_URL || '',
+  token: process.env.KV_REST_API_TOKEN || '',
+});
+=======
 // Graceful Redis initialization with fallback
 let redis: any = null;
 try {
@@ -48,6 +186,7 @@ try {
 } catch (error) {
   console.warn('⚠️ Redis initialization failed:', error);
 }
+
 
 // Graceful MongoDB connection wrapper
 async function safeGetMongoDb() {
@@ -3763,6 +3902,62 @@ function verifyAdminPassword(req: Request): boolean {
   const headerPw = req.headers['x-admin-password'] as string;
   const queryPw = req.query.password as string;
   const bodyPw = req.body?.password;
+
+
+  console.log('[ADMIN AUTH DEBUG]', {
+    adminPassword,
+    headerPw,
+    queryPw,
+    bodyPw,
+    method: req.method,
+    url: req.url
+  });
+
+  const suppliedPassword = headerPw || queryPw || bodyPw;
+  const isValid = suppliedPassword === adminPassword;
+
+  console.log('[ADMIN AUTH RESULT]', {
+    suppliedPassword,
+    isValid,
+    expectedPassword: adminPassword
+  });
+
+  return isValid;
+}
+
+app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
+  // Prevent browser caching for real-time data
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    // Get consolidated stats from Upstash KV
+    const { checkUpstashConnection, getConsolidatedUserCount } = await import('../server/services/upstashConsolidationService.js');
+
+    const [upstashStatus, totalUsers] = await Promise.all([
+      checkUpstashConnection(),
+      getConsolidatedUserCount()
+    ]);
+
+    return res.json({
+      success: true,
+      stats: {
+        totalUniqueUsers: totalUsers,
+        totalVisits: 0, // TODO: Implement visit tracking in consolidation
+        totalVipUsers: 0  // TODO: Implement VIP counting in consolidation
+      },
+      cache: {
+        upstashConnected: upstashStatus.connected,
+        upstashLatency: upstashStatus.latency,
+        consolidatedUsers: totalUsers
+      }
+    });
+  } catch (e: any) {
+    console.error('[ADMIN STATS] Error:', e);
+
   return (headerPw || queryPw || bodyPw) === adminPassword;
 }
 
@@ -3801,11 +3996,157 @@ app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
       stats: { totalUniqueUsers, totalVisits, totalVipUsers },
     });
   } catch (e: any) {
+
     return res.status(500).json({ error: e.message });
   }
 });
 
 app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
+
+  // Prevent browser caching for real-time data
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
+  console.log(' [API] /api/admin-portal/users request received');
+  console.log(' [API] Query params:', req.query);
+
+  if (!verifyAdminPassword(req)) {
+    console.error(' [API] Admin password verification failed');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  console.log(' [API] Admin password verified');
+
+  console.log('Frontend is calling me at /api/admin-portal/users');
+  console.log("CRITICAL: I AM RUNNING THE REAL VERSION NOW");
+
+  try {
+    const page = Math.max(parseInt(req.query.page as string) || 1, 1);
+    const limit = 50; // Fixed 50 users per page as requested
+    const skip = (page - 1) * limit;
+    const search = req.query.search as string;
+
+    console.log(` [API] Requesting page ${page}, limit ${limit}, search: "${search || 'none'}"`);
+
+    // REAL DATA RESTORE - Pull from MongoDB and Upstash with deep merging
+    console.log(' [API] Restoring real data from MongoDB and Upstash...');
+
+    const { createMasterRegistry } = await import('../server/services/upstashConsolidationService.js');
+    const { masterRegistry, uniqueUsers, totalRecords, sourceStats } = await createMasterRegistry();
+
+    console.log(` [API] Master registry created: ${masterRegistry.length} users`);
+
+    // Apply search filter if provided
+    let filteredUsers = masterRegistry;
+    if (search) {
+      console.log(` [API] Applying search filter: "${search}"`);
+      const searchLower = search.toLowerCase();
+      filteredUsers = masterRegistry.filter(user =>
+        user.username.toLowerCase().includes(searchLower) ||
+        user.email?.toLowerCase().includes(searchLower) ||
+        user.wallets.some((wallet: string) => wallet.toLowerCase().includes(searchLower))
+      );
+      console.log(` [API] Search results: ${filteredUsers.length} users`);
+    }
+
+    // Apply pagination
+    const totalFiltered = filteredUsers.length;
+    const paginatedUsers = filteredUsers.slice(skip, skip + limit);
+    const totalPages = Math.ceil(totalFiltered / limit);
+
+    console.log(` [API] Pagination: page ${page}/${totalPages}, showing ${paginatedUsers.length} users (${skip + 1}-${skip + paginatedUsers.length} of ${totalFiltered})`);
+
+    console.log('Sending to Frontend: ' + paginatedUsers.length + ' users');
+
+    const responseData = {
+      success: true,
+      users: paginatedUsers,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalUsers: totalFiltered,
+        usersPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      stats: {
+        uniqueUsers,
+        totalRecords,
+        mongodbCollections: sourceStats.mongodbCollections.length,
+        upstashKeys: sourceStats.upstashKeys,
+        upstashError: sourceStats.upstashError
+      },
+      cache: {
+        source: 'master_aggregator',
+        searchApplied: !!search,
+        lastUpdate: new Date().toISOString(),
+        processingTimeMs: Date.now() - Date.now() // Placeholder
+      }
+    };
+
+    console.log(' [API] Response prepared successfully');
+    console.log('CRITICAL DEBUG: Sending to Frontend ->', responseData.users.length, 'users');
+    res.header("Content-Type", "application/json");
+    return res.json(responseData);
+
+  } catch (error: any) {
+    console.error(' [API] CRITICAL ERROR in /api/admin-portal/users:');
+    console.error(' [API] Error message:', error.message);
+    console.error(' [API] Error stack:', error.stack);
+    console.error(' [API] Error code:', error.code);
+    console.error(' [API] Error name:', error.name);
+
+    // Check for specific error types
+    if (error.message.includes('MongoDB') || error.message.includes('mongoose')) {
+      console.error(' [API] MongoDB connection error detected');
+    } else if (error.message.includes('Redis') || error.message.includes('Upstash')) {
+      console.error(' [API] Upstash Redis error detected');
+    } else if (error.message.includes('timeout')) {
+      console.error(' [API] Timeout error detected');
+    } else if (error.message.includes('network') || error.message.includes('ECONNREFUSED')) {
+      console.error(' [API] Network connectivity error detected');
+    }
+
+    // Return error response with available data if possible
+    try {
+      console.log(' [API] Attempting to return partial data...');
+      return res.status(500).json({
+        error: error.message,
+        success: false,
+        partialData: {
+          errorType: 'network_error',
+          timestamp: new Date().toISOString(),
+          availableStats: {
+            hasMongoDB: process.env.MONGODB_URI ? true : false,
+            hasUpstash: (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) ? true : false
+          }
+        }
+      });
+    } catch (fallbackError) {
+      console.error(' [API] Even fallback response failed:', fallbackError);
+      return res.status(500).json({
+        error: 'Critical system error',
+        success: false
+      });
+    }
+  }
+});
+
+// Manually trigger data consolidation (for admin use)
+app.post('/api/admin-portal/consolidate', async (req: Request, res: Response) => {
+  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const { createMasterRegistry } = await import('../server/services/upstashConsolidationService.js');
+    const result = await createMasterRegistry();
+
+    return res.json({
+      success: true,
+      message: `Consolidated ${result.uniqueUsers} users`,
+      data: result
+    });
+
   if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -4074,6 +4415,7 @@ app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
       .toArray();
 
     return res.json({ success: true, paidUsers });
+
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }

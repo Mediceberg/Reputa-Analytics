@@ -162,6 +162,95 @@ async function handleAdminGetAllUsers(req: Request, res: Response) {
 
 app.all('/api/admin', handleAdminGetAllUsers);
 
+async function handleAdminDashboard(req: Request, res: Response) {
+  try {
+    // Get collections
+    const usersCollection = await getUsersCollection();
+    const reputationCollection = await getReputationScoresCollection();
+    // Get total users
+    const totalUsers = await usersCollection.countDocuments();
+    // Get all users with reputation data
+    const mongoUsers = await usersCollection.find({}).toArray();
+    const reputationDocs = await reputationCollection.find({}).toArray();
+    const reputationMap = new Map();
+    reputationDocs.forEach(doc => {
+      reputationMap.set(doc.pioneerId, doc);
+    });
+    // Get vip statuses from Redis
+    const vipStatuses = new Map();
+    for (const user of mongoUsers) {
+      const vipStatus = await redis.get(`vip_status:${user.pioneerId}`);
+      vipStatuses.set(user.pioneerId, vipStatus === 'active');
+    }
+    // Get total pioneers from Redis
+    const totalPioneers = parseInt((await redis.get('total_pioneers')) || '0');
+    // Calculate stats
+    let totalReputation = 0;
+    let scoreHigh = 0, scoreMedium = 0, scoreLow = 0;
+    let totalPayments = 0; // Placeholder, need to calculate from transactions
+    let totalTransactions = 0; // Placeholder
+    const users: any[] = [];
+    for (const user of mongoUsers) {
+      const rep = reputationMap.get(user.pioneerId);
+      const reputationScore = rep?.totalReputationScore || 0;
+      const appScore = rep?.appEngagementScore || 0;
+      totalReputation += reputationScore;
+      if (reputationScore > 80) scoreHigh++;
+      else if (reputationScore >= 40) scoreMedium++;
+      else scoreLow++;
+      const totalActivity = rep?.legacy?.interactionHistory?.length || 0;
+      const visitCount = rep?.currentStreak || 0; // placeholder for visits
+      const sessionCount = rep?.longestStreak || 0; // placeholder for sessions
+      const sourceTables = ['final_users_v3', 'ReputationScores']; // placeholder
+
+      users.push({
+        id: user._id.toString(),
+        uid: user.pioneerId,
+        username: user.username,
+        reputation_score: reputationScore,
+        wallet_address: user.walletAddress || rep?.legacy?.walletAddress || 'N/A',
+        vip_status: vipStatuses.get(user.pioneerId) || false,
+        joined_date: user.createdAt.toISOString(),
+        app_score: appScore,
+        email: user.email,
+        totalActivity,
+        visitCount,
+        sessionCount,
+        sourceTables,
+      });
+
+      // Continuous logging for each user sent
+      console.log(`[SENDING] User: ${user.username} | Wallets: ${user.walletAddress ? 1 : 0} | Score: ${reputationScore}`);
+    }
+    const averageReputation = totalUsers > 0 ? totalReputation / totalUsers : 0;
+    // Calculate payments and transactions from Redis (placeholder)
+    // You might need to aggregate from history or other keys
+    const stats = {
+      totalPioneers,
+      totalPayments,
+      totalTransactions,
+      averageReputation: Math.round(averageReputation * 100) / 100,
+      totalUsers,
+    };
+    const scoreDistribution = {
+      high: scoreHigh,
+      medium: scoreMedium,
+      low: scoreLow,
+    };
+    console.log('[SUCCESS] Loaded', users.length, 'users with full profile details');
+    return res.status(200).json({
+      stats,
+      scoreDistribution,
+      users,
+    });
+  } catch (error: any) {
+    console.error('[ADMIN DASHBOARD ERROR]', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
+
+app.all('/api/admin/dashboard', handleAdminDashboard);
+
 // ====================
 // AUTH
 // ====================
