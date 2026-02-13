@@ -3898,12 +3898,11 @@ function verifyAdminPassword(req: Request): boolean {
   const queryPw = req.query.password as string;
   const bodyPw = req.body?.password;
 
-
   console.log('[ADMIN AUTH DEBUG]', {
-    adminPassword,
-    headerPw,
-    queryPw,
-    bodyPw,
+    adminPassword: adminPassword ? '***' : 'not set',
+    headerPw: headerPw ? '***' : 'not provided',
+    queryPw: queryPw ? '***' : 'not provided',
+    bodyPw: bodyPw ? '***' : 'not provided',
     method: req.method,
     url: req.url
   });
