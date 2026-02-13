@@ -166,11 +166,6 @@ app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
   }
 });
 
-const redis = new Redis({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
-=======
 // Graceful Redis initialization with fallback
 let redis: any = null;
 try {
