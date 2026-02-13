@@ -68,17 +68,19 @@ export function createRedisClient() {
   } catch (error) {
     console.error('❌ Failed to connect to Upstash Redis:', error);
 
-    const redis = new Redis({ 
-      url, 
-      token,
-    });
+    try {
+      const redis = new Redis({ 
+        url, 
+        token,
+      });
 
-    console.log('✅ Vercel KV/Redis client initialized');
-    return redis;
-  } catch (error) {
-    console.error('❌ Failed to initialize Redis client:', error);
-
-    console.warn('⚠️ Falling back to in-memory noop cache client');
-    return createNoopRedisClient();
-  }
+      // Test the connection
+      await redis.ping();
+      console.log('✅ Vercel KV/Redis client initialized and connected');
+      return redis;
+    } catch (error) {
+      console.error('❌ Failed to initialize Redis client:', error);
+      console.warn('⚠️ Falling back to in-memory noop cache client');
+      return createNoopRedisClient();
+    }
 }
