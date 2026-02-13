@@ -951,6 +951,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
   const [sortField, setSortField] = useState<'lastSeen' | 'visitCount' | 'firstSeen'>('lastSeen');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [error, setError] = useState<string | null>(null);
 
   const headers = { 'x-admin-password': password };
 
