@@ -762,7 +762,7 @@ app.all('/api/wallet', async (req: Request, res: Response) => {
 
     const recentActivityRaw = (await redis.lrange(`history:${cleanWallet}`, 0, 9)) || [];
 
-    const recentActivity = recentActivityRaw.map((item) => {
+    const recentActivity = recentActivityRaw.map((item: string | any) => {
       const tx = typeof item === 'string' ? JSON.parse(item) : item;
       return {
         id: tx.id || Math.random().toString(36).substring(7),
@@ -4294,7 +4294,7 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
 
     // Add search filter if provided
     if (searchQuery) {
-      fullPipeline.push({
+      const matchStage: any = {
         $match: {
           $or: [
             { username: { $regex: searchQuery, $options: 'i' } },
@@ -4302,10 +4302,12 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
             { primaryEmail: { $regex: searchQuery, $options: 'i' } }
           ]
         }
-      });
+      };
+      fullPipeline.push(matchStage);
     }
 
-    fullPipeline.push({ $sort: { lastActiveAt: -1 } });
+    const sortStage: any = { $sort: { lastActiveAt: -1 } };
+    fullPipeline.push(sortStage);
 
     // Execute aggregation
     const consolidatedUsers = await db.collection('final_users_v3').aggregate(fullPipeline).toArray();
@@ -4314,17 +4316,17 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
     const usernames = consolidatedUsers.map(u => u.username);
     
     // Get reputation scores
-    let reputationScores = [];
+    let reputationScores: Array<{pioneerId: string; totalReputationScore?: number}> = [];
     try {
       reputationScores = await db.collection('ReputationScores')
-        .find({ pioneerId: { $in: consolidatedUsers.flatMap(u => u.allPioneerIds).filter(Boolean) } })
+        .find({ pioneerId: { $in: consolidatedUsers.flatMap((u: any) => u.allPioneerIds).filter(Boolean) } })
         .toArray();
     } catch (e) {
       console.warn('ReputationScores collection not found:', e);
     }
 
     // Get feedback data
-    let feedbackData = [];
+    let feedbackData: Array<{username: string; [key: string]: any}> = [];
     try {
       feedbackData = await db.collection('all_feedbacks')
         .find({ username: { $in: usernames } })
