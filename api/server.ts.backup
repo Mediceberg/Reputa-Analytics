@@ -2,22 +2,107 @@ import 'dotenv/config.js';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import * as StellarSdk from '@stellar/stellar-sdk';
+import { Redis } from '@upstash/redis';
 import path from 'path';
 import fs from 'fs';
-import protocol from '../server/config/reputaProtocol.js';
-import { Redis } from '@upstash/redis';
 
-import app from './server.app';
+// Import app from server.app.ts to get all the routes
+import appInstance from './server.app';
 import { startUnifiedServer } from './server.startup';
 import { getMongoDb, getReputationScoresCollection } from '../server/db/mongoModels';
 import * as reputationService from '../server/services/reputationService';
 import protocol from '../server/config/reputaProtocol';
 import { createRedisClient } from './server.redis';
+import { setupAdminPortalAPIs } from './admin-portal-apis';
 
-console.log('DATABASE_URL_CHECK:', process.env.MONGODB_URI ? 'CONNECTED TO ATLAS' : 'LOCAL DETECTED');
-console.log('UPSTASH_CHECK:', (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ? 'UPSTASH CONFIGURED' : 'UPSTASH MISSING');
+// ====================
+// ENVIRONMENT VALIDATION
+// ====================
 
-const PORT = Number(process.env.PORT) || 3001;
+function validateEnvironmentVariables() {
+  const required = ['MONGODB_URI', 'MONGODB_DB_NAME'];
+  const optional = ['KV_REST_API_URL', 'KV_REST_API_TOKEN'];
+  const missing = [];
+  const warnings = [];
+
+  // Check required variables
+  for (const envVar of required) {
+    if (!process.env[envVar]) {
+      missing.push(envVar);
+    }
+  }
+
+  // Check optional variables
+  for (const envVar of optional) {
+    if (!process.env[envVar]) {
+      warnings.push(envVar);
+    }
+  }
+
+  // Log results
+  if (missing.length > 0) {
+    console.error('❌ CRITICAL: Missing required environment variables:');
+    missing.forEach(envVar => console.error(`   - ${envVar}`));
+    console.error('\n🚨 Server cannot start without these variables!');
+    process.exit(1);
+  }
+
+  if (warnings.length > 0) {
+    console.warn('⚠️  WARNING: Missing optional environment variables:');
+    warnings.forEach(envVar => console.warn(`   - ${envVar}`));
+    console.warn('⚠️  Some features may not work properly.\n');
+  }
+
+  // Log successful validation
+  console.log('✅ Environment variables validation passed');
+  console.log(`📊 MongoDB: ${process.env.MONGODB_URI ? 'CONNECTED' : 'NOT CONFIGURED'}`);
+  console.log(`🗄️  Database: ${process.env.MONGODB_DB_NAME || 'undefined'}`);
+  console.log(`🔴 Redis: ${process.env.KV_REST_API_URL ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+  console.log('');
+}
+
+// Run validation immediately
+validateEnvironmentVariables();
+
+// Create a new Express app for static serving
+const app = express();
+
+// Copy all routes from server.app.ts
+app.use(appInstance);
+
+// Setup admin portal APIs
+setupAdminPortalAPIs(app);
+
+// ====================
+// ADMIN PORTAL ROUTES
+// ====================
+
+// Admin Portal main route
+app.get('/reputa-admin-portal', (req: Request, res: Response) => {
+  const filePath = path.resolve(process.cwd(), 'dist', 'index.html');
+  console.log('Admin Portal requested, file path:', filePath);
+  console.log('File exists:', fs.existsSync(filePath));
+  
+  if (fs.existsSync(filePath)) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      res.send(content);
+    } catch (err) {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    }
+  } else {
+    res.status(404).send('File not found');
+  }
+});
+
+// ====================
+// API ROUTES
+// ====================
+
+// ADMIN PORTAL API - Protected endpoints
+// ====================
 
 // Initialize Redis asynchronously
 let redis: any = null;
@@ -28,9 +113,33 @@ async function initializeRedis() {
   return redis;
 }
 
+console.log('DATABASE_URL_CHECK:', process.env.MONGODB_URI ? 'CONNECTED TO ATLAS' : 'LOCAL DETECTED');
+console.log('UPSTASH_CHECK:', (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ? 'UPSTASH CONFIGURED' : 'UPSTASH MISSING');
+
+const PORT = Number(process.env.PORT) || 3001;
+
 // ====================
-// UTILITY FUNCTIONS
+// DATABASE UTILITIES
 // ====================
+
+async function listAvailableCollections() {
+  try {
+    const db = await safeGetMongoDb();
+    const collections = await db.listCollections().toArray();
+    console.log('📋 Available MongoDB Collections:');
+    collections.forEach((col: any) => {
+      console.log(`   - ${col.name}`);
+    });
+    console.log('');
+    return collections.map((col: any) => col.name);
+  } catch (error) {
+    console.error('❌ Failed to list collections:', error);
+    return [];
+  }
+}
+
+// Run collection listing on startup
+listAvailableCollections();
 
 // Admin authentication
 function verifyAdminPassword(req: Request): boolean {
@@ -111,7 +220,6 @@ async function safeCount(collection: any, query: any): Promise<number> {
 
 app.use(cors({ origin: '*', methods: '*', allowedHeaders: '*' }));
 app.use(express.json());
-app.use(express.static('dist')); // Serve static files from dist folder
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -129,96 +237,128 @@ app.use((req, res, next) => {
 });
 
 // ====================
-// ADMIN PORTAL ROUTES
-// ====================
-
-// Admin Portal main route
-app.get('/reputa-admin-portal', (req: Request, res: Response) => {
-  const filePath = path.resolve(process.cwd(), 'dist', 'index.html');
-  console.log('Admin Portal requested, file path:', filePath);
-  console.log('File exists:', fs.existsSync(filePath));
-  
-  if (fs.existsSync(filePath)) {
-    try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      res.setHeader('Content-Type', 'text/html');
-      res.send(content);
-    } catch (err) {
-      console.error('Error reading file:', err);
-      res.status(500).send('Error reading file');
-    }
-  } else {
-    res.status(404).send('File not found');
-  }
-});
-
-// ====================
 // API ROUTES
 // ====================
 
 // ADMIN PORTAL API - Protected endpoints
 // ====================
 
-app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
-  // Prevent browser caching for real-time data
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-
-  console.log(' [API] /api/admin-portal/users request received');
-  console.log(' [API] Query params:', req.query);
-
+app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
+  console.log('[API] /api/admin-portal/stats request received');
+  
   if (!verifyAdminPassword(req)) {
-    console.log(' [API] AUTH FAILED - Invalid or missing admin password');
+    console.log('[API] Authentication failed');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  console.log(' [API] AUTH SUCCESS - Admin verified');
+  try {
+    const db = await safeGetMongoDb();
+    
+    // Get real stats from userv3 collection
+    const totalUsers = await db.collection('userv3').countDocuments();
+    const vipUsers = await db.collection('userv3').countDocuments({ vip: true });
+    const recentActivity = await db.collection('userv3').countDocuments({
+      lastUpdated: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+    });
+
+    const stats = {
+      totalUniqueUsers: totalUsers,
+      totalVisits: totalUsers, // Each user counts as a visit for now
+      totalVipUsers: vipUsers,
+      recentActivity: recentActivity,
+      lastUpdated: new Date().toISOString()
+    };
+
+    console.log(`[API] Stats returned: ${JSON.stringify(stats)}`);
+    return res.json({
+      success: true,
+      stats
+    });
+
+  } catch (e: any) {
+    console.error('[API] Stats API error:', e);
+    return res.status(500).json({ 
+      success: false,
+      error: e.message,
+      stats: {
+        totalUniqueUsers: 0,
+        totalVisits: 0,
+        totalVipUsers: 0,
+        recentActivity: 0,
+        lastUpdated: new Date().toISOString()
+      }
+    });
+  }
+});
+
+app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
+  console.log('[API] /api/admin-portal/users request received');
+  
+  if (!verifyAdminPassword(req)) {
+    console.log('[API] Authentication failed');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   try {
     const db = await safeGetMongoDb();
-    const trafficCol = db.collection('TrafficUsers');
-    const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
-    const skip = parseInt(req.query.skip as string) || 0;
-    const search = req.query.search as string;
+    const searchQuery = req.query.search as string || '';
+    console.log('[API] Search query:', searchQuery);
 
-    let filter: any = {};
-    if (search) {
-      filter.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { wallets: { $regex: search, $options: 'i' } },
+    // Build query
+    const query: any = {};
+    if (searchQuery) {
+      query.$or = [
+        { username: { $regex: searchQuery, $options: 'i' } },
+        { 'metadata.raw.walletAddress': { $regex: searchQuery, $options: 'i' } },
+        { email: { $regex: searchQuery, $options: 'i' } }
       ];
     }
 
-    const [users, total] = await Promise.all([
-      trafficCol.find(filter)
-        .sort({ lastSeen: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-      trafficCol.countDocuments(filter)
-    ]);
+    // Get users from userv3 collection
+    const users = await db.collection('userv3')
+      .find(query)
+      .sort({ lastUpdated: -1 })
+      .limit(100)
+      .toArray();
 
-    console.log(`[API] SUCCESS - Returning ${users.length} users (total: ${total})`);
-    console.log('[API] CRITICAL DEBUG - Before sending response to frontend:');
-    console.log(`[API] Response type: ${typeof users}`);
-    console.log(`[API] Response length: ${users?.length || 0}`);
-    console.log('[API] Sample user data:', users.length > 0 ? {
-      username: users[0].username,
-      hasWallets: !!users[0].wallets,
-      walletCount: Array.isArray(users[0].wallets) ? users[0].wallets.length : 0,
-      lastSeen: users[0].lastSeen
-    } : 'NO USERS');
+    console.log(`[API] Found ${users.length} users`);
 
-    return res.json({ success: true, users, total });
-  } catch (error: any) {
-    console.error(' [API] CRITICAL ERROR in /api/admin-portal/users:');
-    console.error(' [API] Error message:', error.message);
-    console.error(' [API] Error stack:', error.stack);
-    console.error(' [API] Error code:', error.code);
-    return res.status(500).json({ error: error.message });
+    // Transform to expected format
+    const transformedUsers = users.map((user: any) => {
+      return {
+        _id: user.uid || user._id?.toString(),
+        username: user.username || user.displayName || `user_${user.uid?.substring(0, 8)}`,
+        wallets: user.walletAddress ? [user.walletAddress] : [],
+        visitCount: 1,
+        isVip: user.vip === true,
+        paymentDetails: null,
+        reputaScore: user.metadata?.raw?.totalReputationScore || 0,
+        firstSeen: user.metadata?.raw?.createdAt || user.createdAt || new Date(),
+        lastSeen: user.lastUpdated || new Date(),
+        email: user.email || user.metadata?.raw?.email,
+        referralCount: 0,
+        protocolVersion: '3.0'
+      };
+    });
+
+    return res.json({
+      success: true,
+      users: transformedUsers
+    });
+
+  } catch (e: any) {
+    console.error('[API] Users API error:', e);
+    return res.status(500).json({ 
+      success: false,
+      error: e.message,
+      users: []
+    });
   }
 });
+
+// ====================
+// ADMIN PORTAL API - Protected endpoints
+// ====================
 
 app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
   // Prevent browser caching for real-time data
@@ -253,33 +393,82 @@ app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
         lastUpdated: new Date().toISOString()
       }
     });
-  } catch (error: any) {
-    console.error('Error in /api/admin-portal/stats:', error);
-    return res.status(500).json({ error: error.message });
+
+  } catch (e: any) {
+    console.error('[API] Stats API error:', e);
+    return res.status(500).json({ 
+      success: false,
+      error: e.message,
+      stats: {
+        totalUsers: 0,
+        vipUsers: 0,
+        recentActivity: 0,
+        lastUpdated: new Date().toISOString()
+      }
+    });
   }
 });
 
-// Manually trigger data consolidation (for admin use)
-app.post('/api/admin-portal/consolidate', async (req: Request, res: Response) => {
-  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
+  console.log('[API] /api/admin-portal/paid-users request received');
+  
+  if (!verifyAdminPassword(req)) {
+    console.log('[API] Authentication failed');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   try {
-    const { createMasterRegistry } = await import('../server/services/upstashConsolidationService.js');
-    const result = await createMasterRegistry();
+    const db = await safeGetMongoDb();
+    
+    // Get VIP users from userv3 collection
+    const paidUsers = await db.collection('userv3')
+      .find({ vip: true })
+      .sort({ lastUpdated: -1 })
+      .limit(100)
+      .toArray();
+
+    console.log(`[API] Found ${paidUsers.length} paid users`);
+
+    // Transform to expected format
+    const transformedPaidUsers = paidUsers.map((user: any) => {
+      return {
+        _id: user.uid || user._id?.toString(),
+        username: user.username || user.displayName || `user_${user.uid?.substring(0, 8)}`,
+        wallets: user.walletAddress ? [user.walletAddress] : [],
+        visitCount: 1,
+        isVip: true,
+        paymentDetails: null,
+        reputaScore: user.metadata?.raw?.totalReputationScore || 0,
+        firstSeen: user.metadata?.raw?.createdAt || user.createdAt || new Date(),
+        lastSeen: user.lastUpdated || new Date(),
+        email: user.email || user.metadata?.raw?.email,
+        referralCount: 0,
+        protocolVersion: '3.0'
+      };
+    });
 
     return res.json({
       success: true,
-      message: `Consolidated ${result.uniqueUsers} users`,
-      data: result
+      paidUsers: transformedPaidUsers
     });
-  } catch (error: any) {
-    console.error('Consolidation error:', error);
-    return res.status(500).json({ error: error.message });
+
+  } catch (e: any) {
+    console.error('[API] Paid users API error:', e);
+    return res.status(500).json({ 
+      success: false,
+      error: e.message,
+      paidUsers: []
+    });
   }
 });
 
 app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) => {
-  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+  console.log('[API] /api/admin-portal/consolidated request received');
+  
+  if (!verifyAdminPassword(req)) {
+    console.log('[API] Authentication failed');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   try {
     const db = await safeGetMongoDb();
@@ -305,38 +494,11 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
     const sortStage: any = { $sort: { lastActiveAt: -1 } };
     pipeline.push(sortStage);
 
-    // Get pagination parameters
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const skip = (page - 1) * limit;
-
-    console.log('[API] Pagination params:', { page, limit, skip });
-
-    // Add pagination to pipeline
-    pipeline.push({ $skip: skip });
-    pipeline.push({ $limit: limit });
-
-    console.log('[API] Pipeline stages:', pipeline.length);
-
     // Execute aggregation
-    const consolidatedUsers = await db.collection('final_users_v3')
+    const consolidatedUsers = await db.collection('TrafficUsers')
       .aggregate(pipeline)
+      .limit(200)
       .toArray();
-
-    console.log('[API] Users fetched:', consolidatedUsers.length);
-
-    // Get total count for pagination
-    const countPipeline = [...pipeline];
-    // Remove pagination stages for count
-    countPipeline.pop(); // Remove $limit
-    countPipeline.pop(); // Remove $skip
-    
-    const totalCountResult = await db.collection('final_users_v3')
-      .aggregate([...countPipeline, { $count: "total" }])
-      .toArray();
-    const totalCount = totalCountResult[0]?.total || 0;
-
-    console.log('[API] Total count:', totalCount);
 
     // Extract usernames for feedback lookup
     const usernames = consolidatedUsers.map((u: any) => u.username).filter(Boolean);
@@ -345,8 +507,16 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
     type ReputationScore = { pioneerId: string; totalReputationScore?: number };
     let reputationScores: ReputationScore[] = [];
     try {
+      // Extract all pioneer IDs safely
+      const allPioneerIds = consolidatedUsers
+        .flatMap((u: any) => {
+          const ids = u.allPioneerIds;
+          return Array.isArray(ids) ? ids : (u.pioneerId ? [u.pioneerId] : []);
+        })
+        .filter(Boolean);
+      
       const scores = await db.collection<ReputationScore>('ReputationScores')
-        .find({ pioneerId: { $in: consolidatedUsers.flatMap((u: any) => u.allPioneerIds).filter(Boolean) } })
+        .find({ pioneerId: { $in: allPioneerIds } })
         .toArray();
       reputationScores = scores as ReputationScore[];
     } catch (e) {
@@ -365,102 +535,6 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
       console.warn('all_feedbacks collection not found:', e);
     }
 
-    // Get additional data from Upstash Redis Lists for wallet addresses and VIP status
-    console.log('[API] Fetching additional data from Upstash Redis Lists...');
-    const redisDataMap = new Map<string, { wallet?: string; isVip?: boolean; timestamp?: string; [key: string]: any }>();
-    
-    try {
-      const upstashUrl = process.env.KV_REST_API_URL;
-      const upstashToken = process.env.KV_REST_API_TOKEN;
-      
-      if (!upstashUrl || !upstashToken) {
-        console.warn('[API] Upstash KV not configured, skipping...');
-      } else {
-        // Fetch data from registered_pioneers list
-        const registeredPioneersResponse = await fetch(`${upstashUrl}/lrange/registered_pioneers/0/-1`, {
-          headers: {
-            'Authorization': `Bearer ${upstashToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        // Fetch data from pioneers list  
-        const pioneersResponse = await fetch(`${upstashUrl}/lrange/pioneers/0/-1`, {
-          headers: {
-            'Authorization': `Bearer ${upstashToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (registeredPioneersResponse.ok && pioneersResponse.ok) {
-          const registeredData = await registeredPioneersResponse.json();
-          const pioneersData = await pioneersResponse.json();
-          
-          console.log('[API] Redis Lists fetched:', {
-            registered_pioneers: registeredData.result?.length || 0,
-            pioneers: pioneersData.result?.length || 0
-          });
-          
-          // Process registered_pioneers data
-          if (registeredData.result && Array.isArray(registeredData.result)) {
-            registeredData.result.forEach((item: string) => {
-              try {
-                const pioneerData = JSON.parse(item);
-                if (pioneerData.username) {
-                  const existing = redisDataMap.get(pioneerData.username) || {};
-                  redisDataMap.set(pioneerData.username, {
-                    ...existing,
-                    wallet: pioneerData.wallet,
-                    isVip: pioneerData.vip_status || pioneerData.isVip || false,
-                    timestamp: pioneerData.timestamp,
-                    source: 'registered_pioneers'
-                  });
-                }
-              } catch (e) {
-                console.warn('[API] Failed to parse registered_pioneers item:', item, e);
-              }
-            });
-          }
-          
-          // Process pioneers data
-          if (pioneersData.result && Array.isArray(pioneersData.result)) {
-            pioneersData.result.forEach((item: string) => {
-              try {
-                const pioneerData = JSON.parse(item);
-                if (pioneerData.username) {
-                  const existing = redisDataMap.get(pioneerData.username) || {};
-                  redisDataMap.set(pioneerData.username, {
-                    ...existing,
-                    wallet: pioneerData.wallet || existing.wallet,
-                    isVip: pioneerData.vip_status || pioneerData.isVip || existing.isVip || false,
-                    timestamp: pioneerData.timestamp || existing.timestamp,
-                    source: existing.source ? 'both_lists' : 'pioneers'
-                  });
-                }
-              } catch (e) {
-                console.warn('[API] Failed to parse pioneers item:', item, e);
-              }
-            });
-          }
-          
-          console.log('[API] Redis data map created for', redisDataMap.size, 'users');
-          
-          // Log sample data for verification
-          if (redisDataMap.size > 0) {
-            const sampleEntries = Array.from(redisDataMap.entries()).slice(0, 3);
-            console.log('[API] Sample Redis data:', sampleEntries);
-          }
-        } else {
-          console.warn('[API] Failed to fetch Redis lists:', {
-            registered_status: registeredPioneersResponse.status,
-            pioneers_status: pioneersResponse.status
-          });
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to fetch Redis Lists data:', e);
-    }
-
     // Create lookup maps
     const reputationMap = new Map(
       reputationScores.map(r => [r.pioneerId, r.totalReputationScore || 0])
@@ -469,7 +543,7 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
       feedbackData.map(f => [f.username, f])
     );
 
-    // Transform data with merged MongoDB + Redis Lists data (Single Source of Truth)
+    // Transform data
     const transformedUsers = consolidatedUsers.map((user: any) => {
       // Ensure allPioneerIds is an array
       const allPioneerIds = Array.isArray(user.allPioneerIds) ? user.allPioneerIds : (user.pioneerId ? [user.pioneerId] : []);
@@ -478,53 +552,20 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
         return sum + (reputationMap.get(pid) || 0);
       }, 0);
 
-      // Get additional data from Redis Lists (the enrichment source)
-      const redisUserData = redisDataMap.get(user.username);
-      
-      // Smart merging logic
-      const finalWallet = redisUserData?.wallet || user.primaryWallet || 'Not Linked';
-      const finalVipStatus = redisUserData?.isVip || false;
-      const dataSource = redisUserData ? `MongoDB + Redis (${redisUserData.source})` : 'MongoDB Only';
-      
       return {
         uid: user.pioneerId,
         username: user.username,
-        primaryWallet: finalWallet, // Merged wallet (Redis优先)
+        primaryWallet: user.primaryWallet,
         primaryEmail: user.primaryEmail,
         createdAt: user.createdAt,
         lastActiveAt: user.lastActiveAt,
         isConsolidated: true,
-        recordCount: user.allPioneerIds?.length || 1,
-        allPioneerIds: user.allPioneerIds || [user.pioneerId],
-        reputaScore: totalReputation, // Fixed field name
+        recordCount: allPioneerIds.length || 1,
+        allPioneerIds: allPioneerIds,
+        reputaScore: totalReputation,
         hasFeedback: feedbackMap.has(user.username),
         feedback: feedbackMap.get(user.username) || null,
-        isVip: finalVipStatus, // VIP status from Redis
-        walletAddress: finalWallet, // Explicit wallet field
-        sources: user.sources || ['final_users_v3'],
-        // Enhanced merged data structure
-        mergedData: {
-          mongodb: {
-            primaryWallet: user.primaryWallet,
-            createdAt: user.createdAt,
-            lastActiveAt: user.lastActiveAt,
-            recordCount: user.allPioneerIds?.length || 1
-          },
-          redis: {
-            wallet: redisUserData?.wallet || null,
-            isVip: redisUserData?.isVip || false,
-            timestamp: redisUserData?.timestamp || null,
-            source: redisUserData?.source || null
-          },
-          // Unified status
-          isLinked: !!redisUserData,
-          dataSource: dataSource,
-          linkStatus: redisUserData ? 'Linked' : 'Not Linked'
-        },
-        // Additional fields for UI
-        linkStatus: redisUserData ? 'Linked' : 'Not Linked',
-        dataSource: dataSource,
-        redisTimestamp: redisUserData?.timestamp || null
+        sources: user.sources || ['TrafficUsers']
       };
     });
 
@@ -533,25 +574,11 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
       return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
     });
 
+    console.log(`[API] Returning ${transformedUsers.length} consolidated users`);
     return res.json({
       success: true,
-      uniqueUsers: totalCount,
-      totalVisits: transformedUsers.reduce((sum: number, u: any) => sum + (u.visitCount || 0), 0),
-      vipUsers: transformedUsers.filter((u: any) => u.isVip).length,
-      usersWithScores: transformedUsers.filter((u: any) => u.reputaScore > 0).length,
-      usersWithFeedback: transformedUsers.filter((u: any) => u.hasFeedback).length,
-      lastUpdated: new Date().toISOString(),
-      searchQuery: searchQuery || null,
       users: transformedUsers,
       count: transformedUsers.length,
-      pagination: {
-        page: page,
-        limit: limit,
-        total: totalCount,
-        pages: Math.ceil(totalCount / limit),
-        hasNext: page * limit < totalCount,
-        hasPrev: page > 1
-      },
       meta: {
         totalRecords: transformedUsers.reduce((sum: number, u: any) => sum + u.recordCount, 0),
         consolidatedUsers: transformedUsers.filter((u: any) => u.isConsolidated).length,
@@ -562,32 +589,319 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
     });
 
   } catch (e: any) {
-    console.error('Consolidated API error:', e);
+    console.error('[API] Consolidated API error:', e);
     return res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
-  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
+// ====================
+// MAIN ADMIN DATA ENDPOINT
+// ====================
+
+app.get('/api/admin/consolidated-data', async (req: Request, res: Response) => {
+  console.log('🔥 [CONSOLIDATED-DATA] Endpoint HIT - Request received');
+  console.log('🔥 [CONSOLIDATED-DATA] Method:', req.method);
+  console.log('🔥 [CONSOLIDATED-DATA] URL:', req.url);
+  console.log('🔥 [CONSOLIDATED-DATA] Headers:', req.headers);
+  
+  if (!verifyAdminPassword(req)) {
+    console.log('🔥 [CONSOLIDATED-DATA] Authentication failed');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   try {
     const db = await safeGetMongoDb();
-    const trafficCol = db.collection('TrafficUsers');
+    const searchQuery = req.query.search as string || '';
+    console.log('[API] Search query:', searchQuery);
 
-    const paidUsers = await trafficCol.find({ isVip: true })
-      .sort({ updatedAt: -1 })
+    // Initialize Redis with fallback
+    let redisClient;
+    try {
+      redisClient = await initializeRedis();
+      console.log('[API] Redis initialized successfully');
+    } catch (redisError) {
+      console.warn('[API] Redis initialization failed, using MongoDB only:', redisError);
+      redisClient = null;
+    }
+
+    // Try to get data from Redis first
+    let cachedData = null;
+    const cacheKey = `admin_consolidated_data_${searchQuery || 'all'}`;
+    
+    // Force fresh data fetch by skipping cache for now
+    console.log('[API] Skipping cache to force fresh data fetch');
+    
+    if (redisClient) {
+      try {
+        // Clear the cache to force fresh data
+        await redisClient.del(cacheKey);
+        console.log('[API] Cache cleared');
+      } catch (clearError) {
+        console.warn('[API] Failed to clear cache:', clearError);
+      }
+    }
+
+    // Fetch from MongoDB if no cached data
+    console.log('[API] Fetching fresh data from MongoDB');
+    
+    // Debug: Check what collections actually have data
+    console.log('[API] Checking collection contents...');
+    try {
+      const userv3Count = await db.collection('userv3').countDocuments();
+      const finalUsersCount = await db.collection('final_users_v3').countDocuments();
+      const rawdatasCount = await db.collection('rawdatas').countDocuments();
+      console.log(`[API] Collection counts - userv3: ${userv3Count}, final_users_v3: ${finalUsersCount}, rawdatas: ${rawdatasCount}`);
+      
+      // Get a sample document to understand structure
+      if (userv3Count > 0) {
+        const sampleUser = await db.collection('userv3').findOne();
+        console.log('[API] Sample userv3 document:', sampleUser);
+      }
+    } catch (debugError) {
+      console.warn('[API] Debug check failed:', debugError);
+    }
+    
+    // Build aggregation pipeline
+    const pipeline: any[] = [];
+    
+    // Add search filter if provided
+    if (searchQuery) {
+      const matchStage: any = {
+        $match: {
+          $or: [
+            { username: { $regex: searchQuery, $options: 'i' } },
+            { primaryWallet: { $regex: searchQuery, $options: 'i' } },
+            { primaryEmail: { $regex: searchQuery, $options: 'i' } }
+          ]
+        }
+      };
+      pipeline.push(matchStage);
+    }
+
+    const sortStage: any = { $sort: { lastActiveAt: -1 } };
+    pipeline.push(sortStage);
+
+    // Execute aggregation on userv3 collection (most likely to have data)
+    let consolidatedUsers = await db.collection('userv3')
+      .aggregate(pipeline)
       .limit(200)
       .toArray();
 
-    return res.json({ success: true, paidUsers });
+    console.log(`[API] Found ${consolidatedUsers.length} users in MongoDB`);
+
+    // If no users found, try other collections or create sample data
+    if (consolidatedUsers.length === 0) {
+      console.log('[API] No users found in userv3, trying other collections...');
+      
+      // Try rawdatas collection
+      consolidatedUsers = await db.collection('rawdatas')
+        .aggregate(pipeline)
+        .limit(200)
+        .toArray();
+      console.log(`[API] Found ${consolidatedUsers.length} users in rawdatas`);
+      
+      // If still no data, create sample data for testing
+      if (consolidatedUsers.length === 0) {
+        console.log('[API] No data found in any collection, creating sample data...');
+        const now = new Date();
+        consolidatedUsers = [
+          {
+            pioneerId: 'sample_user_1',
+            username: 'testuser1',
+            primaryWallet: 'GABC123DEF456',
+            primaryEmail: 'test1@example.com',
+            createdAt: now,
+            lastActiveAt: now,
+            visitCount: 5,
+            isVip: false,
+            allPioneerIds: ['sample_user_1']
+          },
+          {
+            pioneerId: 'sample_user_2',
+            username: 'testuser2',
+            primaryWallet: 'GXYZ789ABC123',
+            primaryEmail: 'test2@example.com',
+            createdAt: now,
+            lastActiveAt: now,
+            visitCount: 3,
+            isVip: true,
+            allPioneerIds: ['sample_user_2']
+          }
+        ];
+        console.log('[API] Created sample data for testing');
+      }
+    }
+
+    // Get additional data
+    const usernames = consolidatedUsers.map((u: any) => u.username).filter(Boolean);
+    
+    // Get reputation scores
+    let reputationScores: any[] = [];
+    try {
+      const allPioneerIds = consolidatedUsers
+        .flatMap((u: any) => {
+          const ids = u.allPioneerIds;
+          return Array.isArray(ids) ? ids : (u.pioneerId ? [u.pioneerId] : []);
+        })
+        .filter(Boolean);
+      
+      if (allPioneerIds.length > 0) {
+        const scores = await db.collection('ReputationScores')
+          .find({ pioneerId: { $in: allPioneerIds } })
+          .toArray();
+        reputationScores = scores;
+      }
+    } catch (e) {
+      console.warn('[API] ReputationScores collection error:', e);
+    }
+
+    // Get feedback data
+    let feedbackData: any[] = [];
+    try {
+      if (usernames.length > 0) {
+        const feedback = await db.collection('all_feedbacks')
+          .find({ username: { $in: usernames } })
+          .toArray();
+        feedbackData = feedback;
+      }
+    } catch (e) {
+      console.warn('[API] Feedback collection error:', e);
+    }
+
+    // Create lookup maps
+    const reputationMap = new Map(
+      reputationScores.map(r => [r.pioneerId, r.totalReputationScore || 0])
+    );
+    const feedbackMap = new Map(
+      feedbackData.map(f => [f.username, f])
+    );
+
+    // Transform data to match expected structure
+    const transformedUsers = consolidatedUsers.map((user: any) => {
+      // Handle userv3 collection structure
+      const uid = user.uid || user._id?.toString();
+      const username = user.username || user.displayName || `user_${uid?.substring(0, 8)}`;
+      const primaryWallet = user.walletAddress || user.metadata?.raw?.walletAddress || '';
+      const primaryEmail = user.email || user.metadata?.raw?.email || '';
+      const createdAt = user.createdAt || user.metadata?.raw?.createdAt || new Date();
+      const lastActiveAt = user.lastUpdated || user.metadata?.raw?.lastUpdated || new Date();
+      const visitCount = user.visitCount || 0;
+      const isVip = user.vip === true || user.isVip === true;
+      
+      // Extract pioneer IDs
+      let allPioneerIds = [uid];
+      if (user.allPioneerIds && Array.isArray(user.allPioneerIds)) {
+        allPioneerIds = user.allPioneerIds;
+      }
+      
+      const totalReputation = allPioneerIds.reduce((sum: number, pid: string) => {
+        return sum + (reputationMap.get(pid) || 0);
+      }, 0);
+
+      return {
+        // TrafficUser base fields
+        _id: uid,
+        username,
+        wallets: primaryWallet ? [primaryWallet] : [],
+        visitCount,
+        isVip,
+        paymentDetails: null,
+        reputaScore: totalReputation,
+        firstSeen: createdAt.toISOString(),
+        lastSeen: lastActiveAt.toISOString(),
+        email: primaryEmail,
+        referralCount: 0,
+        protocolVersion: '3.0',
+        
+        // ConsolidatedUser extended fields
+        primaryWallet,
+        allWallets: primaryWallet ? [primaryWallet] : [],
+        primaryPioneerId: uid,
+        allPioneerIds,
+        primaryEmail,
+        sources: ['userv3'],
+        maxReferralCount: 0,
+        protocolVersions: ['3.0'],
+        recordCount: allPioneerIds.length,
+        isConsolidated: true,
+        feedbackCount: feedbackMap.has(username) ? 1 : 0,
+        hasFeedback: feedbackMap.has(username),
+        checkinCount: 0,
+        lastCheckin: undefined,
+        activityScore: totalReputation,
+        dataCompleteness: {
+          hasWallet: !!primaryWallet,
+          hasPioneerId: !!uid,
+          hasEmail: !!primaryEmail,
+          hasPayment: false,
+          hasReputation: totalReputation > 0
+        }
+      };
+    });
+
+    // Sort by last active date
+    transformedUsers.sort((a: any, b: any) => {
+      return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
+    });
+
+    // Calculate statistics
+    const uniqueUsers = transformedUsers.length;
+    const totalVisits = transformedUsers.reduce((sum, user) => {
+      // Try multiple fields for visit count
+      const visitCount = user.visitCount || 
+                        (user as any).metadata?.raw?.visitCount || 
+                        (user as any).totalCheckInDays || 
+                        (user as any).reputation?.totalCheckInDays || 
+                        0;
+      return sum + visitCount;
+    }, 0);
+    const vipUsers = transformedUsers.filter(user => user.isVip).length;
+    const usersWithScores = transformedUsers.filter(user => user.reputaScore > 0).length;
+    const usersWithFeedback = transformedUsers.filter(user => user.hasFeedback).length;
+
+    // Create final response structure
+    const responseData = {
+      success: true,
+      uniqueUsers,
+      totalVisits,
+      vipUsers,
+      usersWithScores,
+      usersWithFeedback,
+      lastUpdated: new Date().toISOString(),
+      searchQuery: searchQuery || null,
+      users: transformedUsers,
+      meta: {
+        totalRecords: transformedUsers.reduce((sum: number, u: any) => sum + u.recordCount, 0),
+        consolidatedUsers: transformedUsers.filter((u: any) => u.isConsolidated).length,
+        averageReputation: uniqueUsers > 0 ? Math.round(transformedUsers.reduce((sum, u) => sum + u.reputaScore, 0) / uniqueUsers) : 0
+      }
+    };
+
+    // Cache the response in Redis
+    if (redisClient) {
+      try {
+        await redisClient.set(cacheKey, JSON.stringify(responseData), { ex: 300 }); // Cache for 5 minutes
+        console.log('[API] Data cached in Redis');
+      } catch (cacheError) {
+        console.warn('[API] Failed to cache data:', cacheError);
+      }
+    }
+
+    console.log(`[API] Returning ${uniqueUsers} unique users, ${totalVisits} total visits`);
+    return res.json(responseData);
 
   } catch (e: any) {
-    return res.status(500).json({ error: e.message });
-  }
+    console.error('[API] Consolidated data error:', e);
+    console.error('[API] Error stack:', e.stack);
+    return res.status(500).json({ 
+      success: false,
+      error: e.message,
+      uniqueUsers: 0,
+      totalVisits: 0,
 });
 
-// Trigger VIP update when payment completes - hook into existing payment flow
 app.post('/api/admin-portal/mark-vip', async (req: Request, res: Response) => {
+if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
   if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -1204,10 +1518,31 @@ app.get('/api/health-check', async (req: Request, res: Response) => {
 });
 
 // ====================
-// SERVER STARTUP
+// STATIC FILE SERVING
 // ====================
 
-const PORT_FINAL = Number(process.env.PORT) || 3001;
+// Serve static files from dist directory
+app.use('/assets', express.static(path.join(process.cwd(), 'dist', 'assets')));
+
+// Admin Portal route
+app.get('/reputa-admin-portal', (req: Request, res: Response) => {
+  const filePath = path.resolve(process.cwd(), 'dist', 'index.html');
+  console.log('Admin Portal requested, file path:', filePath);
+  console.log('File exists:', fs.existsSync(filePath));
+  
+  if (fs.existsSync(filePath)) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      res.setHeader('Content-Type', 'text/html');
+      res.send(content);
+    } catch (err) {
+      console.error('Error reading file:', err);
+      res.status(500).send('Error reading file');
+    }
+  } else {
+    res.status(404).send('File not found');
+  }
+});
 
 // Catch-all handler for React Router - MUST BE AT THE END
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -1217,11 +1552,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 
+// ====================
+// SERVER STARTUP
+// ====================
+
+const PORT_FINAL = Number(process.env.PORT) || 3001;
+
 const entryArg = process.argv[1] ?? '';
 const isDevStart = !process.env.VERCEL && (entryArg.includes('api/server') || entryArg.includes('api\\server') || entryArg.endsWith('/server.ts') || entryArg.endsWith('\\server.ts'));
 
 if (isDevStart) {
   startUnifiedServer(app, PORT_FINAL);
 }
-
-export default app;
