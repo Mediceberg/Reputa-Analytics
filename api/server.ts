@@ -4155,36 +4155,8 @@ app.post('/api/admin-portal/consolidate', async (req: Request, res: Response) =>
       message: `Consolidated ${result.uniqueUsers} users`,
       data: result
     });
-
-  if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
-
-  try {
-    const db = await getMongoDb();
-    const trafficCol = db.collection('TrafficUsers');
-    const limit = Math.min(parseInt(req.query.limit as string) || 200, 500);
-    const skip = parseInt(req.query.skip as string) || 0;
-    const search = req.query.search as string;
-
-    let filter: any = {};
-    if (search) {
-      filter.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { wallets: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const [users, total] = await Promise.all([
-      trafficCol.find(filter)
-        .sort({ lastSeen: -1 })
-        .skip(skip)
-        .limit(limit)
-        .toArray(),
-      trafficCol.countDocuments(filter)
-    ]);
-
-    return res.json({ success: true, users, total });
   } catch (error: any) {
-    console.error('Error in /api/admin-portal/users:', error);
+    console.error('Consolidation error:', error);
     return res.status(500).json({ error: error.message });
   }
 });

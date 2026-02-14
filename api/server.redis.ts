@@ -83,4 +83,5 @@ export function createRedisClient() {
       console.warn('⚠️ Falling back to in-memory noop cache client');
       return createNoopRedisClient();
     }
+  }
 }
