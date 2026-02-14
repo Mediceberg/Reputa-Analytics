@@ -16,7 +16,18 @@ const app = express();
 
 applyCommonMiddleware(app);
 
-const redis = createRedisClient();
+let redis: any = null;
+async function getRedis() {
+  if (!redis) {
+    redis = await createRedisClient();
+  }
+  return redis;
+}
+
+async function redisOp(operation: string, ...args: any[]) {
+  const client = await getRedis();
+  return await (client as any)[operation](...args);
+}
 
 const REPUTATION_CACHE_TTL_SECONDS = Number(process.env.REPUTATION_CACHE_TTL_SECONDS || 300);
 
@@ -88,13 +99,13 @@ function mapMongoReputationToLegacy(uid: string, doc: any) {
 }
 
 async function getReputationFromCache(uid: string) {
-  const cached = await redis.get(`reputation:${uid}`);
+  const cached = await redisOp('get', `reputation:${uid}`);
   if (!cached) return null;
   return typeof cached === 'string' ? JSON.parse(cached) : cached;
 }
 
 async function cacheReputation(uid: string, data: any) {
-  await redis.set(`reputation:${uid}`, JSON.stringify(data), { ex: REPUTATION_CACHE_TTL_SECONDS });
+  await redisOp('set', `reputation:${uid}`, JSON.stringify(data), { ex: REPUTATION_CACHE_TTL_SECONDS });
 }
 
 // ====================
@@ -325,7 +336,7 @@ app.all('/api/wallet', async (req: Request, res: Response) => {
 
     const recentActivityRaw = (await redis.lrange(`history:${cleanWallet}`, 0, 9)) || [];
 
-    const recentActivity = recentActivityRaw.map((item) => {
+    const recentActivity = recentActivityRaw.map((item: string | any) => {
       const tx = typeof item === 'string' ? JSON.parse(item) : item;
       return {
         id: tx.id || Math.random().toString(36).substring(7),
@@ -1720,10 +1731,11 @@ async function getReputationData(uid: string): Promise<ReputationData> {
 }
 
 async function saveReputationData(data: ReputationData): Promise<void> {
+  const redisClient = await getRedis();
   const key = `reputation_v2:${data.uid}`;
   data.lastUpdated = new Date().toISOString();
   data.reputationLevel = calculateLevel(data.totalReputationScore);
-  await redis.set(key, JSON.stringify(data));
+  await redisClient.set(key, JSON.stringify(data));
 }
 
 function recalculateTotalScore(data: ReputationData): number {

@@ -609,7 +609,7 @@ app.get('/api/atomic/leaderboard', async (req: Request, res: Response) => {
 // HELPER FUNCTIONS
 // ====================
 
-type AtomicTrustLevel = 'Novice' | 'Explorer' | 'Contributor' | 'Verified' | 'Trusted' | 'Ambassador' | 'Elite' | 'Sentinel' | 'Oracle' | 'Atomic Legend';
+type AtomicTrustLevel = 'Newcomer' | 'Novice' | 'Explorer' | 'Contributor' | 'Verified' | 'Trusted' | 'Ambassador' | 'Elite' | 'Sentinel' | 'Oracle' | 'Atomic Legend';
 
 function computeTrustLevel(score: number): AtomicTrustLevel {
   if (score >= 950_001) return 'Atomic Legend';
