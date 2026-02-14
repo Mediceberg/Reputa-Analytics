@@ -6,7 +6,13 @@
 import { createRedisClient } from '../../api/server.redis.js';
 import { getMongoDb, getUsersCollection, getReputationScoresCollection, getWalletSnapshotsCollection } from '../db/mongoModels.js';
 
-const redis = createRedisClient();
+let redis: any = null;
+async function getRedis() {
+  if (!redis) {
+    redis = await createRedisClient();
+  }
+  return redis;
+}
 
 // ====================
 // CONSOLIDATION TYPES
@@ -736,7 +742,8 @@ export async function checkUpstashConnection(): Promise<{
 }> {
   try {
     const startTime = Date.now();
-    await redis.set('connection_test', 'ok', { ex: 10 });
+    const redisClient = await getRedis();
+    await redisClient.set('connection_test', 'ok', { ex: 10 });
     const latency = Date.now() - startTime;
 
     return { connected: true, latency };

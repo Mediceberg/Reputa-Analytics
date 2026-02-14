@@ -30,7 +30,7 @@ function createNoopRedisClient(): RedisLike {
   };
 }
 
-export function createRedisClient() {
+export async function createRedisClient() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -83,4 +83,5 @@ export function createRedisClient() {
       console.warn('⚠️ Falling back to in-memory noop cache client');
       return createNoopRedisClient();
     }
+  }
 }
