@@ -1,4 +1,4 @@
-import { Menu, Sparkles } from 'lucide-react';
+import { User, Sparkles } from 'lucide-react';
 import { useLanguage } from '../hooks/useLanguage';
 import { getMobileBottomNavItems } from '../config/navigation';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
@@ -71,7 +71,7 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
             className="flex flex-col items-center justify-center gap-0.5 rounded-lg transition-all active:scale-95"
             style={{ minWidth: '52px', minHeight: '52px', padding: '6px 8px' }}
           >
-            <Menu 
+            <User 
               className="w-4.5 h-4.5"
               style={{ color: 'rgba(160, 164, 184, 0.6)' }}
             />
@@ -79,7 +79,7 @@ export function MobileBottomNav({ activeItem, onItemClick, onMenuClick }: Mobile
               className="text-[8px] font-bold uppercase tracking-wide"
               style={{ color: 'rgba(160, 164, 184, 0.5)' }}
             >
-              More
+              Profile
             </span>
           </button>
         )}
