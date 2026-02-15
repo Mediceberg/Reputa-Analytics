@@ -195,16 +195,26 @@ body {
 }
 
 @media (min-width: 1024px) {
-  /* Desktop - standard layout */
+  /* Desktop - sidebar + content side by side */
+  .futuristic-bg {
+    flex-direction: row !important;
+    overflow: hidden;
+  }
+
   main[class*="flex-1"] {
     overflow-y: auto;
     overflow-x: hidden;
+    height: 100vh;
   }
 
   .desktop-sidebar {
+    position: sticky;
+    top: 0;
     flex-shrink: 0;
     overflow-y: auto;
-    max-height: 100vh;
+    height: 100vh;
+    width: 260px;
+    z-index: 30;
   }
 }
 

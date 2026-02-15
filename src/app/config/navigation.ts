@@ -12,6 +12,7 @@ import {
   Settings,
   Sparkles,
   User,
+  Users,
   Wallet,
 } from 'lucide-react';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
@@ -81,6 +82,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: Globe,
     section: 'transaction',
     showInMobileBottomNav: true,
+  },
+  {
+    id: 'referral',
+    labelKey: 'Referrals',
+    icon: Users,
+    section: 'transaction',
   },
   {
     id: 'profile',

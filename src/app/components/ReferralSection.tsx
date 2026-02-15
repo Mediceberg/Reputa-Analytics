@@ -10,7 +10,6 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import { useReferral, ReferralStats } from '../hooks/useReferral';
-import { useLanguage } from '../hooks/useLanguage';
 
 interface ReferralSectionProps {
   walletAddress: string;
@@ -18,12 +17,10 @@ interface ReferralSectionProps {
 }
 
 export function ReferralSection({ walletAddress, username }: ReferralSectionProps) {
-  const { t, language } = useLanguage();
   const { stats, loading, error, fetchStats, claimPoints } = useReferral();
   const [copying, setCopying] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const isRTL = language === 'ar';
 
   // Fetch stats on mount and when wallet changes
   useEffect(() => {
@@ -52,10 +49,8 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
     if (navigator.share) {
       try {
         await navigator.share({
-          title: isRTL ? 'انضم إلى Reputa Score' : 'Join Reputa Score',
-          text: isRTL
-            ? `انضم إلي عبر كود الإحالة: ${stats.referralCode}`
-            : `Join me with referral code: ${stats.referralCode}`,
+          title: 'Join Reputa Score',
+          text: `Join me with referral code: ${stats.referralCode}`,
           url: stats.referralLink,
         });
       } catch (err) {
@@ -65,10 +60,10 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
       // Fallback: copy link to clipboard and show message
       try {
         await navigator.clipboard.writeText(stats.referralLink);
-        alert(isRTL ? 'تم نسخ الرابط!' : 'Link copied!');
+        alert('Link copied!');
       } catch (err) {
         console.error('Error copying link:', err);
-        alert(isRTL ? 'الرابط: ' + stats.referralLink : 'Link: ' + stats.referralLink);
+        alert('Link: ' + stats.referralLink);
       }
     }
   };
@@ -106,13 +101,13 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
   const referralCode = stats?.referralCode || 'XXXXXX';
 
   return (
-    <div className={`space-y-4 ${isRTL ? 'rtl' : ''}`}>
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <Gift className="w-5 h-5 text-amber-500" />
           <h3 className="text-lg font-bold text-white">
-            {isRTL ? 'نظام الإحالات' : 'Referral Program'}
+            Referral Program
           </h3>
         </div>
         <div className="relative">
@@ -125,12 +120,10 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           {showMenu && (
             <div
               className="absolute top-10 right-0 bg-black/90 border border-white/10 rounded-lg shadow-xl z-50"
-              style={{
-                [isRTL ? 'right' : 'left']: 0,
-              }}
+              style={{ left: 0 }}
             >
               <button className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors">
-                {isRTL ? 'معلومات' : 'Info'}
+                Info
               </button>
             </div>
           )}
@@ -149,7 +142,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
         <div className="flex items-center gap-2 mb-3">
           <Zap className="w-4 h-4 text-purple-400" />
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-            {isRTL ? 'كود إحالتك الفريد' : 'Your Unique Referral Code'}
+            Your Unique Referral Code
           </p>
         </div>
 
@@ -162,7 +155,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <button
             onClick={handleCopyLink}
             className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-all active:scale-95"
-            title={isRTL ? 'نسخ الرابط' : 'Copy link'}
+            title="Copy link"
           >
             <Copy className="w-4 h-4" />
           </button>
@@ -170,7 +163,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
             <button
               onClick={handleShareLink}
               className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-all active:scale-95"
-              title={isRTL ? 'مشاركة' : 'Share'}
+              title="Share"
             >
               <Share2 className="w-4 h-4" />
             </button>
@@ -178,7 +171,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
         </div>
 
         <p className="text-xs text-gray-400 leading-relaxed">
-          {isRTL ? 'شارك هذا الكود مع الأصدقاء لكسب نقاط مكافأة' : 'Share this code with friends to earn reward points'}
+          Share this code with friends to earn reward points
         </p>
       </div>
 
@@ -195,12 +188,12 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle className="w-4 h-4 text-emerald-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              {isRTL ? 'مؤكدة' : 'Confirmed'}
+              Confirmed
             </p>
           </div>
           <p className="text-2xl font-bold text-emerald-400">{stats?.confirmedReferrals || 0}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {isRTL ? 'إحالات نشطة' : 'Active referrals'}
+            Active referrals
           </p>
         </div>
 
@@ -215,12 +208,12 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-amber-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              {isRTL ? 'معلقة' : 'Pending'}
+              Pending
             </p>
           </div>
           <p className="text-2xl font-bold text-amber-400">{stats?.pendingReferrals || 0}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {isRTL ? 'في الانتظار' : 'Awaiting confirmation'}
+            Awaiting confirmation
           </p>
         </div>
 
@@ -235,11 +228,11 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <Gift className="w-4 h-4 text-purple-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              {isRTL ? 'مجموع النقاط' : 'Total Earned'}
+              Total Earned
             </p>
           </div>
           <p className="text-2xl font-bold text-purple-400">{stats?.totalPointsEarned || 0}</p>
-          <p className="text-xs text-gray-500 mt-1">{isRTL ? 'نقاط' : 'Points'}</p>
+          <p className="text-xs text-gray-500 mt-1">Points</p>
         </div>
 
         {/* Claimable Points */}
@@ -253,12 +246,11 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-blue-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              {isRTL ? 'متاح' : 'Claimable'}
+              Claimable
             </p>
           </div>
           <p className="text-2xl font-bold text-blue-400">{stats?.claimablePoints || 0}</p>
-          <p className="text-xs text-gray-500 mt-1">{isRTL ? 'نقاط' : 'Points'}
-          </p>
+          <p className="text-xs text-gray-500 mt-1">Points</p>
         </div>
       </div>
 
@@ -276,13 +268,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           }}
         >
           <Gift className="w-4 h-4" />
-          {claiming
-            ? isRTL
-              ? 'جاري جمع النقاط...'
-              : 'Claiming...'
-            : isRTL
-              ? `جمع ${stats?.claimablePoints} نقطة`
-              : `Claim ${stats?.claimablePoints} Points`}
+          {claiming ? 'Claiming...' : `Claim ${stats?.claimablePoints} Points`}
         </button>
       )}
 
@@ -295,9 +281,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           }}
         >
           <p className="text-sm text-gray-400">
-            {isRTL
-              ? 'لا توجد إحالات حالياً. شارك كودك للبدء!'
-              : 'No referrals yet. Share your code to get started!'}
+            No referrals yet. Share your code to get started!
           </p>
         </div>
       )}
@@ -311,14 +295,14 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
             </div>
             <div className="flex-1">
               <p className="text-sm text-red-300 font-medium mb-2">
-                {isRTL ? 'خطأ في تحميل بيانات الإحالة' : 'Error loading referral data'}
+                Error loading referral data
               </p>
               <p className="text-xs text-red-400/80 mb-3">{error}</p>
               <button
                 onClick={() => walletAddress && fetchStats(walletAddress)}
                 className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors underline"
               >
-                {isRTL ? 'إعادة المحاولة' : 'Retry'}
+                Retry
               </button>
             </div>
           </div>
