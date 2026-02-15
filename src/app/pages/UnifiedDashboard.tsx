@@ -27,6 +27,7 @@ const ShareReputaCard = React.lazy(async () => ({ default: (await import('../com
 const MiningDaysWidget = React.lazy(async () => ({ default: (await import('../components/MiningDaysWidget')).MiningDaysWidget }));
 const ProfileSection = React.lazy(async () => ({ default: (await import('../components/ProfileSection')).ProfileSection }));
 const ActivityHub = React.lazy(async () => ({ default: (await import('./ActivityHub')).ActivityHub }));
+const ReferralSection = React.lazy(async () => ({ default: (await import('../components/ReferralSection')).ReferralSection }));
 import { PendingRewardsCounter } from '../components/PendingRewardsCounter';
 import { 
   processTransactionTimeline, 
@@ -81,7 +82,8 @@ type ActiveSection =
   | 'feedback'
   | 'help'
   | 'activity-hub'
-  | 'how-it-works';
+  | 'how-it-works'
+  | 'referral';
 type NetworkSubPage = null | 'network-info' | 'top-wallets' | 'reputation';
 
 export function UnifiedDashboard({ 
@@ -117,7 +119,9 @@ export function UnifiedDashboard({
     'settings': '/settings',
     'feedback': '/feedback',
     'help': '/help',
+    'activity-hub': '/activity-hub',
     'how-it-works': '/how-it-works',
+    'referral': '/referral',
   };
 
   const activeSectionLabel = useMemo(() => {
@@ -402,6 +406,8 @@ export function UnifiedDashboard({
       'settings': 'settings',
       'feedback': 'feedback',
       'help': 'help',
+      'referral': 'referral',
+      'how-it-works': 'how-it-works',
     };
     setActiveSection(sectionMap[itemId] || 'overview');
   };
@@ -528,7 +534,8 @@ export function UnifiedDashboard({
           </div>
         </div>
 
-        {/* Main Profile Card - Always visible at top */}
+        {/* Main Profile Card - Only visible on Dashboard */}
+        {activeSection === 'overview' && (
         <div className="mb-5">
           <MainCard
             username={username || 'Pioneer'}
@@ -544,6 +551,7 @@ export function UnifiedDashboard({
             onShare={() => setShowShareCard(true)}
           />
         </div>
+        )}
 
         {/* Section Navigation - Hidden on mobile (using bottom nav) */}
         <div className="hidden sm:flex items-center gap-2 mb-5 overflow-x-auto pb-1">
@@ -1047,6 +1055,17 @@ export function UnifiedDashboard({
           </div>
         )}
 
+        {activeSection === 'referral' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <Suspense fallback={<div className="py-12 text-center text-purple-400">Loading Referrals...</div>}>
+              <ReferralSection
+                walletAddress={liveWalletData.address}
+                username={username || 'Pioneer'}
+              />
+            </Suspense>
+          </div>
+        )}
+
         {activeSection === 'profile' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <ProfileSection 
@@ -1368,12 +1387,12 @@ export function UnifiedDashboard({
                   <BookOpen className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black uppercase tracking-wide text-white">كيف يعمل النظام | How It Works</h2>
-                  <p className="text-xs text-cyan-400">بروتوكول Reputa v3.0 - المرجع الشامل</p>
+                  <h2 className="text-xl font-black uppercase tracking-wide text-white">How It Works</h2>
+                  <p className="text-xs text-cyan-400">Reputa Protocol v3.0 — Complete Reference</p>
                 </div>
               </div>
-              <p className="text-sm text-gray-300 leading-relaxed" dir="rtl">
-                دليلك الكامل لفهم نظام السمعة في Reputa. يشرح هذا القسم بالتفصيل كيفية حساب النقاط، مستويات الثقة، المهام، والمكافآت.
+              <p className="text-sm text-gray-300 leading-relaxed">
+                Your complete guide to the Reputa reputation system. This section explains in detail how points are calculated, trust levels, tasks, and rewards.
               </p>
             </div>
 
@@ -1382,37 +1401,36 @@ export function UnifiedDashboard({
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-cyan-500/10 hover:bg-cyan-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Shield className="w-5 h-5 text-cyan-400" />
-                  نظرة عامة على البروتوكول | Protocol Overview
+                  Protocol Overview
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-cyan-400" />
               </summary>
               <div className="p-5 space-y-4 text-sm text-gray-300 leading-relaxed">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-                  <h4 className="font-bold text-cyan-400 mb-2" dir="rtl">ما هو Reputa Score؟</h4>
-                  <p dir="rtl">Reputa Score هو نظام سمعة متقدم يقيّم نشاطك على شبكة Pi Network. يجمع النظام بين نشاط المحفظة (80%) والتفاعل مع التطبيق (20%) لإنشاء درجة سمعة شاملة وعادلة.</p>
+                  <h4 className="font-bold text-cyan-400 mb-2">What is Reputa Score?</h4>
+                  <p>Reputa Score is an advanced reputation system that evaluates your activity on the Pi Network. It combines wallet activity (80%) and app engagement (20%) to create a comprehensive and fair reputation score.</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
                     <p className="text-2xl font-black text-purple-400">20</p>
-                    <p className="text-xs text-gray-400 mt-1">مستوى | Levels</p>
+                    <p className="text-xs text-gray-400 mt-1">Levels</p>
                   </div>
                   <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
                     <p className="text-2xl font-black text-cyan-400">100,000</p>
-                    <p className="text-xs text-gray-400 mt-1">نقطة قصوى | Max Points</p>
+                    <p className="text-xs text-gray-400 mt-1">Max Points</p>
                   </div>
                   <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
                     <p className="text-2xl font-black text-amber-400">v3.0</p>
-                    <p className="text-xs text-gray-400 mt-1">إصدار البروتوكول | Version</p>
+                    <p className="text-xs text-gray-400 mt-1">Protocol Version</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                  <h4 className="font-bold text-purple-400 mb-2">Formula | الصيغة الحسابية</h4>
-                  <code className="block p-3 rounded bg-black/40 text-cyan-300 text-xs font-mono" dir="ltr">
+                  <h4 className="font-bold text-purple-400 mb-2">Scoring Formula</h4>
+                  <code className="block p-3 rounded bg-black/40 text-cyan-300 text-xs font-mono">
                     Total Score = (Mainnet × 60% + Testnet × 20%) × 80% + App Points × 20%
                   </code>
-                  <p className="text-xs text-gray-400 mt-2" dir="rtl">النتيجة النهائية = (Mainnet × 60% + Testnet × 20%) × 80% + نقاط التطبيق × 20%</p>
                 </div>
               </div>
             </details>
@@ -1422,7 +1440,7 @@ export function UnifiedDashboard({
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-purple-500/10 hover:bg-purple-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Award className="w-5 h-5 text-purple-400" />
-                  نظام النقاط التفصيلي | Detailed Scoring System
+                  Detailed Scoring System
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-purple-400" />
               </summary>
@@ -1431,31 +1449,31 @@ export function UnifiedDashboard({
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                   <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2">
                     <Zap className="w-4 h-4" />
-                    <span dir="rtl">تسجيل الدخول اليومي | Daily Check-in</span>
+                    Daily Check-in
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">نقاط أساسية | Base Points</span>
-                      <span className="font-bold text-purple-400">+10 نقاط</span>
+                      <span className="text-gray-300">Base Points</span>
+                      <span className="font-bold text-purple-400">+10 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة 3 أيام متتالية | 3-Day Streak</span>
-                      <span className="font-bold text-cyan-400">+5 نقاط إضافية</span>
+                      <span className="text-gray-300">3-Day Streak Bonus</span>
+                      <span className="font-bold text-cyan-400">+5 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة 7 أيام متتالية | 7-Day Streak</span>
-                      <span className="font-bold text-emerald-400">+10 نقاط إضافية</span>
+                      <span className="text-gray-300">7-Day Streak Bonus</span>
+                      <span className="font-bold text-emerald-400">+10 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة 14 يوم متتالي | 14-Day Streak</span>
-                      <span className="font-bold text-amber-400">+15 نقطة إضافية</span>
+                      <span className="text-gray-300">14-Day Streak Bonus</span>
+                      <span className="font-bold text-amber-400">+15 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة 30 يوم متتالي | 30-Day Streak</span>
-                      <span className="font-bold text-orange-400">+25 نقطة إضافية</span>
+                      <span className="text-gray-300">30-Day Streak Bonus</span>
+                      <span className="font-bold text-orange-400">+25 pts</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-amber-500/10" dir="rtl">
-                      ⏰ يجب الانتظار 24 ساعة بين كل تسجيل دخول
+                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-amber-500/10">
+                      ⏰ 24-hour cooldown between each check-in
                     </p>
                   </div>
                 </div>
@@ -1464,31 +1482,31 @@ export function UnifiedDashboard({
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                   <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
                     <Wallet className="w-4 h-4" />
-                    <span dir="rtl">نشاط المحفظة | Wallet Activity</span>
+                    Wallet Activity
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">معاملة جديدة | New Transaction</span>
-                      <span className="font-bold text-cyan-400">+50 نقطة</span>
+                      <span className="text-gray-300">New Transaction</span>
+                      <span className="font-bold text-cyan-400">+50 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">زيادة الرصيد | Balance Increase</span>
-                      <span className="font-bold text-emerald-400">+0.01 نقطة لكل Pi</span>
+                      <span className="text-gray-300">Balance Increase</span>
+                      <span className="font-bold text-emerald-400">+0.01 pts per Pi</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة Staking | Staking Bonus</span>
-                      <span className="font-bold text-purple-400">+5 نقاط لكل 100 Pi</span>
+                      <span className="text-gray-300">Staking Bonus</span>
+                      <span className="font-bold text-purple-400">+5 pts per 100 Pi</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">عمر الحساب | Account Age</span>
-                      <span className="font-bold text-amber-400">+1 نقطة لكل 30 يوم</span>
+                      <span className="text-gray-300">Account Age</span>
+                      <span className="font-bold text-amber-400">+1 pt per 30 days</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">جهة اتصال جديدة | New Contact</span>
-                      <span className="font-bold text-cyan-400">+2 نقطة (حد أقصى 20)</span>
+                      <span className="text-gray-300">New Contact</span>
+                      <span className="font-bold text-cyan-400">+2 pts (max 20)</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-cyan-500/10" dir="rtl">
-                      🔄 يتم فحص المحفظة تلقائياً كل 15 دقيقة
+                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-cyan-500/10">
+                      🔄 Wallet is scanned automatically every 15 minutes
                     </p>
                   </div>
                 </div>
@@ -1497,24 +1515,24 @@ export function UnifiedDashboard({
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
                   <h4 className="font-bold text-amber-400 mb-3 flex items-center gap-2">
                     <Network className="w-4 h-4" />
-                    <span dir="rtl">أوزان الشبكات | Network Weights</span>
+                    Network Weights
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
                       <span className="text-gray-300">Mainnet Activity</span>
-                      <span className="font-bold text-emerald-400">60% وزن</span>
+                      <span className="font-bold text-emerald-400">60% weight</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
                       <span className="text-gray-300">Testnet Activity</span>
-                      <span className="font-bold text-amber-400">20% وزن</span>
+                      <span className="font-bold text-amber-400">20% weight</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مجموع نشاط المحفظة | Total Wallet</span>
-                      <span className="font-bold text-cyan-400">80% من النتيجة</span>
+                      <span className="text-gray-300">Total Wallet Score</span>
+                      <span className="font-bold text-cyan-400">80% of total</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">التفاعل مع التطبيق | App Engagement</span>
-                      <span className="font-bold text-purple-400">20% من النتيجة</span>
+                      <span className="text-gray-300">App Engagement</span>
+                      <span className="font-bold text-purple-400">20% of total</span>
                     </div>
                   </div>
                 </div>
@@ -1523,16 +1541,16 @@ export function UnifiedDashboard({
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   <h4 className="font-bold text-emerald-400 mb-3 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
-                    <span dir="rtl">مكافآت الإعلانات | Ad Bonus</span>
+                    Ad Bonus
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">نقاط لكل إعلان | Per Ad</span>
-                      <span className="font-bold text-emerald-400">+5 نقاط</span>
+                      <span className="text-gray-300">Points per Ad</span>
+                      <span className="font-bold text-emerald-400">+5 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">حد أقصى يومي | Daily Max</span>
-                      <span className="font-bold text-amber-400">3 إعلانات (15 نقطة)</span>
+                      <span className="text-gray-300">Daily Maximum</span>
+                      <span className="font-bold text-amber-400">3 ads (15 pts)</span>
                     </div>
                   </div>
                 </div>
@@ -1541,20 +1559,20 @@ export function UnifiedDashboard({
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(244, 63, 94, 0.05)', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
                   <h4 className="font-bold text-rose-400 mb-3 flex items-center gap-2">
                     <User className="w-4 h-4" />
-                    <span dir="rtl">نظام الإحالة | Referral System</span>
+                    Referral System
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">إحالة ناجحة | Valid Referral</span>
-                      <span className="font-bold text-rose-400">+500 نقطة</span>
+                      <span className="text-gray-300">Valid Referral</span>
+                      <span className="font-bold text-rose-400">+500 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة 5 إحالات | 5 Referrals Bonus</span>
-                      <span className="font-bold text-amber-400">+250 نقطة إضافية</span>
+                      <span className="text-gray-300">5 Referrals Bonus</span>
+                      <span className="font-bold text-amber-400">+250 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">مكافأة 10 إحالات | 10 Referrals Bonus</span>
-                      <span className="font-bold text-orange-400">+500 نقطة إضافية</span>
+                      <span className="text-gray-300">10 Referrals Bonus</span>
+                      <span className="font-bold text-orange-400">+500 pts</span>
                     </div>
                   </div>
                 </div>
@@ -1566,36 +1584,36 @@ export function UnifiedDashboard({
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-400" />
-                  نظام المستويات | Level System
+                  Level System
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-amber-400" />
               </summary>
               <div className="p-5 space-y-3">
-                <p className="text-sm text-gray-300 mb-4" dir="rtl">
-                  يحتوي النظام على 20 مستوى، كل مستوى يتطلب 5,000 نقطة للوصول إلى المستوى التالي.
+                <p className="text-sm text-gray-300 mb-4">
+                  The system has 20 levels. Each level requires 5,000 points to advance to the next.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   {[
-                    { level: 1, name: 'Newcomer | وافد جديد', points: '0-5K', color: 'text-gray-400' },
-                    { level: 2, name: 'Active | نشط', points: '5K-10K', color: 'text-blue-400' },
-                    { level: 3, name: 'Trusted | موثوق', points: '10K-15K', color: 'text-cyan-400' },
-                    { level: 4, name: 'Engaged | متفاعل', points: '15K-20K', color: 'text-emerald-400' },
-                    { level: 5, name: 'Reliable | موثوق به', points: '20K-25K', color: 'text-green-400' },
-                    { level: 6, name: 'Notable | بارز', points: '25K-30K', color: 'text-lime-400' },
-                    { level: 7, name: 'Established | راسخ', points: '30K-35K', color: 'text-yellow-400' },
-                    { level: 8, name: 'Loyal | مخلص', points: '35K-40K', color: 'text-amber-400' },
-                    { level: 9, name: 'Contributor | مساهم', points: '40K-45K', color: 'text-orange-400' },
-                    { level: 10, name: 'Pioneer | رائد', points: '45K-50K', color: 'text-red-400' },
-                    { level: 11, name: 'Expert | خبير', points: '50K-55K', color: 'text-pink-400' },
-                    { level: 12, name: 'Master | محترف', points: '55K-60K', color: 'text-rose-400' },
-                    { level: 13, name: 'Legend | أسطورة', points: '60K-65K', color: 'text-fuchsia-400' },
-                    { level: 14, name: 'Luminary | مضيء', points: '65K-70K', color: 'text-purple-400' },
-                    { level: 15, name: 'Titan | عملاق', points: '70K-75K', color: 'text-violet-400' },
-                    { level: 16, name: 'Elite | نخبة', points: '75K-80K', color: 'text-indigo-400' },
-                    { level: 17, name: 'Sage | حكيم', points: '80K-85K', color: 'text-blue-300' },
-                    { level: 18, name: 'Oracle | عراف', points: '85K-90K', color: 'text-cyan-300' },
-                    { level: 19, name: 'Visionary | صاحب رؤية', points: '90K-95K', color: 'text-teal-300' },
-                    { level: 20, name: 'Supreme | أعلى', points: '95K-100K', color: 'text-emerald-300' },
+                    { level: 1, name: 'Newcomer', points: '0 – 5K', color: 'text-gray-400' },
+                    { level: 2, name: 'Active', points: '5K – 10K', color: 'text-blue-400' },
+                    { level: 3, name: 'Trusted', points: '10K – 15K', color: 'text-cyan-400' },
+                    { level: 4, name: 'Engaged', points: '15K – 20K', color: 'text-emerald-400' },
+                    { level: 5, name: 'Reliable', points: '20K – 25K', color: 'text-green-400' },
+                    { level: 6, name: 'Notable', points: '25K – 30K', color: 'text-lime-400' },
+                    { level: 7, name: 'Established', points: '30K – 35K', color: 'text-yellow-400' },
+                    { level: 8, name: 'Loyal', points: '35K – 40K', color: 'text-amber-400' },
+                    { level: 9, name: 'Contributor', points: '40K – 45K', color: 'text-orange-400' },
+                    { level: 10, name: 'Pioneer', points: '45K – 50K', color: 'text-red-400' },
+                    { level: 11, name: 'Expert', points: '50K – 55K', color: 'text-pink-400' },
+                    { level: 12, name: 'Master', points: '55K – 60K', color: 'text-rose-400' },
+                    { level: 13, name: 'Legend', points: '60K – 65K', color: 'text-fuchsia-400' },
+                    { level: 14, name: 'Luminary', points: '65K – 70K', color: 'text-purple-400' },
+                    { level: 15, name: 'Titan', points: '70K – 75K', color: 'text-violet-400' },
+                    { level: 16, name: 'Elite', points: '75K – 80K', color: 'text-indigo-400' },
+                    { level: 17, name: 'Sage', points: '80K – 85K', color: 'text-blue-300' },
+                    { level: 18, name: 'Oracle', points: '85K – 90K', color: 'text-cyan-300' },
+                    { level: 19, name: 'Visionary', points: '90K – 95K', color: 'text-teal-300' },
+                    { level: 20, name: 'Supreme', points: '95K – 100K', color: 'text-emerald-300' },
                   ].map((item) => (
                     <div key={item.level} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all">
                       <div className="flex items-center gap-2">
@@ -1614,42 +1632,42 @@ export function UnifiedDashboard({
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
-                  العقوبات والتآكل | Penalties & Erosion
+                  Penalties & Erosion
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-red-400" />
               </summary>
               <div className="p-5 space-y-4 text-sm">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <h4 className="font-bold text-red-400 mb-3" dir="rtl">تآكل عدم النشاط | Inactivity Erosion</h4>
+                  <h4 className="font-bold text-red-400 mb-3">Inactivity Erosion</h4>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">عقوبة أسبوعية | Weekly Penalty</span>
-                      <span className="font-bold text-red-400">-10 نقاط</span>
+                      <span className="text-gray-300">Weekly Penalty</span>
+                      <span className="font-bold text-red-400">-10 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300" dir="rtl">حد أقصى للتآكل | Max Erosion/Week</span>
-                      <span className="font-bold text-orange-400">-50 نقطة</span>
+                      <span className="text-gray-300">Max Erosion per Week</span>
+                      <span className="font-bold text-orange-400">-50 pts</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-red-500/10" dir="rtl">
-                      ⚠️ يتم تطبيق التآكل بعد أسبوع من عدم النشاط (أقل من 3 أيام نشطة)
+                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-red-500/10">
+                      ⚠️ Erosion applies after 1 week of inactivity (fewer than 3 active days)
                     </p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                  <h4 className="font-bold text-amber-400 mb-3" dir="rtl">كيفية تجنب التآكل | How to Avoid Erosion</h4>
-                  <ul className="space-y-2 text-gray-300" dir="rtl">
+                  <h4 className="font-bold text-amber-400 mb-3">How to Avoid Erosion</h4>
+                  <ul className="space-y-2 text-gray-300">
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-1">✓</span>
-                      <span>سجل دخولك يومياً للحفاظ على النشاط</span>
+                      <span>Check in daily to maintain your streak</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-1">✓</span>
-                      <span>قم بإجراء معاملات على الشبكة بانتظام</span>
+                      <span>Make regular transactions on the network</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-1">✓</span>
-                      <span>تفاعل مع التطبيق على الأقل 3 أيام في الأسبوع</span>
+                      <span>Engage with the app at least 3 days per week</span>
                     </li>
                   </ul>
                 </div>
@@ -1661,28 +1679,28 @@ export function UnifiedDashboard({
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-emerald-400" />
-                  المطالبة الأسبوعية | Weekly Claims
+                  Weekly Claims
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-emerald-400" />
               </summary>
               <div className="p-5 space-y-4 text-sm">
-                <p className="text-gray-300 leading-relaxed" dir="rtl">
-                  نقاط التفاعل مع التطبيق (Daily Check-in + Ad Bonus) يتم تجميعها أسبوعياً. أكمل 7 أيام من النشاط للمطالبة بجميع النقاط المتراكمة.
+                <p className="text-gray-300 leading-relaxed">
+                  App engagement points (Daily Check-in + Ad Bonus) are accumulated weekly. Complete 7 days of activity to claim all accumulated points.
                 </p>
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                  <h4 className="font-bold text-emerald-400 mb-3" dir="rtl">شروط المطالبة | Claim Requirements</h4>
-                  <ul className="space-y-2 text-gray-300" dir="rtl">
+                  <h4 className="font-bold text-emerald-400 mb-3">Claim Requirements</h4>
+                  <ul className="space-y-2 text-gray-300">
                     <li className="flex items-center gap-2">
                       <span className="text-emerald-400">✓</span>
-                      <span>أكمل 7 أيام من النشاط في الأسبوع</span>
+                      <span>Complete 7 days of activity in the week</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-emerald-400">✓</span>
-                      <span>يتم دمج النقاط تلقائياً في نتيجتك الإجمالية</span>
+                      <span>Points are automatically merged into your total score</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-emerald-400">✓</span>
-                      <span>النقاط غير المطالب بها تبقى معلقة حتى الأسبوع التالي</span>
+                      <span>Unclaimed points remain pending until the next week</span>
                     </li>
                   </ul>
                 </div>
@@ -1694,30 +1712,30 @@ export function UnifiedDashboard({
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-indigo-500/10 hover:bg-indigo-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Info className="w-5 h-5 text-indigo-400" />
-                  نصائح وأفضل الممارسات | Tips & Best Practices
+                  Tips & Best Practices
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-indigo-400" />
               </summary>
               <div className="p-5 space-y-4 text-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                    <h4 className="font-bold text-indigo-400 mb-2" dir="rtl">🎯 لتحقيق أقصى نقاط</h4>
-                    <ul className="space-y-1.5 text-gray-300 text-xs" dir="rtl">
-                      <li>• سجل دخولك يومياً للحفاظ على السلسلة</li>
-                      <li>• قم بمعاملات منتظمة على Mainnet</li>
-                      <li>• استخدم Testnet للتجربة الآمنة</li>
-                      <li>• أكمل 7 أيام نشاط للمطالبة الأسبوعية</li>
-                      <li>• قم بدعوة أصدقائك للحصول على مكافآت الإحالة</li>
+                    <h4 className="font-bold text-indigo-400 mb-2">🎯 Maximize Your Points</h4>
+                    <ul className="space-y-1.5 text-gray-300 text-xs">
+                      <li>• Check in daily to maintain your streak</li>
+                      <li>• Make regular transactions on Mainnet</li>
+                      <li>• Use Testnet for safe experimentation</li>
+                      <li>• Complete 7 active days for weekly claim</li>
+                      <li>• Invite friends for referral rewards</li>
                     </ul>
                   </div>
                   <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                    <h4 className="font-bold text-purple-400 mb-2" dir="rtl">⚡ نصائح سريعة</h4>
-                    <ul className="space-y-1.5 text-gray-300 text-xs" dir="rtl">
-                      <li>• النشاط الحديث له وزن أعلى</li>
-                      <li>• Mainnet يعطي 3× نقاط Testnet</li>
-                      <li>• السلاسل الطويلة تعطي مكافآت أكبر</li>
-                      <li>• تجنب فترات الخمول الطويلة</li>
-                      <li>• راقب نقاطك المعلقة بانتظام</li>
+                    <h4 className="font-bold text-purple-400 mb-2">⚡ Quick Tips</h4>
+                    <ul className="space-y-1.5 text-gray-300 text-xs">
+                      <li>• Recent activity carries more weight</li>
+                      <li>• Mainnet gives 3× Testnet points</li>
+                      <li>• Longer streaks yield bigger bonuses</li>
+                      <li>• Avoid extended periods of inactivity</li>
+                      <li>• Monitor your pending points regularly</li>
                     </ul>
                   </div>
                 </div>

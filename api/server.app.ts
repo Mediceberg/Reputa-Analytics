@@ -779,11 +779,16 @@ app.post('/api/save-pioneer', async (req: Request, res: Response) => handleSaveP
 app.post('/api/save-feedback', async (req: Request, res: Response) => handleSaveFeedback(req.body, res));
 
 // ====================
-// REFERRAL
+// REFERRAL (MongoDB-backed)
 // ====================
 
-function generateReferralCode(walletAddress: string): string {
-  return walletAddress.substring(0, 6).toUpperCase().padEnd(6, 'X');
+const REFERRAL_POINTS_PER_CONFIRMED = 500;
+const REFERRAL_BONUS_5 = 250;
+const REFERRAL_BONUS_10 = 500;
+
+function makeReferralCode(walletAddress: string): string {
+  const hash = walletAddress.replace(/[^A-Za-z0-9]/g, '').substring(0, 6).toUpperCase();
+  return hash.padEnd(6, 'X');
 }
 
 function referralSuccess(data: any) {
@@ -804,29 +809,49 @@ app.get('/api/referral', async (req: Request, res: Response) => {
 
   console.log(`✅ [REFERRAL GET] Action: ${action}, Wallet: ${walletAddress}`);
 
-  if (action === 'stats') {
-    const referralCode = generateReferralCode(walletAddress);
-    const referralLink = `https://reputa-score.vercel.app/?ref=${referralCode}`;
+  try {
+    const db = await getMongoDb();
+    const referralsCol = db.collection('Referrals');
+    const referralCode = makeReferralCode(walletAddress);
 
-    return res.status(200).json(
-      referralSuccess({
-        referralCode,
-        referralLink,
-        confirmedReferrals: 0,
-        pendingReferrals: 0,
-        totalPointsEarned: 0,
-        claimablePoints: 0,
-        pointsBalance: 0,
-      })
-    );
+    if (action === 'stats') {
+      const referralLink = `https://reputa-score.vercel.app/?ref=${referralCode}`;
+
+      const confirmedReferrals = await referralsCol.countDocuments({ referrerWallet: walletAddress.toLowerCase(), status: 'confirmed' });
+      const pendingReferrals = await referralsCol.countDocuments({ referrerWallet: walletAddress.toLowerCase(), status: 'pending' });
+
+      // Calculate points
+      let totalPointsEarned = confirmedReferrals * REFERRAL_POINTS_PER_CONFIRMED;
+      if (confirmedReferrals >= 10) totalPointsEarned += REFERRAL_BONUS_10;
+      else if (confirmedReferrals >= 5) totalPointsEarned += REFERRAL_BONUS_5;
+
+      // Check claimed points
+      const claimedDoc = await db.collection('ReferralClaims').findOne({ walletAddress: walletAddress.toLowerCase() });
+      const claimedPoints = claimedDoc?.totalClaimed || 0;
+      const claimablePoints = Math.max(0, totalPointsEarned - claimedPoints);
+
+      return res.status(200).json(
+        referralSuccess({
+          referralCode,
+          referralLink,
+          confirmedReferrals,
+          pendingReferrals,
+          totalPointsEarned,
+          claimablePoints,
+          pointsBalance: claimedPoints,
+        })
+      );
+    }
+
+    if (action === 'code') {
+      return res.status(200).json(referralSuccess({ referralCode }));
+    }
+
+    return res.status(400).json(referralError('Invalid action'));
+  } catch (e: any) {
+    console.error('[REFERRAL GET] Error:', e);
+    return res.status(500).json(referralError(e.message));
   }
-
-  if (action === 'code') {
-    const referralCode = generateReferralCode(walletAddress);
-    return res.status(200).json(referralSuccess({ referralCode }));
-  }
-
-  return res.status(400).json(referralError('Invalid action'));
 });
 
 app.post('/api/referral', async (req: Request, res: Response) => {
@@ -834,47 +859,136 @@ app.post('/api/referral', async (req: Request, res: Response) => {
 
   console.log(`✅ [REFERRAL POST] Action: ${action}, Wallet: ${walletAddress}`);
 
-  if (action === 'track') {
-    if (!walletAddress || !referralCode) {
-      return res.status(400).json(referralError('Wallet address and referral code are required'));
-    }
+  try {
+    const db = await getMongoDb();
+    const referralsCol = db.collection('Referrals');
 
-    return res.status(200).json(
-      referralSuccess({
-        message: 'Referral tracked successfully',
+    if (action === 'track') {
+      if (!walletAddress || !referralCode) {
+        return res.status(400).json(referralError('Wallet address and referral code are required'));
+      }
+
+      const normalizedWallet = walletAddress.toLowerCase();
+      const normalizedCode = referralCode.toUpperCase();
+
+      // Prevent self-referral
+      const selfCode = makeReferralCode(walletAddress);
+      if (selfCode === normalizedCode) {
+        return res.status(400).json(referralError('Cannot refer yourself'));
+      }
+
+      // Check if already referred
+      const existing = await referralsCol.findOne({ referredWallet: normalizedWallet });
+      if (existing) {
+        return res.status(200).json(referralSuccess({ message: 'Already referred', status: existing.status }));
+      }
+
+      // Find referrer by code (first 6 chars of their wallet uppercase)
+      // We store the referral with the code so we can look up later
+      await referralsCol.insertOne({
+        referrerCode: normalizedCode,
+        referrerWallet: '', // Will be resolved on confirm
+        referredWallet: normalizedWallet,
         status: 'pending',
-      })
-    );
-  }
+        pointsAwarded: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-  if (action === 'confirm') {
-    if (!walletAddress) {
-      return res.status(400).json(referralError('Wallet address is required'));
+      return res.status(200).json(referralSuccess({ message: 'Referral tracked successfully', status: 'pending' }));
     }
 
-    return res.status(200).json(
-      referralSuccess({
-        message: 'Referral confirmed successfully',
-        status: 'confirmed',
-        rewardPoints: 30,
-      })
-    );
-  }
+    if (action === 'confirm') {
+      if (!walletAddress) {
+        return res.status(400).json(referralError('Wallet address is required'));
+      }
 
-  if (action === 'claim-points') {
-    if (!walletAddress) {
-      return res.status(400).json(referralError('Wallet address is required'));
+      const normalizedWallet = walletAddress.toLowerCase();
+
+      // Find pending referral for this wallet
+      const pendingRef = await referralsCol.findOne({ referredWallet: normalizedWallet, status: 'pending' });
+      if (!pendingRef) {
+        return res.status(200).json(referralSuccess({ message: 'No pending referral found', status: 'none' }));
+      }
+
+      // Try to resolve referrer wallet from code
+      // Look through userv3 to find wallet that matches the code
+      const usersCol = db.collection('userv3');
+      const allUsers = await usersCol.find({ walletAddress: { $exists: true, $ne: '' } }).project({ walletAddress: 1 }).toArray();
+      let referrerWallet = '';
+      for (const u of allUsers) {
+        if (u.walletAddress && makeReferralCode(u.walletAddress) === pendingRef.referrerCode) {
+          referrerWallet = u.walletAddress.toLowerCase();
+          break;
+        }
+      }
+
+      await referralsCol.updateOne(
+        { _id: pendingRef._id },
+        {
+          $set: {
+            status: 'confirmed',
+            referrerWallet,
+            pointsAwarded: REFERRAL_POINTS_PER_CONFIRMED,
+            confirmedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        }
+      );
+
+      return res.status(200).json(referralSuccess({ message: 'Referral confirmed', status: 'confirmed', rewardPoints: REFERRAL_POINTS_PER_CONFIRMED }));
     }
 
-    return res.status(200).json(
-      referralSuccess({
-        message: 'Points claimed successfully',
-        pointsClaimed: 30,
-      })
-    );
-  }
+    if (action === 'claim-points') {
+      if (!walletAddress) {
+        return res.status(400).json(referralError('Wallet address is required'));
+      }
 
-  return res.status(400).json(referralError('Invalid action'));
+      const normalizedWallet = walletAddress.toLowerCase();
+      const confirmedCount = await referralsCol.countDocuments({ referrerWallet: normalizedWallet, status: 'confirmed' });
+
+      let totalEarned = confirmedCount * REFERRAL_POINTS_PER_CONFIRMED;
+      if (confirmedCount >= 10) totalEarned += REFERRAL_BONUS_10;
+      else if (confirmedCount >= 5) totalEarned += REFERRAL_BONUS_5;
+
+      const claimsCol = db.collection('ReferralClaims');
+      const claimedDoc = await claimsCol.findOne({ walletAddress: normalizedWallet });
+      const alreadyClaimed = claimedDoc?.totalClaimed || 0;
+      const claimable = Math.max(0, totalEarned - alreadyClaimed);
+
+      if (claimable <= 0) {
+        return res.status(200).json(referralSuccess({ message: 'No points to claim', pointsClaimed: 0 }));
+      }
+
+      // Record the claim
+      await claimsCol.updateOne(
+        { walletAddress: normalizedWallet },
+        {
+          $set: { walletAddress: normalizedWallet, updatedAt: new Date() },
+          $inc: { totalClaimed: claimable },
+          $setOnInsert: { createdAt: new Date() },
+        },
+        { upsert: true }
+      );
+
+      // Log points event
+      await db.collection('PointsLog').insertOne({
+        pioneerId: normalizedWallet,
+        action: 'referral_claim',
+        pointsChange: claimable,
+        metadata: { confirmedReferrals: confirmedCount },
+        timestamp: new Date(),
+        createdAt: new Date(),
+      });
+
+      return res.status(200).json(referralSuccess({ message: 'Points claimed successfully', pointsClaimed: claimable }));
+    }
+
+    return res.status(400).json(referralError('Invalid action'));
+  } catch (e: any) {
+    console.error('[REFERRAL POST] Error:', e);
+    return res.status(500).json(referralError(e.message));
+  }
 });
 
 // ====================
@@ -3141,6 +3255,145 @@ app.get('/health', (req: Request, res: Response) => {
     status: 'Reputa API Unified',
     timestamp: new Date().toISOString(),
   });
+});
+
+// ====================
+// HEALTH CHECK (Admin Portal)
+// ====================
+
+app.get('/api/health-check', async (req: Request, res: Response) => {
+  const startTime = process.uptime();
+  let mongoStatus = { status: 'disconnected', latency: null as number | null };
+  let upstashStatus = { status: 'disconnected', latency: null as number | null };
+
+  try {
+    const mongoStart = Date.now();
+    const db = await getMongoDb();
+    await db.command({ ping: 1 });
+    mongoStatus = { status: 'connected', latency: Date.now() - mongoStart };
+  } catch (e) {
+    mongoStatus = { status: 'error', latency: null };
+  }
+
+  try {
+    const redisStart = Date.now();
+    const client = await getRedis();
+    if (client) {
+      await client.ping();
+      upstashStatus = { status: 'connected', latency: Date.now() - redisStart };
+    } else {
+      upstashStatus = { status: 'noop-fallback', latency: 0 };
+    }
+  } catch (e) {
+    upstashStatus = { status: 'noop-fallback', latency: 0 };
+  }
+
+  res.json({
+    status: 'ok',
+    uptime: Math.floor(startTime),
+    mongodb: mongoStatus,
+    upstash: upstashStatus,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ====================
+// ADMIN PORTAL CONSOLIDATED API
+// ====================
+
+app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) => {
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const headerPw = req.headers['x-admin-password'] as string;
+  if (headerPw !== adminPassword) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const db = await getMongoDb();
+    const pageNum = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 50);
+    const searchQuery = (req.query.search as string || '').trim();
+
+    // Build search filter
+    const filter: any = {};
+    if (searchQuery) {
+      filter.$or = [
+        { username: { $regex: searchQuery, $options: 'i' } },
+        { walletAddress: { $regex: searchQuery, $options: 'i' } },
+        { email: { $regex: searchQuery, $options: 'i' } },
+        { pioneerId: { $regex: searchQuery, $options: 'i' } },
+      ];
+    }
+
+    // Query userv3 collection
+    const usersCollection = db.collection('userv3');
+    const reputationCollection = db.collection('ReputationScores');
+    const referralsCollection = db.collection('Referrals');
+
+    const total = await usersCollection.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(pageNum, totalPages);
+    const skip = (safePage - 1) * limit;
+
+    const rawUsers = await usersCollection
+      .find(filter)
+      .sort({ lastUpdated: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    // Get VIP count and total visits
+    const vipCount = await usersCollection.countDocuments({ vip: true });
+    const totalVisits = await usersCollection.countDocuments({});
+    const totalReferrals = await referralsCollection.countDocuments({ status: 'confirmed' }).catch(() => 0);
+
+    // Transform users
+    const users = rawUsers.map((u: any) => ({
+      uid: u.uid || u.pioneerId || u._id?.toString(),
+      username: u.username || u.displayName || 'Unknown',
+      primaryWallet: u.walletAddress || u.metadata?.raw?.walletAddress || '',
+      walletAddress: u.walletAddress || u.metadata?.raw?.walletAddress || '',
+      primaryEmail: u.email || u.metadata?.raw?.email || '',
+      createdAt: u.createdAt || u.metadata?.raw?.createdAt || '',
+      lastActiveAt: u.lastUpdated || u.lastActiveAt || '',
+      reputaScore: u.metadata?.raw?.totalReputationScore || 0,
+      hasFeedback: false,
+      isVip: u.vip === true,
+      linkStatus: u.walletAddress ? 'Linked' : 'Not Linked',
+      dataSource: 'MongoDB',
+    }));
+
+    res.json({
+      success: true,
+      users,
+      uniqueUsers: total,
+      vipUsers: vipCount,
+      totalVisits,
+      totalReferrals,
+      lastUpdated: new Date().toISOString(),
+      pagination: {
+        page: safePage,
+        limit,
+        total,
+        pages: totalPages,
+        hasNext: safePage < totalPages,
+        hasPrev: safePage > 1,
+      },
+    });
+  } catch (e: any) {
+    console.error('[Admin Portal] Consolidated API error:', e);
+    res.status(500).json({
+      success: false,
+      error: e.message,
+      users: [],
+      uniqueUsers: 0,
+      vipUsers: 0,
+      totalVisits: 0,
+      totalReferrals: 0,
+      lastUpdated: new Date().toISOString(),
+      pagination: { page: 1, limit: 50, total: 0, pages: 1, hasNext: false, hasPrev: false },
+    });
+  }
 });
 
 // ====================
