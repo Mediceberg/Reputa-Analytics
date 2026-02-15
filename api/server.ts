@@ -11,7 +11,6 @@ import app from './server.app';
 import { startUnifiedServer } from './server.startup';
 import { getMongoDb, getReputationScoresCollection } from '../server/db/mongoModels';
 import * as reputationService from '../server/services/reputationService';
-import protocol from '../server/config/reputaProtocol';
 import { createRedisClient } from './server.redis';
 
 console.log('DATABASE_URL_CHECK:', process.env.MONGODB_URI ? 'CONNECTED TO ATLAS' : 'LOCAL DETECTED');
