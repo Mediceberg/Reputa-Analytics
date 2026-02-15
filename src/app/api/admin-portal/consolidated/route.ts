@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const REDIS_REGISTERED_LIST = 'registered_pioneers';
-const REDIS_FETCH_LIMIT = 100; // keep the payload lean to avoid memory spikes on Vercel
+const REDIS_FETCH_LIMIT = 200; // increased for better pagination and response speed
 
 type GlobalWithMongo = typeof globalThis & {
   __ADMIN_PORTAL_DB?: Promise<Db>;

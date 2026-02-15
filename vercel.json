@@ -1,13 +1,1 @@
-{
-  "version": 2,
-  "functions": {
-    "api/**/*.ts": {
-      "includeFiles": "server/**"
-    }
-  },
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server.ts" },
-    { "source": "/reputa-admin-portal", "destination": "/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}
+{"version":2,"functions":{"api/**/*.js":{"memory":1024,"maxDuration":30}},"routes":[{"src":"/api/(.*)","dest":"/api/$1"}]}
