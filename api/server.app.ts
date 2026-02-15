@@ -8,6 +8,7 @@ import {
   getMongoDb,
   getReputationScoresCollection,
 } from '../server/db/mongoModels.js';
+import { connectMongo } from '../db/mongo';
 import { applyCommonMiddleware } from './server.middleware';
 import { toNumberParam, toStringParam } from './server.params';
 import { createRedisClient } from './server.redis';
