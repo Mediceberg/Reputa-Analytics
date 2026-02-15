@@ -1,9 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectMongoDB } from '@/server/db/mongoModels';
 import { createRedisClient } from '@/api/server.redis';
+import { Db } from 'mongodb';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+type GlobalWithMongo = typeof globalThis & {
+  __HEALTH_DB?: Promise<Db>;
+};
+
+const globalWithMongo = globalThis as GlobalWithMongo;
+
+async function getCachedDb() {
+  if (!globalWithMongo.__HEALTH_DB) {
+    globalWithMongo.__HEALTH_DB = connectMongoDB().catch((error: Error) => {
+      globalWithMongo.__HEALTH_DB = undefined;
+      throw error;
+    });
+  }
+  return globalWithMongo.__HEALTH_DB;
+}
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -16,7 +33,7 @@ export async function GET(request: NextRequest) {
     
     try {
       const mongoStart = Date.now();
-      await connectMongoDB();
+      await getCachedDb();
       mongoLatency = Date.now() - mongoStart;
     } catch (error) {
       mongoStatus = 'error';
