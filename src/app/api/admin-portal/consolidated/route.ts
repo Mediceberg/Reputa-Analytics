@@ -39,8 +39,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get search query
+    // Get search query and pagination
     const searchQuery = request.nextUrl.searchParams.get('search') || '';
+    const pageParam = request.nextUrl.searchParams.get('page');
+    const limitParam = request.nextUrl.searchParams.get('limit');
+    const page = Math.max(1, parseInt(pageParam || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt(limitParam || '50', 10)));
+    const skip = (page - 1) * limit;
 
     // Prepare Redis data map (wallet hydration)
     const redisWalletMap = new Map<string, { wallet: string | null; raw: any }>();
@@ -87,8 +92,8 @@ export async function GET(request: NextRequest) {
       console.error('Failed to fetch registered_pioneers from Redis:', redisError);
     }
 
-    // Connect to database
-    const db = await connectMongoDB();
+    // Connect to database (cached)
+    const db = await getCachedDb();
 
     // Build unified aggregation pipeline
     const pipeline: any[] = [];
@@ -227,7 +232,9 @@ export async function GET(request: NextRequest) {
       unionStage3,
       groupStage,
       projectStage,
-      { $sort: { lastActiveAt: -1 } }
+      { $sort: { lastActiveAt: -1 } },
+      { $skip: skip },
+      { $limit: limit }
     ];
 
     // Execute aggregation
@@ -331,10 +338,48 @@ export async function GET(request: NextRequest) {
       return new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime();
     });
 
+    // Get total count for pagination
+    const countPipeline = [
+      // Start with final_users_v3 as base
+      {
+        $project: {
+          username: 1,
+          walletAddress: 1,
+          pioneerId: 1,
+          email: 1,
+          createdAt: 1,
+          lastActiveAt: 1,
+          referralCount: 1,
+          paymentDetails: 1,
+          protocolVersion: { $literal: 'v3' },
+          source: { $literal: 'final_users_v3' }
+        }
+      },
+      unionStage,
+      unionStage2,
+      unionStage3,
+      groupStage,
+      projectStage,
+      { $sort: { lastActiveAt: -1 } },
+      { $count: "total" }
+    ];
+
+    const countResult = await db.collection('final_users_v3').aggregate(countPipeline).toArray();
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+    const pages = Math.ceil(total / limit);
+
     return NextResponse.json({
       success: true,
       users: transformedUsers,
       count: transformedUsers.length,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages,
+        hasNext: page < pages,
+        hasPrev: page > 1
+      },
       meta: {
         totalRecords: transformedUsers.reduce((sum, u) => sum + u.recordCount, 0),
         consolidatedUsers: transformedUsers.filter(u => u.isConsolidated).length,
