@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectMongoDB } from '@/server/db/mongoModels';
 import { createRedisClient } from '@/api/server.redis';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   const startTimeSeconds = Math.floor(startTime / 1000);
