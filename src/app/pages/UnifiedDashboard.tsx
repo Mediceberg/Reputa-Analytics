@@ -49,7 +49,7 @@ import { reputationService, UnifiedScoreData } from '../services/reputationServi
 import { useReputationEngine } from '../hooks/useReputationEngine';
 import { 
   LayoutDashboard, PieChart, Activity, LineChart, Settings, MessageSquare, HelpCircle,
-  ArrowLeft, User, Wallet, Shield, Globe, Sparkles, Award, AlertCircle,
+  ArrowLeft, User, Wallet, Shield, Globe, Sparkles, Award, AlertCircle, AlertTriangle,
   RefreshCw, Network, Zap, FileText, Copy, ExternalLink, Bell, Moon, Sun,
   Trophy, Info, BarChart3, TrendingUp, TestTube, ChevronDown, BookOpen
 } from 'lucide-react';
