@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectMongoDB } from '@/server/db/mongoModels';
-import { createRedisClient } from '@/api/server.redis';
+import { connectMongoDB } from '../../../../../server/db/mongoModels';
+import { createRedisClient } from '../../../api/server.redis';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

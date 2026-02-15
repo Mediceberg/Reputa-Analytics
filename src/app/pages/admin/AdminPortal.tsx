@@ -455,7 +455,7 @@ function Dashboard({ password, onLogout }: { password: string; onLogout: () => v
             </span>
             <span>{users.length} rows ({pagination?.total ?? 0} total)</span>
           </header>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-black/80 text-[11px] uppercase tracking-widest text-slate-300 backdrop-blur">
                 <tr>

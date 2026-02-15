@@ -51,7 +51,7 @@ import {
   LayoutDashboard, PieChart, Activity, LineChart, Settings, MessageSquare, HelpCircle,
   ArrowLeft, User, Wallet, Shield, Globe, Sparkles, Award, AlertCircle,
   RefreshCw, Network, Zap, FileText, Copy, ExternalLink, Bell, Moon, Sun,
-  Trophy, Info, BarChart3, TrendingUp, TestTube, ChevronDown
+  Trophy, Info, BarChart3, TrendingUp, TestTube, ChevronDown, BookOpen
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { FUTURE_TASKS_CONFIG } from '../protocol/futureTasks';
@@ -80,7 +80,8 @@ type ActiveSection =
   | 'settings'
   | 'feedback'
   | 'help'
-  | 'activity-hub';
+  | 'activity-hub'
+  | 'how-it-works';
 type NetworkSubPage = null | 'network-info' | 'top-wallets' | 'reputation';
 
 export function UnifiedDashboard({ 
@@ -116,6 +117,7 @@ export function UnifiedDashboard({
     'settings': '/settings',
     'feedback': '/feedback',
     'help': '/help',
+    'how-it-works': '/how-it-works',
   };
 
   const activeSectionLabel = useMemo(() => {
@@ -579,7 +581,7 @@ export function UnifiedDashboard({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { id: 'transactions' as ActiveSection, label: 'TOTAL TX', sub: `${liveWalletData?.totalTransactions || 0} Transactions`, icon: Activity, gradient: 'from-purple-500/20 to-violet-500/20', border: 'rgba(139, 92, 246, 0.25)', text: 'text-purple-400', glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]' },
-                { id: 'analytics' as ActiveSection, label: 'ANALYTICS', sub: 'Charts & Insights', icon: LineChart, gradient: 'from-cyan-500/20 to-blue-500/20', border: 'rgba(0, 217, 255, 0.25)', text: 'text-cyan-400', glow: 'hover:shadow-[0_0_20px_rgba(0,217,255,0.15)]' },
+                { id: 'how-it-works' as ActiveSection, label: 'HOW IT WORKS', sub: 'Learn & Guide', icon: BookOpen, gradient: 'from-cyan-500/20 to-blue-500/20', border: 'rgba(0, 217, 255, 0.25)', text: 'text-cyan-400', glow: 'hover:shadow-[0_0_20px_rgba(0,217,255,0.15)]' },
                 { id: 'portfolio' as ActiveSection, label: 'PORTFOLIO', sub: `${tokens.length} Tokens`, icon: PieChart, gradient: 'from-emerald-500/20 to-teal-500/20', border: 'rgba(16, 185, 129, 0.25)', text: 'text-emerald-400', glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]' },
                 { id: 'audit' as ActiveSection, label: 'FULL REPORT', sub: 'Audit & Trust', icon: FileText, gradient: 'from-amber-500/20 to-orange-500/20', border: 'rgba(245, 158, 11, 0.25)', text: 'text-amber-400', glow: 'hover:shadow-[0_0_20px_rgba(245,158,11,0.15)]' },
                 { id: 'rank' as ActiveSection, label: 'RANK', sub: 'Leaderboard', icon: Trophy, gradient: 'from-rose-500/20 to-pink-500/20', border: 'rgba(244, 63, 94, 0.25)', text: 'text-rose-400', glow: 'hover:shadow-[0_0_20px_rgba(244,63,94,0.15)]' },
@@ -1357,6 +1359,84 @@ export function UnifiedDashboard({
           </div>
         )}
 
+        {activeSection === 'how-it-works' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+              <div className="flex items-center gap-3 mb-6">
+                <BookOpen className="w-6 h-6 text-cyan-400" />
+                <h2 className="text-lg font-black uppercase tracking-wide text-white">How It Works</h2>
+              </div>
+              <p className="text-sm text-gray-400 mb-6">Learn how Reputa Score calculates your blockchain reputation and trust level.</p>
+              
+              <div className="space-y-4">
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    What is Reputa Score?
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed">
+                    Reputa Score is your blockchain reputation score calculated from your Pi Network activity. It analyzes your transaction history, wallet age, network participation, and app engagement to generate a comprehensive trust score.
+                  </div>
+                </details>
+
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    How is my score calculated?
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
+                    <p><strong className="text-cyan-400">Mainnet Activity (100%):</strong> Real blockchain transactions, wallet age, and network participation.</p>
+                    <p><strong className="text-amber-400">Testnet Activity (25%):</strong> Testing environment activity contributes 25% as supplementary points.</p>
+                    <p><strong className="text-purple-400">App Engagement:</strong> Daily check-ins, activity streaks, and platform interactions.</p>
+                    <p className="mt-3 text-cyan-300">Formula: Total Score = Mainnet Points + (Testnet Points × 0.25) + App Engagement Points</p>
+                  </div>
+                </details>
+
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    Trust Levels Explained
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
+                    <p><strong className="text-gray-300">Newcomer (0-50K):</strong> Just starting your blockchain journey.</p>
+                    <p><strong className="text-blue-300">Novice (50K-150K):</strong> Building initial reputation.</p>
+                    <p><strong className="text-cyan-300">Explorer (150K-250K):</strong> Active network participant.</p>
+                    <p><strong className="text-emerald-300">Contributor (250K-350K):</strong> Regular contributor to the ecosystem.</p>
+                    <p><strong className="text-amber-300">Verified (350K-450K):</strong> Established trusted member.</p>
+                    <p><strong className="text-orange-300">Trusted (450K-550K):</strong> Highly reliable participant.</p>
+                    <p><strong className="text-purple-300">Ambassador (550K+):</strong> Elite network ambassador.</p>
+                  </div>
+                </details>
+
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    Earning Points
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
+                    <p><strong className="text-purple-400">Daily Check-in:</strong> Earn points by checking in daily. Build streaks for bonus rewards.</p>
+                    <p><strong className="text-cyan-400">Blockchain Activity:</strong> Every mainnet transaction contributes to your score.</p>
+                    <p><strong className="text-emerald-400">Network Participation:</strong> Active wallet usage and consistent activity boost your reputation.</p>
+                    <p><strong className="text-amber-400">Weekly Claims:</strong> Complete 7 days of activity to claim accumulated app engagement rewards.</p>
+                  </div>
+                </details>
+
+                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
+                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
+                    Network Modes
+                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
+                  </summary>
+                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
+                    <p><strong className="text-emerald-400">Mainnet:</strong> Real Pi Network blockchain. Full 100% score impact.</p>
+                    <p><strong className="text-amber-400">Testnet:</strong> Testing environment. 25% score impact for safe experimentation.</p>
+                    <p className="mt-3 text-cyan-300">Switch between networks anytime to view different data sources.</p>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeSection === 'help' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="glass-card p-6" style={{ border: '1px solid rgba(16, 185, 129, 0.2)' }}>
@@ -1393,7 +1473,7 @@ export function UnifiedDashboard({
       <MobileBottomNav
         activeItem={activeSection === 'overview' ? 'dashboard' : activeSection}
         onItemClick={handleSidebarNavigation}
-        onMenuClick={() => setIsSideDrawerOpen(true)}
+        onMenuClick={() => setActiveSection('profile')}
       />
 
       {/* Side Drawer for mobile */}
