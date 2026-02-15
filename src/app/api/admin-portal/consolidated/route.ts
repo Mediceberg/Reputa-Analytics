@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectMongoDB } from '../../../../../server/db/mongoModels';
 import { Db, Collection } from 'mongodb';
+import { createRedisClient } from '@/api/server.redis';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const REDIS_REGISTERED_LIST = 'registered_pioneers';
+const REDIS_FETCH_LIMIT = 100; // keep the payload lean to avoid memory spikes on Vercel
+
+type GlobalWithMongo = typeof globalThis & {
+  __ADMIN_PORTAL_DB?: Promise<Db>;
+};
+
+const globalWithMongo = globalThis as GlobalWithMongo;
+
+async function getCachedDb() {
+  if (!globalWithMongo.__ADMIN_PORTAL_DB) {
+    globalWithMongo.__ADMIN_PORTAL_DB = connectMongoDB().catch((error) => {
+      // Reset the cache so subsequent calls can retry a fresh connection
+      globalWithMongo.__ADMIN_PORTAL_DB = undefined;
+      throw error;
+    });
+  }
+  return globalWithMongo.__ADMIN_PORTAL_DB;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,6 +41,51 @@ export async function GET(request: NextRequest) {
 
     // Get search query
     const searchQuery = request.nextUrl.searchParams.get('search') || '';
+
+    // Prepare Redis data map (wallet hydration)
+    const redisWalletMap = new Map<string, { wallet: string | null; raw: any }>();
+    try {
+      const redisClient = await createRedisClient();
+      const redisEntries = await redisClient.lrange(
+        REDIS_REGISTERED_LIST,
+        0,
+        Math.max(0, REDIS_FETCH_LIMIT - 1)
+      );
+
+      if (Array.isArray(redisEntries)) {
+        redisEntries.forEach((entry, index) => {
+          if (!entry) return;
+          try {
+            const parsed = typeof entry === 'string' ? JSON.parse(entry) : entry;
+            const usernameRaw = parsed?.username || parsed?.handle || parsed?.name;
+            const walletRaw =
+              parsed?.wallet ||
+              parsed?.walletAddress ||
+              parsed?.wallet_address ||
+              parsed?.publicKey ||
+              parsed?.public_key ||
+              null;
+
+            if (!usernameRaw) return;
+            const normalizedUsername = String(usernameRaw).trim().toLowerCase();
+            if (!normalizedUsername) return;
+
+            const sanitizedWallet = walletRaw ? String(walletRaw).trim() : null;
+            redisWalletMap.set(normalizedUsername, {
+              wallet: sanitizedWallet,
+              raw: parsed,
+            });
+          } catch (parseError) {
+            console.warn('Failed to parse Redis registered_pioneers entry', {
+              index,
+              parseError,
+            });
+          }
+        });
+      }
+    } catch (redisError) {
+      console.error('Failed to fetch registered_pioneers from Redis:', redisError);
+    }
 
     // Connect to database
     const db = await connectMongoDB();
@@ -210,6 +279,21 @@ export async function GET(request: NextRequest) {
 
     // Final data transformation
     const transformedUsers = consolidatedUsers.map((user: any) => {
+      const normalizedUsername = (user.username || '').toLowerCase();
+      const redisWallet = normalizedUsername
+        ? redisWalletMap.get(normalizedUsername)
+        : null;
+      const walletFromRedis = redisWallet?.wallet || null;
+      const combinedWallet = walletFromRedis || user.primaryWallet || null;
+      const combinedAllWallets = walletFromRedis
+        ? Array.from(
+            new Set([
+              walletFromRedis,
+              ...(Array.isArray(user.allWallets) ? user.allWallets.filter(Boolean) : []),
+            ])
+          )
+        : user.allWallets;
+
       const userScores = user.allPioneerIds.map((id: any) => scoresMap.get(id) || 0);
       const maxScore = Math.max(...userScores, 0);
       const feedbacks = feedbackMap.get(user.username) || [];
@@ -217,6 +301,12 @@ export async function GET(request: NextRequest) {
 
       return {
         ...user,
+        walletAddress: combinedWallet,
+        primaryWallet: combinedWallet,
+        allWallets: combinedAllWallets,
+        walletSource: walletFromRedis ? 'registered_pioneers' : user.sources?.[0] || 'mongo',
+        dataSource: walletFromRedis ? 'Upstash Redis + MongoDB' : 'MongoDB',
+        redisPayload: redisWallet?.raw ?? null,
         reputaScore: maxScore,
         feedbackCount: feedbacks.length,
         hasFeedback: feedbacks.length > 0,
@@ -251,7 +341,8 @@ export async function GET(request: NextRequest) {
         usersWithScores: transformedUsers.filter(u => u.reputaScore > 0).length,
         usersWithFeedback: transformedUsers.filter(u => u.hasFeedback).length,
         usersWithCheckins: transformedUsers.filter(u => u.checkinCount > 0).length,
-        searchQuery: searchQuery || null
+        searchQuery: searchQuery || null,
+        redisWalletsHydrated: redisWalletMap.size,
       }
     });
 
