@@ -53,6 +53,17 @@
         flex-direction: column;
         overflow: hidden;
       }
+
+      /* Stable loading animations */
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes progressSlide {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(150%); }
+        100% { transform: translateX(-100%); }
+      }
     </style>
   </head>
   <body>
