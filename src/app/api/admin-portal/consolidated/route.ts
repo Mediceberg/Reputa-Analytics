@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectMongoDB } from '../../../../../server/db/mongoModels';
 import { Db, Collection } from 'mongodb';
-import { createRedisClient } from '@/api/server.redis';
+import { createRedisClient } from '../../../../api/server.redis';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -92,8 +92,8 @@ export async function GET(request: NextRequest) {
       console.error('Failed to fetch registered_pioneers from Redis:', redisError);
     }
 
-    // Connect to database (cached)
-    const db = await getCachedDb();
+    // Connect to database
+    const db = await connectMongoDB();
 
     // Build unified aggregation pipeline
     const pipeline: any[] = [];
