@@ -1388,7 +1388,7 @@ export function UnifiedDashboard({
                 </div>
                 <div>
                   <h2 className="text-xl font-black uppercase tracking-wide text-white">How It Works</h2>
-                  <p className="text-xs text-cyan-400">Reputa Protocol v3.0 — Complete Reference</p>
+                  <p className="text-xs text-cyan-400">Atomic Protocol — Complete Reference</p>
                 </div>
               </div>
               <p className="text-sm text-gray-300 leading-relaxed">
@@ -1408,149 +1408,126 @@ export function UnifiedDashboard({
               <div className="p-5 space-y-4 text-sm text-gray-300 leading-relaxed">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                   <h4 className="font-bold text-cyan-400 mb-2">What is Reputa Score?</h4>
-                  <p>Reputa Score is an advanced reputation system that evaluates your activity on the Pi Network. It combines wallet activity (80%) and app engagement (20%) to create a comprehensive and fair reputation score.</p>
+                  <p>Reputa Score is an advanced reputation system that evaluates your activity on the Pi Network. It combines Mainnet activity (50%), App Engagement (30%), and Testnet activity (20%) to create a comprehensive and fair reputation score up to 1,000,000 points.</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
-                    <p className="text-2xl font-black text-purple-400">20</p>
-                    <p className="text-xs text-gray-400 mt-1">Levels</p>
+                    <p className="text-2xl font-black text-purple-400">10</p>
+                    <p className="text-xs text-gray-400 mt-1">Trust Levels</p>
                   </div>
                   <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
-                    <p className="text-2xl font-black text-cyan-400">100,000</p>
+                    <p className="text-2xl font-black text-cyan-400">1,000,000</p>
                     <p className="text-xs text-gray-400 mt-1">Max Points</p>
                   </div>
                   <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                    <p className="text-2xl font-black text-amber-400">v3.0</p>
-                    <p className="text-xs text-gray-400 mt-1">Protocol Version</p>
+                    <p className="text-2xl font-black text-amber-400">Atomic</p>
+                    <p className="text-xs text-gray-400 mt-1">Protocol</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                   <h4 className="font-bold text-purple-400 mb-2">Scoring Formula</h4>
                   <code className="block p-3 rounded bg-black/40 text-cyan-300 text-xs font-mono">
-                    Total Score = (Mainnet × 60% + Testnet × 20%) × 80% + App Points × 20%
+                    Total Score = Mainnet (50%) + App Engagement (30%) + Testnet (20%)
                   </code>
+                  <p className="text-xs text-gray-400 mt-2">Each component is capped at its maximum contribution: Mainnet 500K, App 300K, Testnet 200K</p>
                 </div>
               </div>
             </details>
 
-            {/* Detailed Scoring System */}
+            {/* Score Weights */}
             <details open className="group glass-card border border-purple-500/30 rounded-xl overflow-hidden">
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-purple-500/10 hover:bg-purple-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Award className="w-5 h-5 text-purple-400" />
-                  Detailed Scoring System
+                  Score Components & Weights
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-purple-400" />
               </summary>
               <div className="p-5 space-y-4">
-                {/* Daily Check-in */}
+                {/* Mainnet (50%) */}
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <h4 className="font-bold text-emerald-400 mb-3 flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    Mainnet Activity — 50% (Max 500,000 pts)
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Wallet Age Bonus</span>
+                      <span className="font-bold text-emerald-400">Up to 50,000 pts</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Lifetime Activity Bonus</span>
+                      <span className="font-bold text-emerald-400">Up to 100,000 pts</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Transaction Points</span>
+                      <span className="font-bold text-cyan-400">+50 pts per tx</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">DEX Trade Points</span>
+                      <span className="font-bold text-purple-400">+100 pts per trade</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Staking (365+ days)</span>
+                      <span className="font-bold text-amber-400">+50,000 pts</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* App Engagement (30%) */}
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
                   <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2">
                     <Zap className="w-4 h-4" />
-                    Daily Check-in
+                    App Engagement — 30% (Max 300,000 pts)
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Base Points</span>
-                      <span className="font-bold text-purple-400">+10 pts</span>
+                      <span className="text-gray-300">Daily Check-in</span>
+                      <span className="font-bold text-purple-400">+100 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">3-Day Streak Bonus</span>
-                      <span className="font-bold text-cyan-400">+5 pts</span>
+                      <span className="text-gray-300">Check-in with Ad</span>
+                      <span className="font-bold text-cyan-400">+150 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">7-Day Streak Bonus</span>
+                      <span className="text-gray-300">Streak Bonus (per day)</span>
                       <span className="font-bold text-emerald-400">+10 pts</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">14-Day Streak Bonus</span>
-                      <span className="font-bold text-amber-400">+15 pts</span>
+                      <span className="text-gray-300">Report Views</span>
+                      <span className="font-bold text-amber-400">+25 pts each</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">30-Day Streak Bonus</span>
-                      <span className="font-bold text-orange-400">+25 pts</span>
+                      <span className="text-gray-300">Tool Usage</span>
+                      <span className="font-bold text-orange-400">+20 pts each</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-amber-500/10">
-                      ⏰ 24-hour cooldown between each check-in
-                    </p>
                   </div>
                 </div>
 
-                {/* Wallet Activity */}
+                {/* Testnet (20%) */}
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
                   <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
                     <Wallet className="w-4 h-4" />
-                    Wallet Activity
+                    Testnet Activity — 20% (Max 200,000 pts)
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">New Transaction</span>
-                      <span className="font-bold text-cyan-400">+50 pts</span>
+                      <span className="text-gray-300">Testnet Transaction</span>
+                      <span className="font-bold text-cyan-400">+50 pts per tx</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Balance Increase</span>
-                      <span className="font-bold text-emerald-400">+0.01 pts per Pi</span>
+                      <span className="text-gray-300">SDK Payments</span>
+                      <span className="font-bold text-purple-400">+100 pts each</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Staking Bonus</span>
-                      <span className="font-bold text-purple-400">+5 pts per 100 Pi</span>
+                      <span className="text-gray-300">Weekly Activity Bonus</span>
+                      <span className="font-bold text-emerald-400">+500 pts per week</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Account Age</span>
-                      <span className="font-bold text-amber-400">+1 pt per 30 days</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">New Contact</span>
-                      <span className="font-bold text-cyan-400">+2 pts (max 20)</span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-cyan-500/10">
-                      🔄 Wallet is scanned automatically every 15 minutes
-                    </p>
-                  </div>
-                </div>
-
-                {/* Network Weights */}
-                <div className="p-4 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                  <h4 className="font-bold text-amber-400 mb-3 flex items-center gap-2">
-                    <Network className="w-4 h-4" />
-                    Network Weights
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Mainnet Activity</span>
-                      <span className="font-bold text-emerald-400">60% weight</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Testnet Activity</span>
-                      <span className="font-bold text-amber-400">20% weight</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Total Wallet Score</span>
-                      <span className="font-bold text-cyan-400">80% of total</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">App Engagement</span>
-                      <span className="font-bold text-purple-400">20% of total</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Ad Bonus */}
-                <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                  <h4 className="font-bold text-emerald-400 mb-3 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    Ad Bonus
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Points per Ad</span>
-                      <span className="font-bold text-emerald-400">+5 pts</span>
-                    </div>
-                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Daily Maximum</span>
-                      <span className="font-bold text-amber-400">3 ads (15 pts)</span>
+                      <span className="text-gray-300">Testnet Link Bonus</span>
+                      <span className="font-bold text-amber-400">+1,000 pts</span>
                     </div>
                   </div>
                 </div>
@@ -1579,41 +1556,31 @@ export function UnifiedDashboard({
               </div>
             </details>
 
-            {/* Level System */}
+            {/* Trust Level System */}
             <details open className="group glass-card border border-amber-500/30 rounded-xl overflow-hidden">
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-amber-400" />
-                  Level System
+                  Trust Level System (10 Levels)
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-amber-400" />
               </summary>
               <div className="p-5 space-y-3">
                 <p className="text-sm text-gray-300 mb-4">
-                  The system has 20 levels. Each level requires 5,000 points to advance to the next.
+                  The Atomic Protocol has 10 trust levels from 0 to 1,000,000 points. Each level represents your reputation status in the Pi Network ecosystem.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                   {[
-                    { level: 1, name: 'Newcomer', points: '0 – 5K', color: 'text-gray-400' },
-                    { level: 2, name: 'Active', points: '5K – 10K', color: 'text-blue-400' },
-                    { level: 3, name: 'Trusted', points: '10K – 15K', color: 'text-cyan-400' },
-                    { level: 4, name: 'Engaged', points: '15K – 20K', color: 'text-emerald-400' },
-                    { level: 5, name: 'Reliable', points: '20K – 25K', color: 'text-green-400' },
-                    { level: 6, name: 'Notable', points: '25K – 30K', color: 'text-lime-400' },
-                    { level: 7, name: 'Established', points: '30K – 35K', color: 'text-yellow-400' },
-                    { level: 8, name: 'Loyal', points: '35K – 40K', color: 'text-amber-400' },
-                    { level: 9, name: 'Contributor', points: '40K – 45K', color: 'text-orange-400' },
-                    { level: 10, name: 'Pioneer', points: '45K – 50K', color: 'text-red-400' },
-                    { level: 11, name: 'Expert', points: '50K – 55K', color: 'text-pink-400' },
-                    { level: 12, name: 'Master', points: '55K – 60K', color: 'text-rose-400' },
-                    { level: 13, name: 'Legend', points: '60K – 65K', color: 'text-fuchsia-400' },
-                    { level: 14, name: 'Luminary', points: '65K – 70K', color: 'text-purple-400' },
-                    { level: 15, name: 'Titan', points: '70K – 75K', color: 'text-violet-400' },
-                    { level: 16, name: 'Elite', points: '75K – 80K', color: 'text-indigo-400' },
-                    { level: 17, name: 'Sage', points: '80K – 85K', color: 'text-blue-300' },
-                    { level: 18, name: 'Oracle', points: '85K – 90K', color: 'text-cyan-300' },
-                    { level: 19, name: 'Visionary', points: '90K – 95K', color: 'text-teal-300' },
-                    { level: 20, name: 'Supreme', points: '95K – 100K', color: 'text-emerald-300' },
+                    { level: 1, name: 'Novice', points: '0 – 10K', color: 'text-gray-400' },
+                    { level: 2, name: 'Explorer', points: '10K – 50K', color: 'text-orange-400' },
+                    { level: 3, name: 'Contributor', points: '50K – 150K', color: 'text-yellow-400' },
+                    { level: 4, name: 'Verified', points: '150K – 300K', color: 'text-green-400' },
+                    { level: 5, name: 'Trusted', points: '300K – 450K', color: 'text-blue-400' },
+                    { level: 6, name: 'Ambassador', points: '450K – 600K', color: 'text-purple-400' },
+                    { level: 7, name: 'Elite', points: '600K – 750K', color: 'text-pink-400' },
+                    { level: 8, name: 'Sentinel', points: '750K – 850K', color: 'text-violet-400' },
+                    { level: 9, name: 'Oracle', points: '850K – 950K', color: 'text-amber-400' },
+                    { level: 10, name: 'Atomic Legend', points: '950K – 1M', color: 'text-cyan-400' },
                   ].map((item) => (
                     <div key={item.level} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all">
                       <div className="flex items-center gap-2">
@@ -1627,80 +1594,56 @@ export function UnifiedDashboard({
               </div>
             </details>
 
-            {/* Penalties & Erosion */}
+            {/* Penalties */}
             <details className="group glass-card border border-red-500/30 rounded-xl overflow-hidden">
               <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 transition-all">
                 <span className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-400" />
-                  Penalties & Erosion
+                  Penalties & Deductions
                 </span>
                 <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-red-400" />
               </summary>
               <div className="p-5 space-y-4 text-sm">
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                  <h4 className="font-bold text-red-400 mb-3">Inactivity Erosion</h4>
+                  <h4 className="font-bold text-red-400 mb-3">Behavior Penalties</h4>
                   <div className="space-y-2">
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Weekly Penalty</span>
-                      <span className="font-bold text-red-400">-10 pts</span>
+                      <span className="text-gray-300">Small External Transfers</span>
+                      <span className="font-bold text-red-400">-2 pts each</span>
                     </div>
                     <div className="flex justify-between items-center p-2 rounded bg-white/5">
-                      <span className="text-gray-300">Max Erosion per Week</span>
-                      <span className="font-bold text-orange-400">-50 pts</span>
+                      <span className="text-gray-300">Frequent External Transfers</span>
+                      <span className="font-bold text-red-400">-5 pts each</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-red-500/10">
-                      ⚠️ Erosion applies after 1 week of inactivity (fewer than 3 active days)
-                    </p>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Sudden Exits</span>
+                      <span className="font-bold text-orange-400">-10 pts each</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Spam Activity</span>
+                      <span className="font-bold text-red-400">-3 pts each</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Farming Behavior</span>
+                      <span className="font-bold text-red-400">-5 pts each</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
-                  <h4 className="font-bold text-amber-400 mb-3">How to Avoid Erosion</h4>
+                  <h4 className="font-bold text-amber-400 mb-3">How to Avoid Penalties</h4>
                   <ul className="space-y-2 text-gray-300">
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-1">✓</span>
-                      <span>Check in daily to maintain your streak</span>
+                      <span>Maintain consistent, organic activity</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-1">✓</span>
-                      <span>Make regular transactions on the network</span>
+                      <span>Avoid suspicious transfer patterns</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-emerald-400 mt-1">✓</span>
-                      <span>Engage with the app at least 3 days per week</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </details>
-
-            {/* Weekly Claims */}
-            <details className="group glass-card border border-emerald-500/30 rounded-xl overflow-hidden">
-              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 transition-all">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-emerald-400" />
-                  Weekly Claims
-                </span>
-                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-emerald-400" />
-              </summary>
-              <div className="p-5 space-y-4 text-sm">
-                <p className="text-gray-300 leading-relaxed">
-                  App engagement points (Daily Check-in + Ad Bonus) are accumulated weekly. Complete 7 days of activity to claim all accumulated points.
-                </p>
-                <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                  <h4 className="font-bold text-emerald-400 mb-3">Claim Requirements</h4>
-                  <ul className="space-y-2 text-gray-300">
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-400">✓</span>
-                      <span>Complete 7 days of activity in the week</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-400">✓</span>
-                      <span>Points are automatically merged into your total score</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span className="text-emerald-400">✓</span>
-                      <span>Unclaimed points remain pending until the next week</span>
+                      <span>Engage genuinely with the ecosystem</span>
                     </li>
                   </ul>
                 </div>
@@ -1719,23 +1662,23 @@ export function UnifiedDashboard({
               <div className="p-5 space-y-4 text-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-                    <h4 className="font-bold text-indigo-400 mb-2">🎯 Maximize Your Points</h4>
+                    <h4 className="font-bold text-indigo-400 mb-2">🎯 Maximize Your Score</h4>
                     <ul className="space-y-1.5 text-gray-300 text-xs">
-                      <li>• Check in daily to maintain your streak</li>
-                      <li>• Make regular transactions on Mainnet</li>
-                      <li>• Use Testnet for safe experimentation</li>
-                      <li>• Complete 7 active days for weekly claim</li>
+                      <li>• Check in daily with ads for +150 pts</li>
+                      <li>• Focus on Mainnet activity (50% weight)</li>
+                      <li>• Build long-term staking for big bonuses</li>
+                      <li>• Explore DEX trading for extra points</li>
                       <li>• Invite friends for referral rewards</li>
                     </ul>
                   </div>
                   <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                    <h4 className="font-bold text-purple-400 mb-2">⚡ Quick Tips</h4>
+                    <h4 className="font-bold text-purple-400 mb-2">⚡ Quick Facts</h4>
                     <ul className="space-y-1.5 text-gray-300 text-xs">
-                      <li>• Recent activity carries more weight</li>
-                      <li>• Mainnet gives 3× Testnet points</li>
-                      <li>• Longer streaks yield bigger bonuses</li>
-                      <li>• Avoid extended periods of inactivity</li>
-                      <li>• Monitor your pending points regularly</li>
+                      <li>• Mainnet = 50%, App = 30%, Testnet = 20%</li>
+                      <li>• Max score: 1,000,000 points</li>
+                      <li>• 10 trust levels from Novice to Atomic Legend</li>
+                      <li>• Wallet age and lifetime activity matter</li>
+                      <li>• Avoid suspicious patterns to prevent penalties</li>
                     </ul>
                   </div>
                 </div>
