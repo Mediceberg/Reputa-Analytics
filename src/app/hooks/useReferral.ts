@@ -19,7 +19,7 @@ export interface UseReferralReturn {
   stats: ReferralStats | null;
   loading: boolean;
   error: string | null;
-  fetchStats: (walletAddress: string) => Promise<void>;
+  fetchStats: (walletAddress: string, username?: string) => Promise<void>;
   trackReferral: (walletAddress: string, referralCode: string) => Promise<boolean>;
   confirmReferral: (walletAddress: string) => Promise<boolean>;
   claimPoints: (walletAddress: string) => Promise<boolean>;
@@ -52,7 +52,7 @@ export function useReferral(): UseReferralReturn {
   /**
    * Fetch referral stats for a user
    */
-  const fetchStats = useCallback(async (walletAddress: string) => {
+  const fetchStats = useCallback(async (walletAddress: string, username?: string) => {
     if (!walletAddress) return;
 
     setLoading(true);
@@ -61,7 +61,8 @@ export function useReferral(): UseReferralReturn {
     try {
       // Add a random param to prevent caching
       const timestamp = Date.now();
-      const response = await fetch(`${API_BASE}?action=stats&walletAddress=${encodeURIComponent(walletAddress)}&_t=${timestamp}`, {
+      const usernameParam = username ? `&username=${encodeURIComponent(username)}` : '';
+      const response = await fetch(`${API_BASE}?action=stats&walletAddress=${encodeURIComponent(walletAddress)}${usernameParam}&_t=${timestamp}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
