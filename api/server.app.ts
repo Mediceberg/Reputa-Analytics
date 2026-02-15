@@ -3349,6 +3349,62 @@ app.get('/api/health-check', async (req: Request, res: Response) => {
 });
 
 // ====================
+// ADMIN PORTAL: KV REGISTERED PIONEERS SCAN
+// ====================
+
+app.get('/api/admin-portal/kv-pioneers', async (req: Request, res: Response) => {
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const headerPw = req.headers['x-admin-password'] as string;
+  if (headerPw !== adminPassword) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const client = await getRedis();
+    // Try multiple methods to fetch registered pioneers from KV
+    let pioneers: string[] = [];
+
+    // Method 1: LRANGE on registered_pioneers list
+    try {
+      const listData = await client.lrange('registered_pioneers', 0, -1);
+      if (listData && listData.length > 0) {
+        pioneers = listData.map((item: any) => typeof item === 'string' ? item : JSON.stringify(item));
+      }
+    } catch { /* not a list key */ }
+
+    // Method 2: SMEMBERS on registered_pioneers set
+    if (pioneers.length === 0) {
+      try {
+        const setData = await client.smembers('registered_pioneers');
+        if (setData && setData.length > 0) {
+          pioneers = setData.map((item: any) => typeof item === 'string' ? item : JSON.stringify(item));
+        }
+      } catch { /* not a set key */ }
+    }
+
+    // Method 3: SCAN for pioneer:* keys
+    if (pioneers.length === 0) {
+      try {
+        const keys = await client.keys('pioneer:*');
+        if (keys && keys.length > 0) {
+          pioneers = keys;
+        }
+      } catch { /* scan not supported */ }
+    }
+
+    res.json({
+      success: true,
+      pioneers,
+      count: pioneers.length,
+      lastUpdated: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    console.error('[Admin Portal] KV pioneers scan error:', e);
+    res.status(500).json({ success: false, error: e.message, pioneers: [], count: 0 });
+  }
+});
+
+// ====================
 // ADMIN PORTAL CONSOLIDATED API
 // ====================
 
@@ -3393,6 +3449,15 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
       .limit(limit)
       .toArray();
 
+    // Also fetch newly registered wallets from KV to merge
+    let kvWalletCount = 0;
+    try {
+      const client = await getRedis();
+      const kvList = await client.lrange('registered_pioneers', 0, -1).catch(() => []);
+      const kvSet = kvList.length > 0 ? kvList : await client.smembers('registered_pioneers').catch(() => []);
+      kvWalletCount = kvSet.length;
+    } catch { /* KV unavailable */ }
+
     // Get VIP count and total visits
     const vipCount = await usersCollection.countDocuments({ vip: true });
     const totalVisits = await usersCollection.countDocuments({});
@@ -3421,6 +3486,7 @@ app.get('/api/admin-portal/consolidated', async (req: Request, res: Response) =>
       vipUsers: vipCount,
       totalVisits,
       totalReferrals,
+      kvWalletCount,
       lastUpdated: new Date().toISOString(),
       pagination: {
         page: safePage,
