@@ -15,6 +15,7 @@ type RedisLike = {
   scan: (cursor: number, options?: { match?: string; count?: number }) => Promise<[string, string[]]>;
   smembers: (key: string) => Promise<string[]>;
   keys: (pattern: string) => Promise<string[]>;
+  ping: () => Promise<string>;
 };
 
 function createNoopRedisClient(): RedisLike {
@@ -33,6 +34,7 @@ function createNoopRedisClient(): RedisLike {
     scan: async () => ['0', []],
     smembers: async () => [],
     keys: async () => [],
+    ping: async () => 'PONG',
   };
 }
 

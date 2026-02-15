@@ -1,11 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectMongoDB } from '../../../../../server/db/mongoModels';
-import { createRedisClient } from '../../../api/server.redis';
+import { connectMongoDB } from '../../../../server/db/mongoModels';
+import { createRedisClient } from '../../../../api/server.redis';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const startTime = Date.now();
   const startTimeSeconds = Math.floor(startTime / 1000);
 
@@ -29,14 +28,13 @@ export async function GET(request: NextRequest) {
     let redisLatency = 0;
     
     try {
-      const redis = createRedisClient();
+      const redis = await createRedisClient();
       const redisStart = Date.now();
-      await redis.set('health-check', 'ok', { ex: 60 });
-      await redis.get('health-check');
+      await redis.ping();
       redisLatency = Date.now() - redisStart;
       
-      // Check if it's the noop client
-      if (redisLatency === 0) {
+      // Check if it's the noop client (ping returns instantly)
+      if (redisLatency <= 1) {
         redisStatus = 'noop-fallback';
       }
     } catch (error) {
@@ -49,7 +47,7 @@ export async function GET(request: NextRequest) {
     const endTimeSeconds = Math.floor(endTime / 1000);
     const uptime = endTimeSeconds - startTimeSeconds;
 
-    return NextResponse.json({
+    return Response.json({
       success: true,
       mongodb: {
         status: mongoStatus,
@@ -67,7 +65,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Health check API error:', error);
     
-    return NextResponse.json({
+    return Response.json({
       success: false,
       error: 'Health check failed',
       mongodb: { status: 'error', latency: null },
