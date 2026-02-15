@@ -1361,79 +1361,368 @@ export function UnifiedDashboard({
 
         {activeSection === 'how-it-works' && (
           <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)' }}>
-              <div className="flex items-center gap-3 mb-6">
-                <BookOpen className="w-6 h-6 text-cyan-400" />
-                <h2 className="text-lg font-black uppercase tracking-wide text-white">How It Works</h2>
+            {/* Header Card */}
+            <div className="glass-card p-6" style={{ border: '1px solid rgba(0, 217, 255, 0.2)', background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
+                  <BookOpen className="w-6 h-6 text-cyan-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-wide text-white">كيف يعمل النظام | How It Works</h2>
+                  <p className="text-xs text-cyan-400">بروتوكول Reputa v3.0 - المرجع الشامل</p>
+                </div>
               </div>
-              <p className="text-sm text-gray-400 mb-6">Learn how Reputa Score calculates your blockchain reputation and trust level.</p>
-              
-              <div className="space-y-4">
-                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
-                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
-                    What is Reputa Score?
-                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-                  </summary>
-                  <div className="p-4 text-xs text-gray-400 leading-relaxed">
-                    Reputa Score is your blockchain reputation score calculated from your Pi Network activity. It analyzes your transaction history, wallet age, network participation, and app engagement to generate a comprehensive trust score.
-                  </div>
-                </details>
-
-                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
-                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
-                    How is my score calculated?
-                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-                  </summary>
-                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
-                    <p><strong className="text-cyan-400">Mainnet Activity (100%):</strong> Real blockchain transactions, wallet age, and network participation.</p>
-                    <p><strong className="text-amber-400">Testnet Activity (25%):</strong> Testing environment activity contributes 25% as supplementary points.</p>
-                    <p><strong className="text-purple-400">App Engagement:</strong> Daily check-ins, activity streaks, and platform interactions.</p>
-                    <p className="mt-3 text-cyan-300">Formula: Total Score = Mainnet Points + (Testnet Points × 0.25) + App Engagement Points</p>
-                  </div>
-                </details>
-
-                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
-                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
-                    Trust Levels Explained
-                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-                  </summary>
-                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
-                    <p><strong className="text-gray-300">Newcomer (0-50K):</strong> Just starting your blockchain journey.</p>
-                    <p><strong className="text-blue-300">Novice (50K-150K):</strong> Building initial reputation.</p>
-                    <p><strong className="text-cyan-300">Explorer (150K-250K):</strong> Active network participant.</p>
-                    <p><strong className="text-emerald-300">Contributor (250K-350K):</strong> Regular contributor to the ecosystem.</p>
-                    <p><strong className="text-amber-300">Verified (350K-450K):</strong> Established trusted member.</p>
-                    <p><strong className="text-orange-300">Trusted (450K-550K):</strong> Highly reliable participant.</p>
-                    <p><strong className="text-purple-300">Ambassador (550K+):</strong> Elite network ambassador.</p>
-                  </div>
-                </details>
-
-                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
-                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
-                    Earning Points
-                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-                  </summary>
-                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
-                    <p><strong className="text-purple-400">Daily Check-in:</strong> Earn points by checking in daily. Build streaks for bonus rewards.</p>
-                    <p><strong className="text-cyan-400">Blockchain Activity:</strong> Every mainnet transaction contributes to your score.</p>
-                    <p><strong className="text-emerald-400">Network Participation:</strong> Active wallet usage and consistent activity boost your reputation.</p>
-                    <p><strong className="text-amber-400">Weekly Claims:</strong> Complete 7 days of activity to claim accumulated app engagement rewards.</p>
-                  </div>
-                </details>
-
-                <details className="group glass-card border border-white/10 rounded-xl overflow-hidden">
-                  <summary className="p-4 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-white/5 hover:bg-white/10 transition-all">
-                    Network Modes
-                    <ChevronDown className="w-4 h-4 group-open:rotate-180 transition-transform" />
-                  </summary>
-                  <div className="p-4 text-xs text-gray-400 leading-relaxed space-y-2">
-                    <p><strong className="text-emerald-400">Mainnet:</strong> Real Pi Network blockchain. Full 100% score impact.</p>
-                    <p><strong className="text-amber-400">Testnet:</strong> Testing environment. 25% score impact for safe experimentation.</p>
-                    <p className="mt-3 text-cyan-300">Switch between networks anytime to view different data sources.</p>
-                  </div>
-                </details>
-              </div>
+              <p className="text-sm text-gray-300 leading-relaxed" dir="rtl">
+                دليلك الكامل لفهم نظام السمعة في Reputa. يشرح هذا القسم بالتفصيل كيفية حساب النقاط، مستويات الثقة، المهام، والمكافآت.
+              </p>
             </div>
+
+            {/* Protocol Overview */}
+            <details open className="group glass-card border border-cyan-500/30 rounded-xl overflow-hidden">
+              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-cyan-500/10 hover:bg-cyan-500/20 transition-all">
+                <span className="flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-cyan-400" />
+                  نظرة عامة على البروتوكول | Protocol Overview
+                </span>
+                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-cyan-400" />
+              </summary>
+              <div className="p-5 space-y-4 text-sm text-gray-300 leading-relaxed">
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <h4 className="font-bold text-cyan-400 mb-2" dir="rtl">ما هو Reputa Score؟</h4>
+                  <p dir="rtl">Reputa Score هو نظام سمعة متقدم يقيّم نشاطك على شبكة Pi Network. يجمع النظام بين نشاط المحفظة (80%) والتفاعل مع التطبيق (20%) لإنشاء درجة سمعة شاملة وعادلة.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.3)' }}>
+                    <p className="text-2xl font-black text-purple-400">20</p>
+                    <p className="text-xs text-gray-400 mt-1">مستوى | Levels</p>
+                  </div>
+                  <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(0, 217, 255, 0.1)', border: '1px solid rgba(0, 217, 255, 0.3)' }}>
+                    <p className="text-2xl font-black text-cyan-400">100,000</p>
+                    <p className="text-xs text-gray-400 mt-1">نقطة قصوى | Max Points</p>
+                  </div>
+                  <div className="p-4 rounded-lg text-center" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                    <p className="text-2xl font-black text-amber-400">v3.0</p>
+                    <p className="text-xs text-gray-400 mt-1">إصدار البروتوكول | Version</p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                  <h4 className="font-bold text-purple-400 mb-2">Formula | الصيغة الحسابية</h4>
+                  <code className="block p-3 rounded bg-black/40 text-cyan-300 text-xs font-mono" dir="ltr">
+                    Total Score = (Mainnet × 60% + Testnet × 20%) × 80% + App Points × 20%
+                  </code>
+                  <p className="text-xs text-gray-400 mt-2" dir="rtl">النتيجة النهائية = (Mainnet × 60% + Testnet × 20%) × 80% + نقاط التطبيق × 20%</p>
+                </div>
+              </div>
+            </details>
+
+            {/* Detailed Scoring System */}
+            <details open className="group glass-card border border-purple-500/30 rounded-xl overflow-hidden">
+              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-purple-500/10 hover:bg-purple-500/20 transition-all">
+                <span className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-purple-400" />
+                  نظام النقاط التفصيلي | Detailed Scoring System
+                </span>
+                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-purple-400" />
+              </summary>
+              <div className="p-5 space-y-4">
+                {/* Daily Check-in */}
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                  <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    <span dir="rtl">تسجيل الدخول اليومي | Daily Check-in</span>
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">نقاط أساسية | Base Points</span>
+                      <span className="font-bold text-purple-400">+10 نقاط</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة 3 أيام متتالية | 3-Day Streak</span>
+                      <span className="font-bold text-cyan-400">+5 نقاط إضافية</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة 7 أيام متتالية | 7-Day Streak</span>
+                      <span className="font-bold text-emerald-400">+10 نقاط إضافية</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة 14 يوم متتالي | 14-Day Streak</span>
+                      <span className="font-bold text-amber-400">+15 نقطة إضافية</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة 30 يوم متتالي | 30-Day Streak</span>
+                      <span className="font-bold text-orange-400">+25 نقطة إضافية</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-amber-500/10" dir="rtl">
+                      ⏰ يجب الانتظار 24 ساعة بين كل تسجيل دخول
+                    </p>
+                  </div>
+                </div>
+
+                {/* Wallet Activity */}
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(0, 217, 255, 0.05)', border: '1px solid rgba(0, 217, 255, 0.2)' }}>
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    <span dir="rtl">نشاط المحفظة | Wallet Activity</span>
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">معاملة جديدة | New Transaction</span>
+                      <span className="font-bold text-cyan-400">+50 نقطة</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">زيادة الرصيد | Balance Increase</span>
+                      <span className="font-bold text-emerald-400">+0.01 نقطة لكل Pi</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة Staking | Staking Bonus</span>
+                      <span className="font-bold text-purple-400">+5 نقاط لكل 100 Pi</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">عمر الحساب | Account Age</span>
+                      <span className="font-bold text-amber-400">+1 نقطة لكل 30 يوم</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">جهة اتصال جديدة | New Contact</span>
+                      <span className="font-bold text-cyan-400">+2 نقطة (حد أقصى 20)</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-cyan-500/10" dir="rtl">
+                      🔄 يتم فحص المحفظة تلقائياً كل 15 دقيقة
+                    </p>
+                  </div>
+                </div>
+
+                {/* Network Weights */}
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <h4 className="font-bold text-amber-400 mb-3 flex items-center gap-2">
+                    <Network className="w-4 h-4" />
+                    <span dir="rtl">أوزان الشبكات | Network Weights</span>
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Mainnet Activity</span>
+                      <span className="font-bold text-emerald-400">60% وزن</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300">Testnet Activity</span>
+                      <span className="font-bold text-amber-400">20% وزن</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مجموع نشاط المحفظة | Total Wallet</span>
+                      <span className="font-bold text-cyan-400">80% من النتيجة</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">التفاعل مع التطبيق | App Engagement</span>
+                      <span className="font-bold text-purple-400">20% من النتيجة</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ad Bonus */}
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <h4 className="font-bold text-emerald-400 mb-3 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4" />
+                    <span dir="rtl">مكافآت الإعلانات | Ad Bonus</span>
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">نقاط لكل إعلان | Per Ad</span>
+                      <span className="font-bold text-emerald-400">+5 نقاط</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">حد أقصى يومي | Daily Max</span>
+                      <span className="font-bold text-amber-400">3 إعلانات (15 نقطة)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Referral System */}
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(244, 63, 94, 0.05)', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
+                  <h4 className="font-bold text-rose-400 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span dir="rtl">نظام الإحالة | Referral System</span>
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">إحالة ناجحة | Valid Referral</span>
+                      <span className="font-bold text-rose-400">+500 نقطة</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة 5 إحالات | 5 Referrals Bonus</span>
+                      <span className="font-bold text-amber-400">+250 نقطة إضافية</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">مكافأة 10 إحالات | 10 Referrals Bonus</span>
+                      <span className="font-bold text-orange-400">+500 نقطة إضافية</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            {/* Level System */}
+            <details open className="group glass-card border border-amber-500/30 rounded-xl overflow-hidden">
+              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-amber-500/10 hover:bg-amber-500/20 transition-all">
+                <span className="flex items-center gap-2">
+                  <Trophy className="w-5 h-5 text-amber-400" />
+                  نظام المستويات | Level System
+                </span>
+                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-amber-400" />
+              </summary>
+              <div className="p-5 space-y-3">
+                <p className="text-sm text-gray-300 mb-4" dir="rtl">
+                  يحتوي النظام على 20 مستوى، كل مستوى يتطلب 5,000 نقطة للوصول إلى المستوى التالي.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  {[
+                    { level: 1, name: 'Newcomer | وافد جديد', points: '0-5K', color: 'text-gray-400' },
+                    { level: 2, name: 'Active | نشط', points: '5K-10K', color: 'text-blue-400' },
+                    { level: 3, name: 'Trusted | موثوق', points: '10K-15K', color: 'text-cyan-400' },
+                    { level: 4, name: 'Engaged | متفاعل', points: '15K-20K', color: 'text-emerald-400' },
+                    { level: 5, name: 'Reliable | موثوق به', points: '20K-25K', color: 'text-green-400' },
+                    { level: 6, name: 'Notable | بارز', points: '25K-30K', color: 'text-lime-400' },
+                    { level: 7, name: 'Established | راسخ', points: '30K-35K', color: 'text-yellow-400' },
+                    { level: 8, name: 'Loyal | مخلص', points: '35K-40K', color: 'text-amber-400' },
+                    { level: 9, name: 'Contributor | مساهم', points: '40K-45K', color: 'text-orange-400' },
+                    { level: 10, name: 'Pioneer | رائد', points: '45K-50K', color: 'text-red-400' },
+                    { level: 11, name: 'Expert | خبير', points: '50K-55K', color: 'text-pink-400' },
+                    { level: 12, name: 'Master | محترف', points: '55K-60K', color: 'text-rose-400' },
+                    { level: 13, name: 'Legend | أسطورة', points: '60K-65K', color: 'text-fuchsia-400' },
+                    { level: 14, name: 'Luminary | مضيء', points: '65K-70K', color: 'text-purple-400' },
+                    { level: 15, name: 'Titan | عملاق', points: '70K-75K', color: 'text-violet-400' },
+                    { level: 16, name: 'Elite | نخبة', points: '75K-80K', color: 'text-indigo-400' },
+                    { level: 17, name: 'Sage | حكيم', points: '80K-85K', color: 'text-blue-300' },
+                    { level: 18, name: 'Oracle | عراف', points: '85K-90K', color: 'text-cyan-300' },
+                    { level: 19, name: 'Visionary | صاحب رؤية', points: '90K-95K', color: 'text-teal-300' },
+                    { level: 20, name: 'Supreme | أعلى', points: '95K-100K', color: 'text-emerald-300' },
+                  ].map((item) => (
+                    <div key={item.level} className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-all">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white w-6">{item.level}</span>
+                        <span className={`font-semibold ${item.color}`}>{item.name}</span>
+                      </div>
+                      <span className="text-gray-400 font-mono">{item.points}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </details>
+
+            {/* Penalties & Erosion */}
+            <details className="group glass-card border border-red-500/30 rounded-xl overflow-hidden">
+              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-red-500/10 hover:bg-red-500/20 transition-all">
+                <span className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-400" />
+                  العقوبات والتآكل | Penalties & Erosion
+                </span>
+                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-red-400" />
+              </summary>
+              <div className="p-5 space-y-4 text-sm">
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                  <h4 className="font-bold text-red-400 mb-3" dir="rtl">تآكل عدم النشاط | Inactivity Erosion</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">عقوبة أسبوعية | Weekly Penalty</span>
+                      <span className="font-bold text-red-400">-10 نقاط</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded bg-white/5">
+                      <span className="text-gray-300" dir="rtl">حد أقصى للتآكل | Max Erosion/Week</span>
+                      <span className="font-bold text-orange-400">-50 نقطة</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3 p-2 rounded bg-red-500/10" dir="rtl">
+                      ⚠️ يتم تطبيق التآكل بعد أسبوع من عدم النشاط (أقل من 3 أيام نشطة)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                  <h4 className="font-bold text-amber-400 mb-3" dir="rtl">كيفية تجنب التآكل | How to Avoid Erosion</h4>
+                  <ul className="space-y-2 text-gray-300" dir="rtl">
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-400 mt-1">✓</span>
+                      <span>سجل دخولك يومياً للحفاظ على النشاط</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-400 mt-1">✓</span>
+                      <span>قم بإجراء معاملات على الشبكة بانتظام</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-emerald-400 mt-1">✓</span>
+                      <span>تفاعل مع التطبيق على الأقل 3 أيام في الأسبوع</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            {/* Weekly Claims */}
+            <details className="group glass-card border border-emerald-500/30 rounded-xl overflow-hidden">
+              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-emerald-500/10 hover:bg-emerald-500/20 transition-all">
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-emerald-400" />
+                  المطالبة الأسبوعية | Weekly Claims
+                </span>
+                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-emerald-400" />
+              </summary>
+              <div className="p-5 space-y-4 text-sm">
+                <p className="text-gray-300 leading-relaxed" dir="rtl">
+                  نقاط التفاعل مع التطبيق (Daily Check-in + Ad Bonus) يتم تجميعها أسبوعياً. أكمل 7 أيام من النشاط للمطالبة بجميع النقاط المتراكمة.
+                </p>
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                  <h4 className="font-bold text-emerald-400 mb-3" dir="rtl">شروط المطالبة | Claim Requirements</h4>
+                  <ul className="space-y-2 text-gray-300" dir="rtl">
+                    <li className="flex items-center gap-2">
+                      <span className="text-emerald-400">✓</span>
+                      <span>أكمل 7 أيام من النشاط في الأسبوع</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-emerald-400">✓</span>
+                      <span>يتم دمج النقاط تلقائياً في نتيجتك الإجمالية</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="text-emerald-400">✓</span>
+                      <span>النقاط غير المطالب بها تبقى معلقة حتى الأسبوع التالي</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </details>
+
+            {/* Tips & Best Practices */}
+            <details className="group glass-card border border-indigo-500/30 rounded-xl overflow-hidden">
+              <summary className="p-5 cursor-pointer flex items-center justify-between font-bold text-sm text-white uppercase tracking-wide bg-indigo-500/10 hover:bg-indigo-500/20 transition-all">
+                <span className="flex items-center gap-2">
+                  <Info className="w-5 h-5 text-indigo-400" />
+                  نصائح وأفضل الممارسات | Tips & Best Practices
+                </span>
+                <ChevronDown className="w-5 h-5 group-open:rotate-180 transition-transform text-indigo-400" />
+              </summary>
+              <div className="p-5 space-y-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg" style={{ background: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                    <h4 className="font-bold text-indigo-400 mb-2" dir="rtl">🎯 لتحقيق أقصى نقاط</h4>
+                    <ul className="space-y-1.5 text-gray-300 text-xs" dir="rtl">
+                      <li>• سجل دخولك يومياً للحفاظ على السلسلة</li>
+                      <li>• قم بمعاملات منتظمة على Mainnet</li>
+                      <li>• استخدم Testnet للتجربة الآمنة</li>
+                      <li>• أكمل 7 أيام نشاط للمطالبة الأسبوعية</li>
+                      <li>• قم بدعوة أصدقائك للحصول على مكافآت الإحالة</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <h4 className="font-bold text-purple-400 mb-2" dir="rtl">⚡ نصائح سريعة</h4>
+                    <ul className="space-y-1.5 text-gray-300 text-xs" dir="rtl">
+                      <li>• النشاط الحديث له وزن أعلى</li>
+                      <li>• Mainnet يعطي 3× نقاط Testnet</li>
+                      <li>• السلاسل الطويلة تعطي مكافآت أكبر</li>
+                      <li>• تجنب فترات الخمول الطويلة</li>
+                      <li>• راقب نقاطك المعلقة بانتظام</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         )}
 
