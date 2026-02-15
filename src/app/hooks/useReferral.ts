@@ -69,7 +69,7 @@ export function useReferral(): UseReferralReturn {
       });
       
       if (!response.ok) {
-        throw new Error(`خطأ في الاتصال بالخادم: ${response.status}`);
+        throw new Error(`Server connection error: ${response.status}`);
       }
 
       const data = await parseJsonResponse(response);
@@ -78,14 +78,14 @@ export function useReferral(): UseReferralReturn {
         console.log('✅ [useReferral] Stats fetched:', data.data);
         setStats(data.data);
       } else {
-        const errorMsg = data.error || 'فشل في جلب بيانات الإحالة';
+        const errorMsg = data.error || 'Failed to fetch referral data';
         setError(errorMsg);
         console.warn('⚠️ [useReferral] API returned non-success response:', data);
         throw new Error(errorMsg); // Throw to propagate the error to the component
       }
     } catch (err: any) {
       console.error('[useReferral] Error fetching stats:', err);
-      setError(err.message || 'خطأ في جلب بيانات الإحالة');
+      setError(err.message || 'Error loading referral data');
       throw err; // Rethrow for component handling
     } finally {
       setLoading(false);
