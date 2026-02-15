@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
+  BookOpen,
   FileText,
   Globe,
   HelpCircle,
@@ -103,6 +104,12 @@ const NAV_ITEMS: NavItem[] = [
     id: 'help',
     labelKey: 'sidebar.help',
     icon: HelpCircle,
+    section: 'tools',
+  },
+  {
+    id: 'how-it-works',
+    labelKey: 'How It Works',
+    icon: BookOpen,
     section: 'tools',
   },
 ];
