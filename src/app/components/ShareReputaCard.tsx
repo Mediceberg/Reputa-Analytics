@@ -299,28 +299,49 @@ reputa-score.vercel.app`;
    * Shares the card image using native share API if available
    */
   const handleShareImage = async () => {
+    // Haptic feedback if supported
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+
     try {
       setIsGenerating(true);
       const imageBlob = await generateCardImage();
       const imageFile = new File([imageBlob], `reputa-${username}.png`, { type: 'image/png' });
 
       if (navigator.share) {
-        await navigator.share({
-          title: 'My Reputa Score',
-          text: shareText,
-          files: [imageFile]
-        });
+        // Check if file sharing is supported
+        if (navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+          await navigator.share({
+            title: 'My Reputa Score',
+            text: shareText,
+            files: [imageFile]
+          });
+        } else {
+          // Fallback to text-only share
+          await navigator.share({
+            title: 'My Reputa Score',
+            text: shareText,
+            url: `${window.location.origin}/register?ref=${username}`
+          });
+        }
         setShareSuccess(true);
         setTimeout(() => setShareSuccess(false), 3000);
       } else {
-        setShareError('مشاركة الصور غير مدعومة على جهازك');
-        setTimeout(() => setShareError(null), 3000);
+        // Fallback: open social share links
+        handleSocialShare('telegram');
       }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
-        console.error('Share error:', error);
-        setShareError('فشلت المشاركة');
-        setTimeout(() => setShareError(null), 3000);
+        // Fallback: copy text to clipboard
+        try {
+          await navigator.clipboard.writeText(shareText);
+          setShareSuccess(true);
+          setTimeout(() => setShareSuccess(false), 3000);
+        } catch {
+          setShareError('فشلت المشاركة');
+          setTimeout(() => setShareError(null), 3000);
+        }
       }
     } finally {
       setIsGenerating(false);

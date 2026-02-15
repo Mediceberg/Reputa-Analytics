@@ -12,6 +12,9 @@ type RedisLike = {
   lpush: (key: string, value: any) => Promise<any>;
   rpush: (key: string, value: any) => Promise<any>;
   incr: (key: string) => Promise<number>;
+  scan: (cursor: number, options?: { match?: string; count?: number }) => Promise<[string, string[]]>;
+  smembers: (key: string) => Promise<string[]>;
+  keys: (pattern: string) => Promise<string[]>;
 };
 
 function createNoopRedisClient(): RedisLike {
@@ -27,61 +30,40 @@ function createNoopRedisClient(): RedisLike {
     lpush: async () => 0,
     rpush: async () => 0,
     incr: async () => 1,
+    scan: async () => ['0', []],
+    smembers: async () => [],
+    keys: async () => [],
   };
 }
 
 export async function createRedisClient() {
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
+  // Check both KV_REST_API_URL and UPSTASH_REDIS_REST_URL for compatibility
+  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!url || !token) {
-
-    console.warn('⚠️ Redis credentials are missing. Falling back to in-memory noop cache client.');
-    console.warn('📝 To enable Redis caching, add UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to your .env file');
-
-    console.warn('⚠️ Redis credentials are missing. Using fallback mode.');
-    console.warn('⚠️ To enable Redis caching, set these environment variables:');
-    console.warn('   - KV_REST_API_URL=https://<your-vercel-kv-url>.upstash.io');
-    console.warn('   - KV_REST_API_TOKEN=<your-vercel-kv-token>');
-    console.warn('   OR alternatively:');
-    console.warn('   - UPSTASH_REDIS_REST_URL=https://<your-upstash-redis-url>.upstash.io');
-    console.warn('   - UPSTASH_REDIS_REST_TOKEN=<your-upstash-redis-token>');
-
+    console.warn('⚠️ Redis credentials missing. Set KV_REST_API_URL + KV_REST_API_TOKEN or UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN');
     return createNoopRedisClient();
   }
 
   try {
-
     console.log('🔗 Connecting to Upstash Redis...');
     const client = new Redis({
       url,
       token,
-      // Add timeout and retry settings
       retry: {
         retries: 3,
         backoff: (attemptIndex: number) => Math.min(attemptIndex * 1000, 5000),
       },
     });
 
-    console.log('✅ Upstash Redis connected successfully');
-    return client;
+    // Verify connection with a ping
+    await client.ping();
+    console.log('✅ Upstash Redis connected and verified');
+    return client as unknown as RedisLike;
   } catch (error) {
     console.error('❌ Failed to connect to Upstash Redis:', error);
-
-    try {
-      const redis = new Redis({ 
-        url, 
-        token,
-      });
-
-      // Test the connection
-      await redis.ping();
-      console.log('✅ Vercel KV/Redis client initialized and connected');
-      return redis;
-    } catch (error) {
-      console.error('❌ Failed to initialize Redis client:', error);
-      console.warn('⚠️ Falling back to in-memory noop cache client');
-      return createNoopRedisClient();
-    }
+    console.warn('⚠️ Falling back to noop cache client');
+    return createNoopRedisClient();
   }
 }

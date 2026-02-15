@@ -22,7 +22,17 @@ let db: Db | null = null;
 // ====================
 
 export async function connectMongoDB(): Promise<Db> {
-  if (db) return db;
+  if (db && mongoClient) {
+    // Heartbeat: verify the existing connection is still alive
+    try {
+      await db.command({ ping: 1 });
+      return db;
+    } catch {
+      console.warn('⚠️ MongoDB heartbeat failed, reconnecting...');
+      db = null;
+      mongoClient = null;
+    }
+  }
 
   if (!MONGODB_URI) {
     throw new Error('MONGODB_URI environment variable is required. Please configure it in your environment.');
@@ -37,22 +47,37 @@ export async function connectMongoDB(): Promise<Db> {
       mongoClient = new MongoClient(MONGODB_URI, {
         connectTimeoutMS: 10000,
         serverSelectionTimeoutMS: 10000,
-        maxPoolSize: 10,
+        maxPoolSize: 20,
+        minPoolSize: 2,
+        maxIdleTimeMS: 60000,
         retryWrites: true,
         retryReads: true,
+        heartbeatFrequencyMS: 10000,
       });
       
       await mongoClient.connect();
       db = mongoClient.db(MONGODB_DB_NAME);
       
-      console.log(`✅ Connected to MongoDB: ${MONGODB_DB_NAME}`);
+      // Listen for connection events to auto-reconnect
+      mongoClient.on('close', () => {
+        console.warn('⚠️ MongoDB connection closed unexpectedly');
+        db = null;
+        mongoClient = null;
+      });
+      mongoClient.on('error', (err) => {
+        console.error('❌ MongoDB client error:', err.message);
+      });
+      mongoClient.on('reconnect', () => {
+        console.log('🔄 MongoDB reconnected successfully');
+      });
+      
+      console.log(`✅ Connected to MongoDB: ${MONGODB_DB_NAME} (pool: 2-20, heartbeat: 10s)`);
       
       // Initialize collections with error handling
       try {
         await initializeCollections(db);
       } catch (initError: any) {
         console.warn('⚠️ Collection initialization warning:', initError.message);
-        // Don't throw here - allow server to continue even if index creation fails
         console.log('📊 Server will continue with limited functionality');
       }
       

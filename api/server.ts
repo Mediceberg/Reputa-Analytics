@@ -38,25 +38,8 @@ function verifyAdminPassword(req: Request): boolean {
   const queryPw = req.query.password as string;
   const bodyPw = req.body?.password;
 
-  console.log('[ADMIN AUTH DEBUG]', {
-    adminPassword: adminPassword ? '***' : 'not set',
-    headerPw: headerPw ? '***' : 'not provided',
-    queryPw: queryPw ? '***' : 'not provided',
-    bodyPw: bodyPw ? '***' : 'not provided',
-    method: req.method,
-    url: req.url
-  });
-
   const suppliedPassword = headerPw || queryPw || bodyPw;
-  const isValid = suppliedPassword === adminPassword;
-
-  console.log('[ADMIN AUTH RESULT]', {
-    suppliedPassword,
-    isValid,
-    expectedPassword: adminPassword
-  });
-
-  return isValid;
+  return suppliedPassword === adminPassword;
 }
 
 // Graceful MongoDB connection wrapper
@@ -115,7 +98,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, x-admin-password');
+  // Disable caching on all API routes to ensure fresh data every request
+  if (req.path.startsWith('/api')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  }
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -159,20 +149,9 @@ app.get('/reputa-admin-portal', (req: Request, res: Response) => {
 // ====================
 
 app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
-  // Prevent browser caching for real-time data
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-
-  console.log(' [API] /api/admin-portal/users request received');
-  console.log(' [API] Query params:', req.query);
-
   if (!verifyAdminPassword(req)) {
-    console.log(' [API] AUTH FAILED - Invalid or missing admin password');
     return res.status(401).json({ error: 'Unauthorized' });
   }
-
-  console.log(' [API] AUTH SUCCESS - Admin verified');
 
   try {
     const db = await safeGetMongoDb();
@@ -198,33 +177,14 @@ app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
       trafficCol.countDocuments(filter)
     ]);
 
-    console.log(`[API] SUCCESS - Returning ${users.length} users (total: ${total})`);
-    console.log('[API] CRITICAL DEBUG - Before sending response to frontend:');
-    console.log(`[API] Response type: ${typeof users}`);
-    console.log(`[API] Response length: ${users?.length || 0}`);
-    console.log('[API] Sample user data:', users.length > 0 ? {
-      username: users[0].username,
-      hasWallets: !!users[0].wallets,
-      walletCount: Array.isArray(users[0].wallets) ? users[0].wallets.length : 0,
-      lastSeen: users[0].lastSeen
-    } : 'NO USERS');
-
     return res.json({ success: true, users, total });
   } catch (error: any) {
-    console.error(' [API] CRITICAL ERROR in /api/admin-portal/users:');
-    console.error(' [API] Error message:', error.message);
-    console.error(' [API] Error stack:', error.stack);
-    console.error(' [API] Error code:', error.code);
+    console.error('[API] /api/admin-portal/users error:', error.message);
     return res.status(500).json({ error: error.message });
   }
 });
 
 app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
-  // Prevent browser caching for real-time data
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-
   if (!verifyAdminPassword(req)) return res.status(401).json({ error: 'Unauthorized' });
 
   try {

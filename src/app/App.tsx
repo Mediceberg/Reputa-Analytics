@@ -101,6 +101,7 @@ function ReputaAppContent() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [piBrowser, setPiBrowser] = useState(false);
+  const [syncTimedOut, setSyncTimedOut] = useState(false);
   
   const { refreshWallet } = useTrust();
 
@@ -287,41 +288,59 @@ function ReputaAppContent() {
         return;
       }
       
-      try {
-        const initialized = await initializePiSDK();
-        if (initialized) {
-          // If no saved user or we want to ensure fresh session
-          if (!savedUserId || savedUserId === 'demo') {
-            const user = await authenticateUser(['username', 'wallet_address', 'payments']);
-            if (user && user.uid) {
-              setCurrentUser(user);
-              localStorage.setItem('piUserId', user.uid);
-              localStorage.setItem('piUsername', user.username);
-              if (user.wallet_address) localStorage.setItem('piWalletAddress', user.wallet_address);
-              
-              syncToAdmin(user.username, user.wallet_address || "Pending...");
-              const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
-              setIsVip(res.isVip);
-              setPaymentCount(res.count || 0);
+      // Guard Pi SDK init with a 10s timeout to avoid hanging on non-Pi browsers
+      const piInitTimeout = new Promise<void>((resolve) => setTimeout(() => {
+        console.warn('[App] Pi SDK init timed out after 10s');
+        resolve();
+      }, 10000));
 
-              // Initialize referral system
-              if (user.wallet_address) {
-                // Capture ref code from URL first
-                captureReferralCodeFromUrl();
-                // Then initialize referral system
-                await initializeReferralOnLogin(user.wallet_address);
+      const piInitTask = (async () => {
+        try {
+          const initialized = await initializePiSDK();
+          if (initialized) {
+            if (!savedUserId || savedUserId === 'demo') {
+              const user = await authenticateUser(['username', 'wallet_address', 'payments']);
+              if (user && user.uid) {
+                setCurrentUser(user);
+                localStorage.setItem('piUserId', user.uid);
+                localStorage.setItem('piUsername', user.username);
+                if (user.wallet_address) localStorage.setItem('piWalletAddress', user.wallet_address);
+                
+                syncToAdmin(user.username, user.wallet_address || "Pending...");
+                const res = await fetch(`/api/check-vip?uid=${user.uid}`).then(r => r.json()).catch(() => ({isVip: false, count: 0}));
+                setIsVip(res.isVip);
+                setPaymentCount(res.count || 0);
+
+                if (user.wallet_address) {
+                  captureReferralCodeFromUrl();
+                  await initializeReferralOnLogin(user.wallet_address);
+                }
               }
             }
           }
-        }
-      } catch (e: any) { console.error('Auth failed', e); } finally { setIsInitializing(false); }
+        } catch (e: any) { console.error('Auth failed', e); }
+      })();
+
+      await Promise.race([piInitTask, piInitTimeout]);
+      setIsInitializing(false);
     };
     initApp();
   }, []);
 
+  // 10-second timeout for wallet sync loading
+  useEffect(() => {
+    if (!isLoading) {
+      setSyncTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => setSyncTimedOut(true), 10000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   const handleWalletCheck = async (address: string) => {
     const isDemo = address.toLowerCase().trim() === 'demo';
     setIsLoading(true);
+    setSyncTimedOut(false);
     if (isDemo) {
       setTimeout(() => {
         setWalletData({ address: "GDU22WEH7M3O...DEMO", username: "Demo_Pioneer", reputaScore: 632, trustLevel: "Elite", recentActivity: [] });
@@ -456,12 +475,27 @@ function ReputaAppContent() {
       </header>
       <main className="flex-1 w-full flex flex-col items-center justify-start z-10 overflow-y-auto overflow-x-hidden pt-4 pb-20">
         {isLoading ? (
-          <div className="flex flex-col items-center py-24">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%)', filter: 'blur(20px)', transform: 'scale(2)' }} />
-              <div className="relative w-16 h-16 rounded-full animate-spin" style={{ border: '3px solid rgba(139, 92, 246, 0.2)', borderTopColor: '#8B5CF6' }} />
+          <div className="flex flex-col items-center py-24 w-full max-w-xs mx-auto">
+            {/* Stable linear progress bar */}
+            <div className="w-full h-1 rounded-full overflow-hidden mb-8" style={{ background: 'rgba(139, 92, 246, 0.15)' }}>
+              <div className="h-full rounded-full" style={{ background: 'linear-gradient(90deg, #8B5CF6, #00D9FF)', animation: 'progressSlide 1.5s ease-in-out infinite', width: '40%' }} />
             </div>
-            <p className="text-[10px] mt-8 font-black tracking-[0.3em] uppercase text-purple-400">Syncing Protocol...</p>
+            <div className="relative">
+              <div className="relative w-14 h-14 rounded-full" style={{ border: '3px solid rgba(139, 92, 246, 0.2)', borderTopColor: '#8B5CF6', animation: 'spin 1s linear infinite' }} />
+            </div>
+            {syncTimedOut ? (
+              <div className="mt-6 text-center">
+                <p className="text-xs font-semibold text-amber-400 mb-2">Connection slow, please refresh</p>
+                <button
+                  onClick={() => { setIsLoading(false); setSyncTimedOut(false); }}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl border border-purple-400/40 bg-purple-500/10 text-purple-300 active:scale-95 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <p className="text-[10px] mt-6 font-black tracking-[0.3em] uppercase text-purple-400">Syncing Protocol...</p>
+            )}
           </div>
         ) : (
           <div className="w-full max-w-4xl px-4 py-2">

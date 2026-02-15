@@ -10,7 +10,9 @@ import {
   MoreVertical,
   Info,
   X,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Send
 } from 'lucide-react';
 import { useReferral, ReferralStats } from '../hooks/useReferral';
 import { toast } from 'react-hot-toast';
@@ -26,12 +28,13 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
   const [claiming, setClaiming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  // Generate referral link using username - defined early so it can be used in handlers
+  // Generate referral link using full origin URL + username
   const generatedReferralCode = username || 'loading';
   const generatedReferralLink = username 
-    ? `https://reputa-score.vercel.app/register?ref=${username}`
+    ? `${typeof window !== 'undefined' ? window.location.origin : 'https://reputa-score.vercel.app'}/register?ref=${username}`
     : '';
 
   // Fetch stats on mount and when wallet changes or after retry
@@ -64,47 +67,65 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
     }
   };
 
-  const handleShareLink = async () => {
+  const handleShareLink = () => {
     const linkToShare = stats?.referralLink || generatedReferralLink;
-    const codeToShare = stats?.referralCode || generatedReferralCode;
     
     if (!linkToShare) {
       toast.error('Referral link not available');
       return;
     }
 
-    // Always try native Web Share API first
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join Reputa Score',
-          text: `Join me on Reputa Score using my referral link!`,
-          url: linkToShare,
-        });
-        toast.success('Link shared successfully');
-      } catch (err: unknown) {
-        console.error('Error sharing:', err);
-        const error = err as { name?: string };
-        if (error.name !== 'AbortError') {
-          // Fallback to clipboard if share was not cancelled
-          try {
-            await navigator.clipboard.writeText(linkToShare);
-            toast.success('Link copied to clipboard');
-          } catch (clipErr) {
-            toast.error('Failed to share link');
-          }
-        }
-      }
-    } else {
-      // Fallback: copy link to clipboard
-      try {
-        await navigator.clipboard.writeText(linkToShare);
-        toast.success('Link copied to clipboard');
-      } catch (err) {
-        console.error('Error copying link:', err);
-        toast.error('Failed to copy link');
-      }
+    // Haptic feedback if supported
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
     }
+
+    // Native Web Share API - must be called synchronously from click handler
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join Reputa Score',
+        text: `Join me on Reputa Score using my referral link!`,
+        url: linkToShare,
+      }).then(() => {
+        toast.success('Link shared successfully');
+      }).catch((err: any) => {
+        if (err.name !== 'AbortError') {
+          // Native share failed, show fallback modal
+          setShowShareModal(true);
+        }
+      });
+    } else {
+      // No native share support, show fallback modal
+      setShowShareModal(true);
+    }
+  };
+
+  const handleFallbackCopy = async () => {
+    const linkToShare = stats?.referralLink || generatedReferralLink;
+    if (!linkToShare) return;
+    try {
+      await navigator.clipboard.writeText(linkToShare);
+      if (navigator.vibrate) navigator.vibrate(50);
+      toast.success('Link copied to clipboard');
+      setShowShareModal(false);
+    } catch {
+      toast.error('Failed to copy link');
+    }
+  };
+
+  const handleFallbackSocialShare = (platform: 'whatsapp' | 'telegram') => {
+    const linkToShare = stats?.referralLink || generatedReferralLink;
+    if (!linkToShare) return;
+    const encodedText = encodeURIComponent(`Join me on Reputa Score! ${linkToShare}`);
+    const isMobile = /iPhone|iPad|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    let shareUrl = '';
+    if (platform === 'whatsapp') {
+      shareUrl = isMobile ? `whatsapp://send?text=${encodedText}` : `https://wa.me/?text=${encodedText}`;
+    } else {
+      shareUrl = isMobile ? `tg://msg?text=${encodedText}` : `https://t.me/share/url?url=${encodeURIComponent(linkToShare)}&text=${encodeURIComponent('Join me on Reputa Score!')}`;
+    }
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+    setShowShareModal(false);
   };
 
   const handleClaimPoints = async () => {
@@ -364,6 +385,51 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
         </div>
       )}
       
+      {/* Fallback Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4" onClick={() => setShowShareModal(false)}>
+          <div 
+            className="bg-gray-900 border border-purple-500/20 rounded-xl p-5 w-full max-w-sm"
+            style={{ boxShadow: '0 8px 32px rgba(168, 85, 247, 0.2)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Share2 className="w-4 h-4 text-purple-400" />
+                Share Referral Link
+              </h3>
+              <button onClick={() => setShowShareModal(false)} className="p-1 rounded-full hover:bg-white/10">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={handleFallbackCopy}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-300 transition-all active:scale-95"
+              >
+                <Copy className="w-5 h-5" />
+                <span className="font-medium text-sm">Copy Link</span>
+              </button>
+              <button
+                onClick={() => handleFallbackSocialShare('whatsapp')}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-green-400 transition-all active:scale-95"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span className="font-medium text-sm">WhatsApp</span>
+              </button>
+              <button
+                onClick={() => handleFallbackSocialShare('telegram')}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 transition-all active:scale-95"
+              >
+                <Send className="w-5 h-5" />
+                <span className="font-medium text-sm">Telegram</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Info Modal */}
       {showInfoModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">

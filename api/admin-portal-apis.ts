@@ -14,38 +14,27 @@ function verifyAdminPassword(req: Request): boolean {
 // Stats API
 export function setupAdminPortalStats(app: express.Application) {
   app.get('/api/admin-portal/stats', async (req: Request, res: Response) => {
-    console.log('[NEW API] /api/admin-portal/stats request received');
-    
     if (!verifyAdminPassword(req)) {
-      console.log('[NEW API] Authentication failed');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     try {
       const db = await getMongoDb();
       
-      // List available collections for debugging
-      const collections = await db.listCollections().toArray();
-      console.log('[API] Available collections:', collections.map((c: any) => c.name));
-      
-      // Get real stats from userv3 collection
       const totalUsers = await db.collection('userv3').countDocuments();
       const vipUsers = await db.collection('userv3').countDocuments({ vip: true });
       const recentActivity = await db.collection('userv3').countDocuments({
-        lastUpdated: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+        lastUpdated: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
       });
-
-      console.log(`[API] Stats - Total: ${totalUsers}, VIP: ${vipUsers}, Recent: ${recentActivity}`);
 
       const stats = {
         totalUniqueUsers: totalUsers,
-        totalVisits: totalUsers, // Each user counts as a visit for now
+        totalVisits: totalUsers,
         totalVipUsers: vipUsers,
         recentActivity: recentActivity,
         lastUpdated: new Date().toISOString()
       };
 
-      console.log(`[API] Stats returned: ${JSON.stringify(stats)}`);
       return res.json({
         success: true,
         stats
@@ -71,27 +60,14 @@ export function setupAdminPortalStats(app: express.Application) {
 // Users API
 export function setupAdminPortalUsers(app: express.Application) {
   app.get('/api/admin-portal/users', async (req: Request, res: Response) => {
-    console.log('[NEW API] /api/admin-portal/users request received');
-    
     if (!verifyAdminPassword(req)) {
-      console.log('[NEW API] Authentication failed');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     try {
       const db = await getMongoDb();
       const searchQuery = req.query.search as string || '';
-      console.log('[API] Search query:', searchQuery);
 
-      // List available collections for debugging
-      const collections = await db.listCollections().toArray();
-      console.log('[API] Available collections:', collections.map((c: any) => c.name));
-      
-      // Check userv3 collection count
-      const userv3Count = await db.collection('userv3').countDocuments();
-      console.log(`[API] userv3 collection has ${userv3Count} documents`);
-
-      // Build query
       const query: any = {};
       if (searchQuery) {
         query.$or = [
@@ -101,14 +77,11 @@ export function setupAdminPortalUsers(app: express.Application) {
         ];
       }
 
-      // Get users from userv3 collection
       const users = await db.collection('userv3')
         .find(query)
         .sort({ lastUpdated: -1 })
         .limit(100)
         .toArray();
-
-      console.log(`[API] Found ${users.length} users`);
 
       // Transform to expected format
       const transformedUsers = users.map((user: any) => {
@@ -147,24 +120,18 @@ export function setupAdminPortalUsers(app: express.Application) {
 // Paid Users API
 export function setupAdminPortalPaidUsers(app: express.Application) {
   app.get('/api/admin-portal/paid-users', async (req: Request, res: Response) => {
-    console.log('[API] /api/admin-portal/paid-users request received');
-    
     if (!verifyAdminPassword(req)) {
-      console.log('[API] Authentication failed');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     try {
       const db = await getMongoDb();
       
-      // Get VIP users from userv3 collection
       const paidUsers = await db.collection('userv3')
         .find({ vip: true })
         .sort({ lastUpdated: -1 })
         .limit(100)
         .toArray();
-
-      console.log(`[API] Found ${paidUsers.length} paid users`);
 
       // Transform to expected format
       const transformedPaidUsers = paidUsers.map((user: any) => {
@@ -202,40 +169,28 @@ export function setupAdminPortalPaidUsers(app: express.Application) {
 
 // Setup all admin portal APIs
 export function setupAdminPortalAPIs(app: express.Application) {
-  // Stats API with different path
   app.get('/api/admin-portal/stats-new', async (req: Request, res: Response) => {
-    console.log('[NEW API] /api/admin-portal/stats-new request received');
-    
     if (!verifyAdminPassword(req)) {
-      console.log('[NEW API] Authentication failed');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     try {
       const db = await getMongoDb();
       
-      // List available collections for debugging
-      const collections = await db.listCollections().toArray();
-      console.log('[NEW API] Available collections:', collections.map((c: any) => c.name));
-      
-      // Get real stats from userv3 collection
       const totalUsers = await db.collection('userv3').countDocuments();
       const vipUsers = await db.collection('userv3').countDocuments({ vip: true });
       const recentActivity = await db.collection('userv3').countDocuments({
-        lastUpdated: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+        lastUpdated: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
       });
-
-      console.log(`[NEW API] Stats - Total: ${totalUsers}, VIP: ${vipUsers}, Recent: ${recentActivity}`);
 
       const stats = {
         totalUniqueUsers: totalUsers,
-        totalVisits: totalUsers, // Each user counts as a visit for now
+        totalVisits: totalUsers,
         totalVipUsers: vipUsers,
         recentActivity: recentActivity,
         lastUpdated: new Date().toISOString()
       };
 
-      console.log(`[NEW API] Stats returned: ${JSON.stringify(stats)}`);
       return res.json({
         success: true,
         stats
@@ -257,29 +212,15 @@ export function setupAdminPortalAPIs(app: express.Application) {
     }
   });
 
-  // Users API with different path
   app.get('/api/admin-portal/users-new', async (req: Request, res: Response) => {
-    console.log('[NEW API] /api/admin-portal/users-new request received');
-    
     if (!verifyAdminPassword(req)) {
-      console.log('[NEW API] Authentication failed');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     try {
       const db = await getMongoDb();
       const searchQuery = req.query.search as string || '';
-      console.log('[NEW API] Search query:', searchQuery);
 
-      // List available collections for debugging
-      const collections = await db.listCollections().toArray();
-      console.log('[NEW API] Available collections:', collections.map((c: any) => c.name));
-      
-      // Check userv3 collection count
-      const userv3Count = await db.collection('userv3').countDocuments();
-      console.log(`[NEW API] userv3 collection has ${userv3Count} documents`);
-
-      // Build query
       const query: any = {};
       if (searchQuery) {
         query.$or = [
@@ -289,14 +230,11 @@ export function setupAdminPortalAPIs(app: express.Application) {
         ];
       }
 
-      // Get users from userv3 collection
       const users = await db.collection('userv3')
         .find(query)
         .sort({ lastUpdated: -1 })
         .limit(100)
         .toArray();
-
-      console.log(`[NEW API] Found ${users.length} users`);
 
       // Transform to expected format
       const transformedUsers = users.map((user: any) => {
@@ -331,5 +269,4 @@ export function setupAdminPortalAPIs(app: express.Application) {
     }
   });
 
-  console.log('[NEW API] Admin Portal APIs initialized with new paths');
 }
