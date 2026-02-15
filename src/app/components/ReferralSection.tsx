@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Copy,
   Share2,
@@ -8,8 +8,11 @@ import {
   CheckCircle,
   Zap,
   MoreVertical,
+  Info,
+  X
 } from 'lucide-react';
 import { useReferral, ReferralStats } from '../hooks/useReferral';
+import { toast } from 'react-hot-toast';
 
 interface ReferralSectionProps {
   walletAddress: string;
@@ -21,13 +24,19 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
   const [copying, setCopying] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Fetch stats on mount and when wallet changes
+  // Fetch stats on mount and when wallet changes or after retry
   useEffect(() => {
     if (walletAddress) {
-      fetchStats(walletAddress);
+      fetchStats(walletAddress)
+        .catch(err => {
+          console.error('Failed to fetch referral stats:', err);
+          // Will show error message through the error state from useReferral
+        });
     }
-  }, [walletAddress, fetchStats]);
+  }, [walletAddress, fetchStats, retryCount]);
 
   const handleCopyLink = async () => {
     if (!stats?.referralLink) return;
@@ -35,10 +44,11 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
     setCopying(true);
     try {
       await navigator.clipboard.writeText(stats.referralLink);
-      // Show toast notification
+      toast.success('تم نسخ الرابط بنجاح');
       setTimeout(() => setCopying(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+      toast.error('فشل نسخ الرابط');
       setCopying(false);
     }
   };
@@ -49,21 +59,25 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join Reputa Score',
-          text: `Join me with referral code: ${stats.referralCode}`,
+          title: 'انضم إلى Reputa Score',
+          text: `انضم معي باستخدام رمز الإحالة: ${stats.referralCode}`,
           url: stats.referralLink,
         });
+        toast.success('تم مشاركة الرابط');
       } catch (err) {
         console.error('Error sharing:', err);
+        if (err.name !== 'AbortError') { // Don't show error if user cancelled
+          toast.error('فشل مشاركة الرابط');
+        }
       }
     } else {
       // Fallback: copy link to clipboard and show message
       try {
         await navigator.clipboard.writeText(stats.referralLink);
-        alert('Link copied!');
+        toast.success('تم نسخ الرابط للمشاركة');
       } catch (err) {
         console.error('Error copying link:', err);
-        alert('Link: ' + stats.referralLink);
+        toast.error('فشل نسخ الرابط: ' + stats.referralLink);
       }
     }
   };
@@ -76,10 +90,27 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
       const success = await claimPoints(walletAddress);
       if (success) {
         // Stats will be updated automatically
+        toast.success('تم استلام النقاط بنجاح');
+      } else {
+        toast.error('فشل استلام النقاط');
       }
+    } catch (err) {
+      console.error('Error claiming points:', err);
+      toast.error('حدث خطأ أثناء استلام النقاط');
     } finally {
       setClaiming(false);
     }
+  };
+  
+  const handleRetry = useCallback(() => {
+    if (walletAddress) {
+      setRetryCount(prev => prev + 1);
+    }
+  }, [walletAddress]);
+  
+  const handleInfoClick = () => {
+    setShowInfoModal(true);
+    setShowMenu(false);
   };
 
   if (loading) {
@@ -120,10 +151,14 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           {showMenu && (
             <div
               className="absolute top-10 right-0 bg-black/90 border border-white/10 rounded-lg shadow-xl z-50"
-              style={{ left: 0 }}
+              style={{ width: '150px' }}
             >
-              <button className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors">
-                Info
+              <button 
+                onClick={handleInfoClick}
+                className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2"
+              >
+                <Info className="w-4 h-4" /> 
+                معلومات
               </button>
             </div>
           )}
@@ -154,24 +189,23 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           </code>
           <button
             onClick={handleCopyLink}
-            className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-all active:scale-95"
-            title="Copy link"
+            className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 transition-all active:scale-95 disabled:opacity-50"
+            title="نسخ الرابط"
+            disabled={copying}
           >
             <Copy className="w-4 h-4" />
           </button>
-          {(typeof navigator !== 'undefined' && typeof navigator.share === 'function') && (
-            <button
-              onClick={handleShareLink}
-              className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-all active:scale-95"
-              title="Share"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={handleShareLink}
+            className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 transition-all active:scale-95"
+            title="مشاركة"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
         </div>
 
         <p className="text-xs text-gray-400 leading-relaxed">
-          Share this code with friends to earn reward points
+          شارك هذا الرمز مع أصدقائك لكسب نقاط المكافآت
         </p>
       </div>
 
@@ -188,12 +222,12 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle className="w-4 h-4 text-emerald-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              Confirmed
+              مؤكدة
             </p>
           </div>
           <p className="text-2xl font-bold text-emerald-400">{stats?.confirmedReferrals || 0}</p>
           <p className="text-xs text-gray-500 mt-1">
-            Active referrals
+            الإحالات النشطة
           </p>
         </div>
 
@@ -208,12 +242,12 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-amber-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              Pending
+              معلقة
             </p>
           </div>
           <p className="text-2xl font-bold text-amber-400">{stats?.pendingReferrals || 0}</p>
           <p className="text-xs text-gray-500 mt-1">
-            Awaiting confirmation
+            في انتظار التأكيد
           </p>
         </div>
 
@@ -228,7 +262,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <Gift className="w-4 h-4 text-purple-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              Total Earned
+              المجموع المكتسب
             </p>
           </div>
           <p className="text-2xl font-bold text-purple-400">{stats?.totalPointsEarned || 0}</p>
@@ -246,7 +280,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-blue-400" />
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              Claimable
+              قابل للمطالبة
             </p>
           </div>
           <p className="text-2xl font-bold text-blue-400">{stats?.claimablePoints || 0}</p>
@@ -268,7 +302,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           }}
         >
           <Gift className="w-4 h-4" />
-          {claiming ? 'Claiming...' : `Claim ${stats?.claimablePoints} Points`}
+          {claiming ? 'جاري المطالبة...' : `استلم ${stats?.claimablePoints} نقطة`}
         </button>
       )}
 
@@ -281,7 +315,7 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
           }}
         >
           <p className="text-sm text-gray-400">
-            No referrals yet. Share your code to get started!
+            لا توجد إحالات حتى الآن. شارك رمزك للبدء!
           </p>
         </div>
       )}
@@ -295,16 +329,72 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
             </div>
             <div className="flex-1">
               <p className="text-sm text-red-300 font-medium mb-2">
-                Error loading referral data
+                خطأ في تحميل بيانات الإحالة
               </p>
               <p className="text-xs text-red-400/80 mb-3">{error}</p>
               <button
-                onClick={() => walletAddress && fetchStats(walletAddress)}
+                onClick={handleRetry}
                 className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors underline"
               >
-                Retry
+                إعادة المحاولة
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div 
+            className="bg-gray-900 border border-purple-500/20 rounded-xl p-5 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            style={{
+              boxShadow: '0 8px 32px rgba(168, 85, 247, 0.2)'
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Info className="w-4 h-4 text-purple-400" />
+                نظام الإحالة
+              </h3>
+              <button 
+                onClick={() => setShowInfoModal(false)}
+                className="p-1 rounded-full hover:bg-white/10"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <p className="text-gray-300">
+                شارك رمز الإحالة الخاص بك مع أصدقائك واربح نقاط عندما ينضمون إلى Reputa Score!  
+              </p>
+              
+              <div className="border-t border-white/10 pt-3">
+                <h4 className="font-medium text-purple-400 mb-2">كيف يعمل؟</h4>
+                <ol className="space-y-2 text-gray-400 list-decimal list-inside">
+                  <li>شارك رمز الإحالة أو الرابط الخاص بك مع الأصدقاء</li>
+                  <li>عندما ينضمون، يدخلون رمزك للتسجيل</li>
+                  <li>عندما يكملون تحليل محفظتهم الأول، تحصل على 500 نقطة</li>
+                  <li>اجمع النقاط واستبدلها بمكافآت</li>
+                </ol>
+              </div>
+              
+              <div className="border-t border-white/10 pt-3">
+                <h4 className="font-medium text-purple-400 mb-2">المكافآت الإضافية</h4>
+                <ul className="space-y-1 text-gray-400">
+                  <li>• 5 إحالات = 250 نقطة إضافية</li>
+                  <li>• 10 إحالات = 500 نقطة إضافية</li>
+                </ul>
+              </div>
+            </div>
+            
+            <button 
+              onClick={() => setShowInfoModal(false)}
+              className="w-full mt-5 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg transition-colors font-medium"
+            >
+              إغلاق
+            </button>
           </div>
         </div>
       )}

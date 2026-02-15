@@ -59,10 +59,17 @@ export function useReferral(): UseReferralReturn {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}?action=stats&walletAddress=${encodeURIComponent(walletAddress)}`);
+      // Add a random param to prevent caching
+      const timestamp = Date.now();
+      const response = await fetch(`${API_BASE}?action=stats&walletAddress=${encodeURIComponent(walletAddress)}&_t=${timestamp}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`خطأ في الاتصال بالخادم: ${response.status}`);
       }
 
       const data = await parseJsonResponse(response);
@@ -71,16 +78,19 @@ export function useReferral(): UseReferralReturn {
         console.log('✅ [useReferral] Stats fetched:', data.data);
         setStats(data.data);
       } else {
-        setError(data.error || 'Failed to fetch referral stats');
+        const errorMsg = data.error || 'فشل في جلب بيانات الإحالة';
+        setError(errorMsg);
         console.warn('⚠️ [useReferral] API returned non-success response:', data);
+        throw new Error(errorMsg); // Throw to propagate the error to the component
       }
     } catch (err: any) {
       console.error('[useReferral] Error fetching stats:', err);
-      setError(err.message || 'Error fetching referral stats');
+      setError(err.message || 'خطأ في جلب بيانات الإحالة');
+      throw err; // Rethrow for component handling
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [parseJsonResponse]);
 
   /**
    * Track a new referral when user signs up

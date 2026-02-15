@@ -779,14 +779,16 @@ app.post('/api/save-pioneer', async (req: Request, res: Response) => handleSaveP
 app.post('/api/save-feedback', async (req: Request, res: Response) => handleSaveFeedback(req.body, res));
 
 // ====================
-// REFERRAL (MongoDB-backed)
+// REFERRAL SYSTEM (MongoDB-backed)
 // ====================
+import { ReferralModel, ReferralClaimsModel } from '../db/referralModels';
 
 const REFERRAL_POINTS_PER_CONFIRMED = 500;
 const REFERRAL_BONUS_5 = 250;
 const REFERRAL_BONUS_10 = 500;
 
 function makeReferralCode(walletAddress: string): string {
+  if (!walletAddress) return 'XXXXXX';
   const hash = walletAddress.replace(/[^A-Za-z0-9]/g, '').substring(0, 6).toUpperCase();
   return hash.padEnd(6, 'X');
 }
@@ -810,15 +812,24 @@ app.get('/api/referral', async (req: Request, res: Response) => {
   console.log(`✅ [REFERRAL GET] Action: ${action}, Wallet: ${walletAddress}`);
 
   try {
-    const db = await getMongoDb();
-    const referralsCol = db.collection('Referrals');
+    // Connect to MongoDB directly using mongoose
+    await connectMongo();
+    const normalizedWallet = walletAddress.toLowerCase();
     const referralCode = makeReferralCode(walletAddress);
 
     if (action === 'stats') {
+      // Build the referral link with the code
       const referralLink = `https://reputa-score.vercel.app/?ref=${referralCode}`;
 
-      const confirmedReferrals = await referralsCol.countDocuments({ referrerWallet: walletAddress.toLowerCase(), status: 'confirmed' });
-      const pendingReferrals = await referralsCol.countDocuments({ referrerWallet: walletAddress.toLowerCase(), status: 'pending' });
+      // Count confirmed and pending referrals
+      const confirmedReferrals = await ReferralModel.countDocuments({ 
+        referrerWallet: normalizedWallet, 
+        status: 'confirmed' 
+      });
+      const pendingReferrals = await ReferralModel.countDocuments({ 
+        referrerWallet: normalizedWallet, 
+        status: 'pending' 
+      });
 
       // Calculate points
       let totalPointsEarned = confirmedReferrals * REFERRAL_POINTS_PER_CONFIRMED;
@@ -826,7 +837,9 @@ app.get('/api/referral', async (req: Request, res: Response) => {
       else if (confirmedReferrals >= 5) totalPointsEarned += REFERRAL_BONUS_5;
 
       // Check claimed points
-      const claimedDoc = await db.collection('ReferralClaims').findOne({ walletAddress: walletAddress.toLowerCase() });
+      const claimedDoc = await ReferralClaimsModel.findOne({ 
+        walletAddress: normalizedWallet 
+      });
       const claimedPoints = claimedDoc?.totalClaimed || 0;
       const claimablePoints = Math.max(0, totalPointsEarned - claimedPoints);
 
@@ -860,8 +873,8 @@ app.post('/api/referral', async (req: Request, res: Response) => {
   console.log(`✅ [REFERRAL POST] Action: ${action}, Wallet: ${walletAddress}`);
 
   try {
-    const db = await getMongoDb();
-    const referralsCol = db.collection('Referrals');
+    // Connect to MongoDB directly using mongoose
+    await connectMongo();
 
     if (action === 'track') {
       if (!walletAddress || !referralCode) {
@@ -878,14 +891,13 @@ app.post('/api/referral', async (req: Request, res: Response) => {
       }
 
       // Check if already referred
-      const existing = await referralsCol.findOne({ referredWallet: normalizedWallet });
+      const existing = await ReferralModel.findOne({ referredWallet: normalizedWallet });
       if (existing) {
         return res.status(200).json(referralSuccess({ message: 'Already referred', status: existing.status }));
       }
 
-      // Find referrer by code (first 6 chars of their wallet uppercase)
-      // We store the referral with the code so we can look up later
-      await referralsCol.insertOne({
+      // Create new referral with the code 
+      await ReferralModel.create({
         referrerCode: normalizedCode,
         referrerWallet: '', // Will be resolved on confirm
         referredWallet: normalizedWallet,
@@ -906,15 +918,22 @@ app.post('/api/referral', async (req: Request, res: Response) => {
       const normalizedWallet = walletAddress.toLowerCase();
 
       // Find pending referral for this wallet
-      const pendingRef = await referralsCol.findOne({ referredWallet: normalizedWallet, status: 'pending' });
+      const pendingRef = await ReferralModel.findOne({ 
+        referredWallet: normalizedWallet, 
+        status: 'pending' 
+      });
+      
       if (!pendingRef) {
         return res.status(200).json(referralSuccess({ message: 'No pending referral found', status: 'none' }));
       }
 
       // Try to resolve referrer wallet from code
       // Look through userv3 to find wallet that matches the code
+      const db = await getMongoDb();
       const usersCol = db.collection('userv3');
-      const allUsers = await usersCol.find({ walletAddress: { $exists: true, $ne: '' } }).project({ walletAddress: 1 }).toArray();
+      const allUsers = await usersCol.find({ walletAddress: { $exists: true, $ne: '' } })
+        .project({ walletAddress: 1 }).toArray();
+      
       let referrerWallet = '';
       for (const u of allUsers) {
         if (u.walletAddress && makeReferralCode(u.walletAddress) === pendingRef.referrerCode) {
@@ -923,7 +942,8 @@ app.post('/api/referral', async (req: Request, res: Response) => {
         }
       }
 
-      await referralsCol.updateOne(
+      // Update the referral to confirmed status
+      await ReferralModel.updateOne(
         { _id: pendingRef._id },
         {
           $set: {
@@ -936,7 +956,11 @@ app.post('/api/referral', async (req: Request, res: Response) => {
         }
       );
 
-      return res.status(200).json(referralSuccess({ message: 'Referral confirmed', status: 'confirmed', rewardPoints: REFERRAL_POINTS_PER_CONFIRMED }));
+      return res.status(200).json(referralSuccess({
+        message: 'Referral confirmed',
+        status: 'confirmed',
+        rewardPoints: REFERRAL_POINTS_PER_CONFIRMED
+      }));
     }
 
     if (action === 'claim-points') {
@@ -945,14 +969,20 @@ app.post('/api/referral', async (req: Request, res: Response) => {
       }
 
       const normalizedWallet = walletAddress.toLowerCase();
-      const confirmedCount = await referralsCol.countDocuments({ referrerWallet: normalizedWallet, status: 'confirmed' });
+      
+      // Count confirmed referrals
+      const confirmedCount = await ReferralModel.countDocuments({ 
+        referrerWallet: normalizedWallet, 
+        status: 'confirmed' 
+      });
 
+      // Calculate total points earned
       let totalEarned = confirmedCount * REFERRAL_POINTS_PER_CONFIRMED;
       if (confirmedCount >= 10) totalEarned += REFERRAL_BONUS_10;
       else if (confirmedCount >= 5) totalEarned += REFERRAL_BONUS_5;
 
-      const claimsCol = db.collection('ReferralClaims');
-      const claimedDoc = await claimsCol.findOne({ walletAddress: normalizedWallet });
+      // Check already claimed points
+      const claimedDoc = await ReferralClaimsModel.findOne({ walletAddress: normalizedWallet });
       const alreadyClaimed = claimedDoc?.totalClaimed || 0;
       const claimable = Math.max(0, totalEarned - alreadyClaimed);
 
@@ -961,10 +991,14 @@ app.post('/api/referral', async (req: Request, res: Response) => {
       }
 
       // Record the claim
-      await claimsCol.updateOne(
+      await ReferralClaimsModel.updateOne(
         { walletAddress: normalizedWallet },
         {
-          $set: { walletAddress: normalizedWallet, updatedAt: new Date() },
+          $set: { 
+            walletAddress: normalizedWallet, 
+            updatedAt: new Date(),
+            lastClaimDate: new Date()
+          },
           $inc: { totalClaimed: claimable },
           $setOnInsert: { createdAt: new Date() },
         },
@@ -972,6 +1006,7 @@ app.post('/api/referral', async (req: Request, res: Response) => {
       );
 
       // Log points event
+      const db = await getMongoDb();
       await db.collection('PointsLog').insertOne({
         pioneerId: normalizedWallet,
         action: 'referral_claim',
@@ -981,7 +1016,10 @@ app.post('/api/referral', async (req: Request, res: Response) => {
         createdAt: new Date(),
       });
 
-      return res.status(200).json(referralSuccess({ message: 'Points claimed successfully', pointsClaimed: claimable }));
+      return res.status(200).json(referralSuccess({
+        message: 'Points claimed successfully',
+        pointsClaimed: claimable
+      }));
     }
 
     return res.status(400).json(referralError('Invalid action'));
