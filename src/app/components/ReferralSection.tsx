@@ -10,11 +10,7 @@ import {
   MoreVertical,
   Info,
   X,
-  Twitter,
-  Facebook,
-  Linkedin,
-  Mail,
-  Link
+  Loader2
 } from 'lucide-react';
 import { useReferral, ReferralStats } from '../hooks/useReferral';
 import { toast } from 'react-hot-toast';
@@ -32,23 +28,33 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Generate referral link using username - defined early so it can be used in handlers
+  const generatedReferralCode = username || 'loading';
+  const generatedReferralLink = username 
+    ? `https://reputa-score.vercel.app/register?ref=${username}`
+    : '';
+
   // Fetch stats on mount and when wallet changes or after retry
   useEffect(() => {
     if (walletAddress) {
-      fetchStats(walletAddress)
+      fetchStats(walletAddress, username)
         .catch(err => {
           console.error('Failed to fetch referral stats:', err);
           // Will show error message through the error state from useReferral
         });
     }
-  }, [walletAddress, fetchStats, retryCount]);
+  }, [walletAddress, username, fetchStats, retryCount]);
 
   const handleCopyLink = async () => {
-    if (!stats?.referralLink) return;
+    const linkToCopy = stats?.referralLink || generatedReferralLink;
+    if (!linkToCopy) {
+      toast.error('Referral link not available');
+      return;
+    }
 
     setCopying(true);
     try {
-      await navigator.clipboard.writeText(stats.referralLink);
+      await navigator.clipboard.writeText(linkToCopy);
       toast.success('Link copied successfully');
       setTimeout(() => setCopying(false), 2000);
     } catch (err) {
@@ -59,56 +65,46 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
   };
 
   const handleShareLink = async () => {
-    if (!stats?.referralLink) return;
+    const linkToShare = stats?.referralLink || generatedReferralLink;
+    const codeToShare = stats?.referralCode || generatedReferralCode;
+    
+    if (!linkToShare) {
+      toast.error('Referral link not available');
+      return;
+    }
 
+    // Always try native Web Share API first
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'Join Reputa Score',
-          text: `Join me using my referral code: ${stats.referralCode}`,
-          url: stats.referralLink,
+          text: `Join me on Reputa Score using my referral link!`,
+          url: linkToShare,
         });
         toast.success('Link shared successfully');
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error sharing:', err);
-        if (err.name !== 'AbortError') { // Don't show error if user cancelled
-          toast.error('Failed to share link');
+        const error = err as { name?: string };
+        if (error.name !== 'AbortError') {
+          // Fallback to clipboard if share was not cancelled
+          try {
+            await navigator.clipboard.writeText(linkToShare);
+            toast.success('Link copied to clipboard');
+          } catch (clipErr) {
+            toast.error('Failed to share link');
+          }
         }
       }
     } else {
-      // Fallback: copy link to clipboard and show message
+      // Fallback: copy link to clipboard
       try {
-        await navigator.clipboard.writeText(stats.referralLink);
-        toast.success('Link copied for sharing');
+        await navigator.clipboard.writeText(linkToShare);
+        toast.success('Link copied to clipboard');
       } catch (err) {
         console.error('Error copying link:', err);
-        toast.error('Failed to copy link: ' + stats.referralLink);
+        toast.error('Failed to copy link');
       }
     }
-  };
-  
-  // Social media sharing functions
-  const shareOnTwitter = () => {
-    const text = `Join me on Reputa Score using my referral code: ${stats?.referralCode}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(stats?.referralLink || '')}`;
-    window.open(url, '_blank');
-  };
-  
-  const shareOnFacebook = () => {
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(stats?.referralLink || '')}`;
-    window.open(url, '_blank');
-  };
-  
-  const shareOnLinkedin = () => {
-    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(stats?.referralLink || '')}`;
-    window.open(url, '_blank');
-  };
-  
-  const shareViaEmail = () => {
-    const subject = "Join me on Reputa Score";
-    const body = `Hey there! Join me on Reputa Score using my referral code: ${stats?.referralCode}\n\n${stats?.referralLink || ''}`;
-    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
   };
 
   const handleClaimPoints = async () => {
@@ -142,23 +138,9 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
     setShowMenu(false);
   };
 
-  if (loading) {
-    return (
-      <div
-        className="rounded-2xl p-6 animate-pulse"
-        style={{
-          background: 'linear-gradient(145deg, rgba(15, 17, 23, 0.98) 0%, rgba(20, 24, 32, 0.95) 100%)',
-          border: '1px solid rgba(148, 51, 234, 0.2)',
-        }}
-      >
-        <div className="h-6 bg-white/10 rounded w-40 mb-4" />
-        <div className="h-4 bg-white/10 rounded w-60 mb-2" />
-      </div>
-    );
-  }
-
-  const referralLink = stats?.referralLink || `https://reputa-score.vercel.app/?ref=CODE`;
-  const referralCode = stats?.referralCode || 'XXXXXX';
+  // Use generated values or stats values
+  const referralLink = stats?.referralLink || generatedReferralLink;
+  const referralCode = stats?.referralCode || generatedReferralCode;
 
   return (
     <div className="space-y-4">
@@ -239,38 +221,6 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
       </div>
 
       {/* Stats Grid */}
-      {/* Social Media Sharing */}
-      <div className="rounded-xl p-3 border mb-3 flex flex-wrap justify-center gap-2" 
-        style={{
-          background: 'rgba(15, 23, 42, 0.3)',
-          border: '1px solid rgba(148, 163, 184, 0.2)'
-        }}>
-        <button 
-          onClick={shareOnTwitter}
-          className="p-2 rounded-lg bg-[#1DA1F2]/10 hover:bg-[#1DA1F2]/20 text-[#1DA1F2] transition-all active:scale-95 flex flex-col items-center gap-1">
-          <Twitter className="w-5 h-5" />
-          <span className="text-xs">Twitter</span>
-        </button>
-        <button 
-          onClick={shareOnFacebook}
-          className="p-2 rounded-lg bg-[#4267B2]/10 hover:bg-[#4267B2]/20 text-[#4267B2] transition-all active:scale-95 flex flex-col items-center gap-1">
-          <Facebook className="w-5 h-5" />
-          <span className="text-xs">Facebook</span>
-        </button>
-        <button 
-          onClick={shareOnLinkedin}
-          className="p-2 rounded-lg bg-[#0077B5]/10 hover:bg-[#0077B5]/20 text-[#0077B5] transition-all active:scale-95 flex flex-col items-center gap-1">
-          <Linkedin className="w-5 h-5" />
-          <span className="text-xs">LinkedIn</span>
-        </button>
-        <button 
-          onClick={shareViaEmail}
-          className="p-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 transition-all active:scale-95 flex flex-col items-center gap-1">
-          <Mail className="w-5 h-5" />
-          <span className="text-xs">Email</span>
-        </button>
-      </div>
-
       <div className="grid grid-cols-2 gap-3">
         {/* Confirmed Referrals */}
         <div
@@ -381,23 +331,33 @@ export function ReferralSection({ walletAddress, username }: ReferralSectionProp
         </div>
       )}
 
-      {/* Error Message */}
-      {error && (
-        <div className="rounded-lg p-4 bg-gradient-to-r from-red-500/10 to-red-600/5 border border-red-500/30 backdrop-blur-sm">
+      {/* Loading State - Show spinner instead of error during initial load */}
+      {loading && (
+        <div className="rounded-lg p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/5 border border-purple-500/20 backdrop-blur-sm">
+          <div className="flex items-center justify-center gap-3">
+            <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+            <p className="text-sm text-purple-300">Loading referral data...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message - Only show if not loading and there's an error */}
+      {!loading && error && (
+        <div className="rounded-lg p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-500/30 backdrop-blur-sm">
           <div className="flex items-start gap-3">
-            <div className="w-5 h-5 rounded-full bg-red-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-red-400 text-xs font-bold">!</span>
+            <div className="w-5 h-5 rounded-full bg-amber-500/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-amber-400 text-xs font-bold">!</span>
             </div>
             <div className="flex-1">
-              <p className="text-sm text-red-300 font-medium mb-2">
-                Error loading referral data
+              <p className="text-sm text-amber-300 font-medium mb-2">
+                Could not load server data
               </p>
-              <p className="text-xs text-red-400/80 mb-3">{error}</p>
+              <p className="text-xs text-gray-400 mb-3">Using local referral code. Stats will sync when connection is restored.</p>
               <button
                 onClick={handleRetry}
-                className="text-xs font-semibold text-red-400 hover:text-red-300 transition-colors underline"
+                className="text-xs font-semibold text-purple-400 hover:text-purple-300 transition-colors underline"
               >
-                Retry
+                Retry Connection
               </button>
             </div>
           </div>

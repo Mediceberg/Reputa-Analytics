@@ -805,22 +805,34 @@ function referralError(error: string) {
 app.get('/api/referral', async (req: Request, res: Response) => {
   const action = toStringParam(req.query.action);
   const walletAddress = toStringParam(req.query.walletAddress);
+  const usernameParam = toStringParam(req.query.username);
 
   if (!walletAddress || typeof walletAddress !== 'string') {
     return res.status(400).json(referralError('Wallet address is required'));
   }
 
-  console.log(`✅ [REFERRAL GET] Action: ${action}, Wallet: ${walletAddress}`);
+  console.log(`✅ [REFERRAL GET] Action: ${action}, Wallet: ${walletAddress}, Username: ${usernameParam}`);
 
   try {
     // Connect to MongoDB directly using mongoose
     await connectMongo();
     const normalizedWallet = walletAddress.toLowerCase();
-    const referralCode = makeReferralCode(walletAddress);
+    
+    // Try to get username from MongoDB if not provided
+    let username = usernameParam;
+    if (!username) {
+      const db = await getMongoDb();
+      const usersCol = db.collection('userv3');
+      const user = await usersCol.findOne({ walletAddress: { $regex: new RegExp(`^${walletAddress}$`, 'i') } });
+      username = user?.username || user?.pioneerId || makeReferralCode(walletAddress);
+    }
+    
+    // Use username as the referral code
+    const referralCode = username;
 
     if (action === 'stats') {
-      // Build the referral link with the code
-      const referralLink = `https://reputa-score.vercel.app/?ref=${referralCode}`;
+      // Build the referral link with username
+      const referralLink = `https://reputa-score.vercel.app/register?ref=${username}`;
 
       // Count confirmed and pending referrals
       const confirmedReferrals = await ReferralModel.countDocuments({ 
